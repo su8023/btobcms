@@ -43,6 +43,31 @@
         ul.done-list li { margin:4px 0; }
         code { background:#eef2f8; padding:1px 6px; border-radius:5px; font-size:13px; }
         .notice { background:#fff8e6; border:1px solid #f0dfa8; padding:10px 14px; border-radius:9px; font-size:13px; margin-top:16px; }
+
+        /* 安装进行中动画 */
+        .btn[disabled] { opacity:.8; cursor:wait; }
+        .btn .btn-spinner {
+            display:inline-block; width:14px; height:14px; margin-right:8px; vertical-align:-2px;
+            border:2px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%;
+            animation:icw-spin .8s linear infinite;
+        }
+        @keyframes icw-spin { to { transform:rotate(360deg); } }
+        .installing-panel { text-align:center; padding:22px 10px 8px; color:var(--muted); font-size:14px; }
+        .installing-panel .spinner {
+            width:36px; height:36px; margin:0 auto 12px; border-radius:50%;
+            border:3px solid #dbe6f4; border-top-color:var(--accent,#25549b);
+            animation:icw-spin .9s linear infinite;
+        }
+        .installing-panel .bar {
+            height:6px; margin-top:14px; border-radius:99px; overflow:hidden;
+            background:#e8eef7;
+        }
+        .installing-panel .bar i {
+            display:block; height:100%; width:40%; border-radius:99px;
+            background:linear-gradient(90deg,#25549b,#6f9bea);
+            animation:icw-slide 1.4s ease-in-out infinite;
+        }
+        @keyframes icw-slide { 0% { margin-left:-40%; } 100% { margin-left:100%; } }
         @media (max-width:640px){ .check-grid,.row{ grid-template-columns:1fr; } }
     </style>
 </head>
@@ -125,8 +150,29 @@
                     <label class="checkline"><input type="checkbox" name="seed_demo" value="1"> 导入演示分类/产品数据（正式站建议不勾）</label>
                 </fieldset>
 
-                <button class="btn" type="submit">开始安装（约 1 分钟）</button>
+                <button class="btn" type="submit" id="install-btn">开始安装（约 1 分钟）</button>
                 <p class="hint">安装会写入 .env、创建数据表与管理员账号，并自动加锁防重复安装。</p>
+
+                {{-- 提交后的安装中动画：禁用按钮防重复提交 --}}
+                <div class="installing-panel" id="installing-panel" hidden>
+                    <div class="spinner" aria-hidden="true"></div>
+                    <p><strong>正在安装…</strong><br>创建数据表 · 写入配置 · 创建管理员，请勿关闭或刷新页面</p>
+                    <div class="bar"><i></i></div>
+                </div>
+
+                <script>
+                (function () {
+                    var form = document.getElementById('config');
+                    if (!form) return;
+                    form.addEventListener('submit', function () {
+                        var btn = document.getElementById('install-btn');
+                        var panel = document.getElementById('installing-panel');
+                        btn.disabled = true;
+                        btn.innerHTML = '<span class="btn-spinner"></span> 正在安装，请稍候…';
+                        panel.hidden = false;
+                    });
+                })();
+                </script>
             </form>
         @endif
     </div>
