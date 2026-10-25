@@ -16,6 +16,22 @@ class AppServiceProvider extends ServiceProvider
         // 插槽注册是静态状态：每个应用实例创建时清空，
         // 防止测试进程/Octane 中上一个实例的插件注入泄漏到当前请求
         \App\Support\Slots::flush();
+
+        // 全新部署（无 .env、无安装锁）：给安装向导可运行的最低运行时配置，
+        // 避免 session/cache 默认走 database、APP_KEY 缺失导致 /install 自身 500。
+        if (! $this->app->runningInConsole()
+            && ! $this->app->environment('testing')
+            && ! is_file(storage_path('app/installed.lock'))) {
+            config([
+                'session.driver' => 'file',
+                'cache.default' => 'file',
+                'queue.default' => 'sync',
+                'database.default' => 'sqlite',
+            ]);
+            if (blank(config('app.key'))) {
+                config(['app.key' => 'base64:'.base64_encode(random_bytes(32))]);
+            }
+        }
     }
 
     /**
