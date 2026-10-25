@@ -246,3 +246,14 @@ location ~ /\.(env|git) { deny all; }
 | sitemap 里是 localhost | .env 的 APP_URL 没改 |
 | 页面样式全丢 | 运行目录没选 /public 或伪静态没配 |
 | 上传插件 zip 失败 | `chmod -R 775 storage`；zip 里不能多包一层目录 |
+
+## 重装（已部署站点重新走安装向导）
+
+```bash
+cd /www/wwwroot/你的域名
+rm -f storage/app/installed.lock                                   # 删安装锁，/install 重新打开
+/www/server/php/84/bin/php artisan migrate:fresh --force           # 清空所有数据表并重建（数据不可恢复！）
+/www/server/php/84/bin/php artisan config:clear
+```
+
+刷新 `http://域名/install` 从头走一遍向导即可。需要保留询盘数据先在后台导出 CSV。
