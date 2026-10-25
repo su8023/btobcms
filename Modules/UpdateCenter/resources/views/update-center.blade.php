@@ -16,9 +16,9 @@
             @if($githubError !== '')
                 <p class="text-sm text-danger-600">{{ $githubError }}</p>
             @elseif($latestTag !== null)
-                <p class="text-2xl font-bold {{ $hasUpdate() ? 'text-success-600' : '' }}">{{ $latestTag }}</p>
+                <p class="text-2xl font-bold {{ $this->hasUpdate() ? 'text-success-600' : '' }}">{{ $latestTag }}</p>
                 <p class="text-xs text-gray-500 mt-1">
-                    {{ $hasUpdate() ? __('admin.update_center.update_available') : __('admin.update_center.up_to_date') }}
+                    {{ $this->hasUpdate() ? __('admin.update_center.update_available') : __('admin.update_center.up_to_date') }}
                 </p>
             @else
                 <p class="text-sm text-gray-500">{{ __('admin.update_center.no_releases') }}</p>
@@ -94,6 +94,6 @@
     {{-- 执行日志（队列进度实时轮询） --}}
     <x-filament::section wire:poll.5s="logTail">
         <x-slot:heading>{{ __('admin.update_center.log') }}</x-slot:heading>
-        <pre class="whitespace-pre-wrap text-xs font-mono bg-gray-950 text-gray-100 rounded-lg p-4 max-h-96 overflow-y-auto">{{ $logTail() ?: __('admin.update_center.log_empty') }}</pre>
+        <pre class="whitespace-pre-wrap text-xs font-mono bg-gray-950 text-gray-100 rounded-lg p-4 max-h-96 overflow-y-auto">{{ $this->logTail() ?: __('admin.update_center.log_empty') }}</pre>
     </x-filament::section>
 </x-filament-panels::page>

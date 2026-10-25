@@ -12,10 +12,12 @@ class GitService
 {
     public function __construct(
         private readonly string $git = 'git',
-        private readonly string $cwd = '',
+        ?string $cwd = null,
     ) {
-        $this->cwd = $cwd !== '' ? $cwd : base_path();
+        $this->cwd = $cwd ?? base_path();
     }
+
+    private readonly string $cwd;
 
     public static function fromSettings(): self
     {

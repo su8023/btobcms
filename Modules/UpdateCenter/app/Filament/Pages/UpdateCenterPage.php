@@ -23,6 +23,8 @@ class UpdateCenterPage extends Page
 
     protected static ?int $navigationSort = 34;
 
+    protected static ?string $slug = 'update-center';
+
     protected string $view = 'updatecenter::update-center';
 
     public static function getNavigationGroup(): string|UnitEnum|null

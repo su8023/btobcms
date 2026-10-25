@@ -64,6 +64,17 @@ tar --exclude=node_modules --exclude=vendor --exclude=.git \
 #    排除 database.sqlite（本地开发库，生产用 MySQL）
 ```
 
+方式 A（**推荐：git 部署**，解锁后台一键更新中心）：
+
+```bash
+# 服务器先配好 GitHub Deploy Key（见 docs/update-center.md 第一节）
+cd /www/wwwroot
+git clone git@github.com:你的账号/btobcms.git 你的域名
+cd 你的域名 && git checkout v1.0.0
+```
+
+方式 B（zip 上传，后续无法用更新中心）：
+
 宝塔 **文件 → 进入站点目录 `/www/wwwroot/你的域名`**：
 先删掉默认的 `index.html`、`404.html`，上传 `btobcms.tar.gz` → 右键解压。
 
