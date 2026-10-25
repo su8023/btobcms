@@ -1,0 +1,11 @@
+{
+    "name": "Default",
+    "slug": "default",
+    "version": "1.0.0",
+    "author": "BtoBcms",
+    "description": "内置默认主题（深蓝专业 B2B 设计，即核心视图与 site.css 本体）",
+    "category": "general",
+    "builtin": true,
+    "color": "#0d4a8f",
+    "color_dark": "#062a52"
+}

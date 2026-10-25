@@ -1,0 +1,17 @@
+{
+    "name": "MailNotifier",
+    "alias": "mailnotifier",
+    "description": "询盘邮件通知插件：买家提交询盘后发送英文确认邮件（Reply-To 管理员邮箱）与管理员通知邮件（客户信息、留言、关联产品、UTM 来源），附 mail:test 测试命令。",
+    "keywords": [
+        "mail",
+        "inquiry",
+        "notifier"
+    ],
+    "priority": 0,
+    "providers": [
+        "Modules\\MailNotifier\\Providers\\MailNotifierServiceProvider"
+    ],
+    "files": [],
+    "category": "notification",
+    "version": "1.0.0"
+}

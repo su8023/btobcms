@@ -1,0 +1,8 @@
+{
+    "FeishuNotifier": true,
+    "AiSeoAuditor": true,
+    "AiContentWriter": true,
+    "MailNotifier": true,
+    "WhatsAppChat": true,
+    "UpdateCenter": true
+}

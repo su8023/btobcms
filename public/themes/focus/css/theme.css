@@ -1,0 +1,47 @@
+/*
+ * Focus 询盘聚焦型排版 —— 首屏左文案右表单、产品前置
+ * 本文件只写本主题自己的布局类（fz-*）；配色沿用核心 site.css 变量
+ */
+
+/* ===== 首屏分栏 ===== */
+.fz-hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(320px, .85fr);
+    gap: clamp(24px, 4vw, 48px);
+    align-items: start;
+}
+
+.fz-hero-copy h1 { font-size: clamp(1.7rem, 1.3rem + 1.8vw, 2.6rem); }
+.fz-hero-copy .hero-actions { margin-top: 26px; }
+.fz-hero-copy .hero-hot { margin-top: 18px; }
+
+.fz-bullets {
+    list-style: none; margin: 0 0 24px; padding: 0;
+    display: flex; flex-direction: column; gap: 9px;
+}
+.fz-bullets li {
+    position: relative; padding-inline-start: 30px;
+    color: #dbe8f7; font-size: var(--fs-sm); font-weight: 570;
+}
+.fz-bullets li::before {
+    content: "✓"; position: absolute; inset-inline-start: 0; top: 1px;
+    width: 20px; height: 20px; border-radius: 7px; background: rgba(255, 255, 255, .14);
+    display: grid; place-items: center; font-size: .72rem; font-weight: 800; color: #ffd479;
+}
+
+/* 表单卡片：首屏即可提交询盘 */
+.fz-form-card {
+    background: var(--surface); border-radius: var(--radius-lg);
+    padding: clamp(18px, 2.5vw, 26px); box-shadow: var(--shadow-lg);
+}
+.fz-form-card h3 { color: var(--ink); margin-bottom: 12px; font-size: var(--fs-md); }
+.fz-form-card .form-field { margin-bottom: 10px; }
+.fz-form-card .form-field input, .fz-form-card .form-field textarea { min-height: 42px; }
+.fz-form-card .form-field textarea { min-height: unset; }
+.fz-form-card .btn-lg { width: 100%; }
+.fz-form-card .form-reassure { margin-top: 8px; }
+
+@media (max-width: 900px) {
+    .fz-hero-grid { grid-template-columns: 1fr; }
+    .fz-form-card { order: -1; } /* 手机上表单优先置顶 */
+}

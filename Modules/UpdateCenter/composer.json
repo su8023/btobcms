@@ -1,0 +1,12 @@
+{
+    "name": "modules/update-center",
+    "type": "project",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Modules\UpdateCenter\\": "app/",
+            "Modules\UpdateCenter\Database\Factories\\": "database/factories/",
+            "Modules\UpdateCenter\Database\Seeders\\": "database/seeders/"
+        }
+    }
+}

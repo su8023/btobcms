@@ -1,0 +1,13 @@
+{
+    "name": "AiSeoAuditor",
+    "alias": "aiseoauditor",
+    "description": "AI SEO 巡检插件：抓取 sitemap 逐页检查 TDK/H1/canonical/状态码，生成 JSON 报告并可视化展示（后台「SEO 巡检报告」页），支持一键巡检与每日调度，结果推送飞书。",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\AiSeoAuditor\\Providers\\AiSeoAuditorServiceProvider"
+    ],
+    "files": [],
+    "category": "ai",
+    "version": "0.9.0"
+}

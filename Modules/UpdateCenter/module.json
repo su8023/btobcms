@@ -1,0 +1,17 @@
+{
+    "name": "UpdateCenter",
+    "alias": "updatecenter",
+    "description": "更新中心：对接 GitHub Releases 检测新版本、展示变更说明，后台一键升级（维护模式 + 自动备份 + 失败回滚），代码与数据分离，更新不碰用户数据。",
+    "keywords": [
+        "deploy",
+        "update",
+        "github"
+    ],
+    "priority": 0,
+    "providers": [
+        "Modules\\UpdateCenter\\Providers\\UpdateCenterServiceProvider"
+    ],
+    "files": [],
+    "category": "system",
+    "version": "1.0.0"
+}

@@ -1,0 +1,201 @@
+<?php
+
+return [
+    'brand_slogan' => 'Global B2B Sourcing Made Reliable',
+
+    'nav' => [
+        'industries' => 'Industries',
+        'services' => 'Services',
+        'catalog' => 'Product catalog',
+        'home' => 'Home',
+        'products' => 'Products',
+        'blog' => 'Blog',
+        'about' => 'About Us',
+        'contact' => 'Contact',
+    ],
+
+    'cta' => [
+        'quote' => 'Get a Quote',
+        'inquiry' => 'Send Inquiry',
+        'band_title' => 'Tell us what you need — quote within 24 hours',
+    ],
+
+    'faq' => [
+        'title' => 'Frequently Asked Questions',
+        'items' => [
+            ['q' => 'What is your minimum order quantity (MOQ)?', 'a' => 'MOQs vary by product, typically from 50 to 500 pieces per SKU. Trial orders and sample orders are accepted for most products.'],
+            ['q' => 'Do you support OEM and ODM customization?', 'a' => 'Yes. We support custom specifications, private labeling, and custom packaging. Share your drawings or samples and our engineering team provides a feasibility review and quotation.'],
+            ['q' => 'How do you control product quality?', 'a' => 'Every order passes raw material inspection, in-line inspection and AQL-standard pre-shipment inspection, with photo documentation sent to the buyer.'],
+            ['q' => 'What shipping terms do you offer?', 'a' => 'EXW, FOB and CIF are available. We ship by sea, air and international express to major ports worldwide.'],
+            ['q' => 'How fast do you respond to inquiries?', 'a' => 'Every inquiry receives a response within 24 hours on business days, including pricing and lead time.'],
+        ],
+    ],
+
+    'hero' => [
+        // 认证徽章（上线前替换为真实认证与编号）
+        'certs' => [
+            'ISO 9001:2015 Certified',
+            'CE Compliant',
+            'SGS Verified Supplier',
+            'T/T · L/C · Trade Assurance',
+        ],
+    ],
+
+    'home' => [
+        'hero_title' => 'Reliable Manufacturer & Wholesale Supplier from China',
+        'hero_title_html' => 'Reliable Manufacturer &amp; Wholesale Supplier <em>from China</em>',
+        'hero_sub' => 'Factory-direct quality, wholesale pricing and OEM/ODM support for B2B buyers worldwide. Tell us what you need — get a quote within 24 hours.',
+        'form_card_title' => 'Get a quote within 24 hours',
+        'search_ph' => 'Search products, e.g. “valve”, “DN50”…',
+        'search_btn' => 'Search',
+        'hot' => 'Hot:',
+        'categories' => 'Product Categories',
+        'categories_eyebrow' => 'Catalog',
+        'products_eyebrow' => 'New arrivals',
+        'blog_eyebrow' => 'Knowledge base',
+        'why_eyebrow' => 'Why buyers choose us',
+        'why_us' => 'Built for serious B2B sourcing',
+        'why_sub' => 'From factory floor to your warehouse — one accountable partner for quality, customization and delivery.',
+        'latest_products' => 'Latest Products',
+        'latest_posts' => 'Latest Sourcing Guides',
+        'view_all' => 'View all',
+        'guarantees_title' => 'Our guarantees',
+        'guarantees' => [
+            'Quote within 24 hours',
+            'Free samples available',
+            'Inspection report before shipment',
+            'Secure payment terms (T/T · L/C)',
+        ],
+        'industries_eyebrow' => 'Industries we serve',
+        'industries_title' => 'Solutions for your industry',
+        'industries_sub' => 'Tell us your application — our engineers match the right product and specification to your use case.',
+        'industries' => [
+    'Construction & Building',
+    'Water Treatment & Plumbing',
+    'Automotive & Machinery',
+    'Agriculture & Irrigation',
+    'Oil, Gas & Petrochemical',
+    'HVAC & Utilities',
+    'Packaging & Retail',
+    'Medical & Laboratory',
+    'Electrical & Electronics',
+    'Lighting & LED',
+    'Furniture & Office',
+    'Textile & Apparel',
+    'Food & Beverage Machinery',
+    'Security & Protection',
+    'Tools & Hardware',
+    'Energy & Solar',
+    'Transportation & Auto Parts',
+    'Chemicals & New Materials',
+        ],
+        'cases_eyebrow' => 'Case studies',
+        'cases_title' => 'Results our buyers achieved',
+        'process_eyebrow' => 'Simple process',
+        'process_title' => 'From inquiry to delivery in 5 steps',
+        'process_sub' => 'A transparent, low-risk ordering process designed for first-time and repeat importers alike.',
+        'process_steps' => [
+            ['title' => 'Send Inquiry', 'text' => 'Tell us the product, quantity and specifications — response within 24 hours.'],
+            ['title' => 'Get Quote', 'text' => 'Formal quotation with unit pricing, lead time and shipping terms (EXW/FOB/CIF).'],
+            ['title' => 'Approve Sample', 'text' => 'Samples for quality approval before any bulk production commitment.'],
+            ['title' => 'Production & QC', 'text' => 'Bulk production with AQL-standard inspection and photo reports at every stage.'],
+            ['title' => 'Ship & Deliver', 'text' => 'Sea, air or express shipping with complete export documentation to your port.'],
+        ],
+    ],
+
+    'stats' => [
+        'years' => 'Years in export',
+        'products' => 'Active SKUs',
+        'industries' => 'Industries served',
+        'countries' => 'Countries served',
+        'response' => 'Quote response',
+    ],
+
+    'features' => [
+        'factory_title' => 'Factory Direct',
+        'factory_text' => 'Own production lines — no middlemen, transparent pricing and stable lead times.',
+        'oem_title' => 'OEM / ODM Ready',
+        'oem_text' => 'Custom specifications, private label and packaging. Engineering review within days.',
+        'qc_title' => 'AQL Quality Control',
+        'qc_text' => 'In-line and pre-shipment inspections on every order, with photo reports.',
+        'ship_title' => 'Global Shipping',
+        'ship_text' => 'EXW / FOB / CIF terms by sea, air or express — to any major port.',
+    ],
+
+    'products' => [
+        'title' => 'All Products',
+        'subtitle' => 'Browse our full catalog of factory-direct products — wholesale pricing, OEM support and fast worldwide shipping.',
+        'results_for' => 'Search results for',
+        'showing' => 'Showing :count product|Showing :count products',
+        'moq' => 'MOQ',
+        'related' => 'Related Products',
+        'specs' => 'Specifications',
+        'from' => 'From',
+        'search_ph' => 'Search products…',
+        'no_results' => 'No products found.',
+        'request_quote' => 'Request a quote for this product',
+    ],
+
+    'category' => [
+        'products_in' => 'Product|Products',
+        'filter' => 'Filter',
+        'clear' => 'Clear filters',
+        'subcategories' => 'Subcategories',
+    ],
+
+    'blog' => [
+        'title' => 'Blog & Sourcing Guides',
+        'subtitle' => 'Practical sourcing knowledge, factory insights and buying guides from our export team.',
+        'read_more' => 'Read more',
+        'back' => 'Back to blog',
+    ],
+
+    'basket' => [
+        'title' => 'Inquiry Basket',
+        'add' => '+ Basket',
+        'remove' => '✓ Added',
+        'empty' => 'Your inquiry basket is empty. Browse products and add items to request quotes together.',
+        'submit_hint' => 'Submit one inquiry for all items above — we quote the full list together within 24 hours.',
+    ],
+
+    'form' => [
+        'name' => 'Your Name',
+        'email' => 'Email Address',
+        'phone' => 'Phone / WhatsApp',
+        'company' => 'Company',
+        'country' => 'Country',
+        'message' => 'Message',
+        'message_ph' => 'Tell us what you need: product, quantity, specifications, destination port…',
+        'submit' => 'Send Inquiry',
+        'sending' => 'Sending…',
+        'success' => 'Thank you! Your inquiry has been sent. We will reply within 24 hours.',
+        'error' => 'Something went wrong. Please try again or email us directly.',
+        'required_note' => 'Fields marked with * are required.',
+        'reassure' => 'No spam, no obligation — a real quotation within 24 hours. Your information is never shared.',
+    ],
+
+    'contact_how_title' => 'How we work',
+    'contact_how' => 'Send your specification, drawing or reference link — our sourcing engineers reply with pricing, lead time and shipping terms within 24 hours. Samples are available before any bulk commitment, and every order ships with photo-documented AQL inspection.',
+    'contact_privacy_title' => 'Your information is safe',
+    'contact_privacy' => 'Every inquiry is answered by a real engineer — never a bot. Your files and requirements stay confidential; we are happy to sign an NDA before you share drawings.',
+    'contact_hours_title' => 'Working hours & response time',
+    'contact_hours' => 'Our team replies Monday to Saturday, 9:00–19:00 (GMT+8), within 24 hours on business days. Urgent projects? Message us on WhatsApp for same-day responses during working hours.',
+    'notfound' => [
+        'title' => 'Page not found',
+        'text' => 'The page you are looking for may have been moved or no longer exists. Browse our industries or send us an inquiry — we reply within 24 hours.',
+        'home' => 'Back to Home',
+    ],
+    'footer_privacy' => 'Privacy Policy',
+    'footer_terms' => 'Terms of Service',
+    'footer' => [
+        'about' => 'About Us',
+        'links' => 'Quick Links',
+        'contact' => 'Contact Us',
+        'copyright' => 'All rights reserved.',
+    ],
+
+    'pagination' => [
+        'prev' => 'Previous',
+        'next' => 'Next',
+    ],
+];

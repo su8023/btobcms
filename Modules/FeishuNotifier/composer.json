@@ -1,0 +1,30 @@
+{
+    "name": "nwidart/feishunotifier",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\FeishuNotifier\\": "app/",
+            "Modules\\FeishuNotifier\\Database\\Factories\\": "database/factories/",
+            "Modules\\FeishuNotifier\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\FeishuNotifier\\Tests\\": "tests/"
+        }
+    }
+}

@@ -1,0 +1,13 @@
+{
+    "name": "AiContentWriter",
+    "alias": "aicontentwriter",
+    "description": "AI 内容工厂插件：ai:article 命令按主题生成 SEO 文章草稿（自动带内链占位与 FAQ 结构），强制落草稿待人工审核。",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\AiContentWriter\\Providers\\AiContentWriterServiceProvider"
+    ],
+    "files": [],
+    "category": "ai",
+    "version": "0.9.0"
+}

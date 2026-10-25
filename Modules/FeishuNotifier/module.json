@@ -1,0 +1,13 @@
+{
+    "name": "FeishuNotifier",
+    "alias": "feishunotifier",
+    "description": "飞书群通知插件：新询盘、SEO 巡检报告实时推送飞书卡片（Webhook 未配置时优雅降级），附 feishu:test 测试命令。",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\FeishuNotifier\\Providers\\FeishuNotifierServiceProvider"
+    ],
+    "files": [],
+    "category": "notification",
+    "version": "1.0.0"
+}

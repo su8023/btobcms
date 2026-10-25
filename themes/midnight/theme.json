@@ -1,0 +1,10 @@
+{
+    "name": "Midnight",
+    "slug": "midnight",
+    "version": "1.0.0",
+    "author": "BtoBcms",
+    "description": "暗夜模式：全站深色底、亮蓝主色，琥珀点缀——对比强烈的大气暗色主题",
+    "category": "general",
+    "color": "#5b8def",
+    "color_dark": "#101b31"
+}

@@ -1,0 +1,39 @@
+/*
+ * Midnight 暗夜模式 —— 全站深色底、亮蓝主色、琥珀点缀
+ * 覆盖：配色变量 + 导航/表单/移动端 CTA 等少量硬编码浅色组件
+ */
+
+:root {
+    --primary: #5b8def;
+    --primary-dark: #3f6fd4;
+    --primary-deep: #101b31;
+    --primary-soft: #16233c;
+    --primary-100: #22345c;
+    --accent: #f5b04c;
+    --accent-soft: #2a2318;
+    --ink: #e6edf7;
+    --ink-2: #c9d5e6;
+    --muted: #8fa1ba;
+    --muted-2: #6d7f99;
+    --bg: #0b1220;
+    --surface: #121b2d;
+    --border: #22304a;
+    --border-strong: #344568;
+}
+
+/* 深色下的导航栏 */
+.navbar { background: rgba(11, 18, 32, .92); border-bottom-color: var(--border); }
+
+/* 深色下的表单控件 */
+.form-field input, .form-field textarea, .form-field select { background: #0d1526; }
+.search-bar input { background: #0d1526; }
+
+/* 深色下的移动端 CTA 条 */
+.mobile-cta { background: rgba(11, 18, 32, .97); border-top-color: var(--border); }
+.mobile-cta__btn { border-color: var(--border-strong); color: var(--ink); }
+
+/* 深色阴影更收敛 */
+:root { --shadow-lg: 0 2px 4px rgba(0, 0, 0, .3), 0 18px 44px -12px rgba(0, 0, 0, .5); }
+
+/* 深色下的选中/高亮微调 */
+::selection { background: #22345c; }
