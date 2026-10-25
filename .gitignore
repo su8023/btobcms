@@ -36,3 +36,4 @@ Thumbs.db
 /storage/app/update-center.log
 /storage/app/backups
 /bootstrap/cache/*.php
+btobcms-deploy-*.zip
