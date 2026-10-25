@@ -107,6 +107,16 @@
 - [x] 测试 7 个（API 映射/prerelease/限流异常/未配置降级/配置后渲染/模块结构/git tag），全套 **84/84（380 断言）**；浏览器验证：页面渲染/中文文案/未配置引导/日志区
 - [x] 文档：docs/update-center.md（GitHub 建仓/Deploy Key/git 部署/发版流程/回滚/FAQ）+ 宝塔手册部署方式改 git clone 优先
 
+**已完成 — 扩展性审查与契约补全（2026-10-26 第十轮）**
+
+- [x] 全盘审查：事件系统（原仅 InquiryCreated + SeoAuditFinished）/ 插件注册面 / Slots / 设置字段 / Filament 页面注册 / LLM 底座——识别 4 缺口修 3（sitemap 分片注册化留待有真实需求再做）
+- [x] 缺口 A 业务事件：新增 InquiryStatusChanged（询盘状态真变化时）/ PostPublished（发布流转）/ ProductSaved（保存），dispatch 挂 Filament afterSave/afterCreate；插件可挂 CRM/电商同步/索引重建
+- [x] 缺口 B 插件后台页约定式发现：PluginPages::discover() 扫描 Modules/{Name}/app/Filament/Pages，PanelProvider 移除硬编码 isEnabled 判断；停用即消失
+- [x] 缺口 C Slots 通用插槽：新增 body_top（公告横幅）/footer_before（信任徽章）+ 布局渲染点，共 4 插槽位
+- [x] 插件开发文档：事件表扩至 5 事件 + 新增 4.5 后台页约定 / 4.6 插槽位清单
+- [x] 教训落袋：中途一次批量 sed 脚本毁掉 5 个 PHP 文件与 1 个文档——git checkout 全部恢复；此后文件修改一律走 Edit/PHP 常量拼接，杜绝 shell 双引号插值
+- [x] 测试 +7（事件契约/反射锁定钩子/页面发现/插槽位），全套 **91/91（392 断言）**；git 发版 v1.0.2
+
 **M3 剩余路线（按优先级）**
 
 - [ ] 搜索与筛选升级：Meilisearch 接入（多语言分词 + 全属性分面）
