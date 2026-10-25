@@ -29,7 +29,16 @@ class AppServiceProvider extends ServiceProvider
                 'database.default' => 'sqlite',
             ]);
             if (blank(config('app.key'))) {
-                config(['app.key' => 'base64:'.base64_encode(random_bytes(32))]);
+                // 密钥必须跨请求稳定（会话 Cookie 用它加解密）：
+                // 生成一次写入 storage/app/install.key，后续请求复用
+                $keyFile = storage_path('app/install.key');
+                if (is_file($keyFile)) {
+                    config(['app.key' => (string) file_get_contents($keyFile)]);
+                } else {
+                    $generated = 'base64:'.base64_encode(random_bytes(32));
+                    config(['app.key' => $generated]);
+                    @file_put_contents($keyFile, $generated);
+                }
             }
         }
     }
