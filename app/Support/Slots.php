@@ -7,8 +7,12 @@ namespace App\Support;
  * 布局在对应位置渲染。模块停用后 Provider 不再执行，注入自动消失。
  *
  * 预定义插槽：
- * - head     </head> 前（meta/样式）
- * - floating 页面右下角浮动层（客服挂件等）
+ * - head          </head> 前（meta/样式）
+ * - floating      页面右下角浮动层（客服挂件等）
+ * - body_top      正文顶部（公告横幅/活动条）
+ * - footer_before 页脚上方（信任徽章行/订阅表单）
+ *
+ * 插件注册：Provider boot 里 Slots::push('body_top', 'pluginname::banner');
  */
 class Slots
 {

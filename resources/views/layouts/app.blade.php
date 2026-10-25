@@ -70,10 +70,18 @@
 </header>
 
 <main class="site-main">
+    {{-- 插件插槽：正文顶部（公告横幅/活动条等） --}}
+    @foreach(\App\Support\Slots::get('body_top') as $bodyTopView)
+        @include($bodyTopView)
+    @endforeach
     @yield('content')
 </main>
 
 <footer class="site-footer">
+    {{-- 插件插槽：页脚上方（信任徽章行/订阅表单等） --}}
+    @foreach(\App\Support\Slots::get('footer_before') as $footerView)
+        @include($footerView)
+    @endforeach
     {{-- 插件浮动插槽（客服挂件等） --}}
     @foreach(\App\Support\Slots::get('floating') as $floatingView)
         @include($floatingView)

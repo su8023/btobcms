@@ -106,7 +106,9 @@ class UpdateCenterTest extends TestCase
             $this->markTestSkipped('非 git 检出环境');
         }
         $git = new GitService('git', base_path());
-        $this->assertNotNull($git->currentTag());
+        // 允许 tag 后有后续提交：用 --tags 宽松描述验证 tag 可达
+        $r = $git->run(['describe', '--tags']);
+        $this->assertSame(0, $r['exit'], '仓库应存在可描述的 tag');
         $this->assertTrue($git->tagExists('v1.0.0'));
         $this->assertTrue($git->hasRemote() === false || $git->hasRemote() === true); // 本地无 remote 合法
     }

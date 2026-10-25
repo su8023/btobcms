@@ -43,17 +43,12 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
-            ->pages(array_values(array_filter([
-                Dashboard::class,
-                // SEO 巡检报告页仅在其插件启用时注册
-                \Nwidart\Modules\Facades\Module::isEnabled('AiSeoAuditor')
-                    ? \Modules\AiSeoAuditor\Filament\Pages\SeoAuditReports::class
-                    : null,
-                // 更新中心页仅在其插件启用时注册
-                \Nwidart\Modules\Facades\Module::isEnabled('UpdateCenter')
-                    ? \Modules\UpdateCenter\Filament\Pages\UpdateCenterPage::class
-                    : null,
-            ])))
+            // 插件后台页面：约定式自动发现 Modules/{Name}/app/Filament/Pages/*.php
+            // 插件自带后台页零核心改动；模块停用后 Provider 不加载，页面自动消失
+            ->pages(array_merge(
+                [Dashboard::class],
+                \App\Support\PluginPages::discover(),
+            ))
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
                 AccountWidget::class,

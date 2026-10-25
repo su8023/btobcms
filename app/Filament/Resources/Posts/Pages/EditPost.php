@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Posts\Pages;
 
+use App\Events\PostPublished;
 use App\Filament\Resources\Posts\PostResource;
 use App\Models\Product;
 use App\Filament\Concerns\SavesSeoAndMedia;
@@ -14,6 +15,14 @@ use Illuminate\Support\Str;
 class EditPost extends EditRecord
 {
     protected static string $resource = PostResource::class;
+
+    protected function afterSave(): void
+    {
+        if ((string) $this->getRecord()->status === 'published'
+            && (string) $this->getRecord()->getOriginal('status') !== 'published') {
+            PostPublished::dispatch($this->getRecord());
+        }
+    }
 
     use SavesSeoAndMedia;
 

@@ -122,7 +122,7 @@ Modules/FeishuNotifier/
 
 ---
 
-## 4. 四个扩展点
+## 4. 扩展点（插件挂载契约）
 
 ### 4.1 事件监听（最常用）
 
@@ -131,6 +131,9 @@ Modules/FeishuNotifier/
 | 事件类 | 载荷 | 触发时机 |
 |---|---|---|
 | `App\Events\InquiryCreated` | `$event->inquiry`（含客户信息/UTM/落地页/关联产品） | 新询盘入库且非垃圾（蜜罐拦截的不触发） |
+| `App\Events\InquiryStatusChanged` | `$event->inquiry / oldStatus / newStatus` | 后台修改询盘状态且真变化（CRM 同步/战报推送） |
+| `App\Events\PostPublished` | `$event->post` | 文章从草稿/审核转为已发布（新建即发布也算） |
+| `App\Events\ProductSaved` | `$event->product / created(bool)` | 产品后台保存（电商平台同步/索引重建/价格监控） |
 | `Modules\AiSeoAuditor\Events\SeoAuditFinished` | `$baseUrl / $pagesChecked / $issueCount / $summary / $reportPath` | 每次巡检完成 |
 
 **注册方式**（在模块主 Provider 的 `boot()` 中，照抄 `FeishuNotifierServiceProvider`）：
@@ -290,3 +293,20 @@ php artisan module:migrate MyPlugin     # 执行该插件的迁移
 - **前台插槽（Slots）**：核心 Blade 布局将暴露 `product_sidebar`、`inquiry_form_after`、`footer` 等插槽位，插件通过 Provider 注册视图片段注入（客户挂件、信任徽章等场景）。
 - **后台菜单注入**：`module.json` 声明导航项，Filament 面板自动挂载插件的设置页。
 - **出站 Webhook**：核心事件同时支持转发到外部 HTTP 端点（对接 Zapier / 企业自有系统）。
+
+### 4.5 后台页面（约定式自动发现）
+
+插件自带后台页零核心改动：放到 `Modules/{Name}/app/Filament/Pages/{AnyPage}.php`
+（类 `Modules\{Name}\Filament\Pages\{AnyPage}`，继承 `Filament\Pages\Page`）即自动注册；
+模块停用自动从导航消失。参照 `UpdateCenter` 的更新中心页。
+
+### 4.6 前台插槽位（Slots）
+
+| 插槽名 | 位置 | 典型用途 |
+|---|---|---|
+| `head` | `</head>` 前 | meta/样式/验证码脚本 |
+| `body_top` | 正文顶部 | 公告横幅/活动条 |
+| `floating` | 右下角浮动层 | 客服挂件 |
+| `footer_before` | 页脚上方 | 信任徽章/订阅表单 |
+
+注册：`Slots::push('body_top', 'myplugin::banner');`（视图放 `Modules/MyPlugin/resources/views/banner.blade.php`）。

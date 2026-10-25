@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Inquiries\Pages;
 
+use App\Events\InquiryStatusChanged;
 use App\Filament\Resources\Inquiries\InquiryResource;
 use App\Mail\InquiryReply;
 use App\Models\Inquiry;
@@ -19,6 +20,16 @@ use Throwable;
 class EditInquiry extends EditRecord
 {
     protected static string $resource = InquiryResource::class;
+
+    protected function afterSave(): void
+    {
+        // 状态流转事件：插件可挂 CRM 同步 / 战报推送（只在真变化时触发）
+        $old = $this->getRecord()->getOriginal('status');
+        $new = $this->getRecord()->status;
+        if ($old !== null && (string) $old !== (string) $new) {
+            InquiryStatusChanged::dispatch($this->getRecord(), (string) $old, (string) $new);
+        }
+    }
 
     protected function getHeaderActions(): array
     {
