@@ -96,6 +96,17 @@
 - [x] 宝塔手册改为一键安装流程（第 6-7 节重写）
 - [x] 开发库 seeder 重构：DatabaseSeeder（默认 admin+内容）→ ContentSeeder 抽出 → DemoContentSeeder（仅内容，生产可选）
 
+**已完成 — 更新中心：GitHub 版本化 + 后台一键升级（2026-10-26 第九轮）**
+
+- [x] git 仓库就绪：.gitignore 补丁（sqlite/安装锁/审计报告/备份），首提交 528 文件（零敏感文件），tag v1.0.0 → v1.0.1
+- [x] UpdateCenter 插件（category=system）：GitHubReleases 客户端（latest/列表/变更说明/prerelease 跳过/限流与 404 友好报错，token 支持私有仓库）、GitService 薄封装（tag 检出/dirty 检查/fetch/checkout）、Updater 编排器（维护模式 → 数据库备份 MySQL+SQLite → git 切换 → composer install → migrate → optimize → 恢复访问；任一步失败自动回滚+尽力 up）、RunUpdate 队列任务（timeout 900s，进度写日志文件）
+- [x] Filament 更新中心页：三卡版本对比（含 git tag 检出状态）、最新版变更说明、历史版本列表（可升任意版本）、一键更新确认弹窗、5 秒轮询执行日志、导航新版本红点 badge；前置体检（git 未装/非仓库/无远程/工作区 dirty）阻断并列出人话原因
+- [x] 版本源：config/version.php（v1.0.1），git tag 与之一致
+- [x] 双语文案（admin.php ×2）+ 插件设置面板（repo/token/git/composer 路径）+ 面板条件注册
+- [x] 修复：module.json JSON 语法（PHP json_encode 生成杜绝手写转义）、composer.json PSR-4 注册、Filament slug、Livewire 视图方法调用（$this->）
+- [x] 测试 7 个（API 映射/prerelease/限流异常/未配置降级/配置后渲染/模块结构/git tag），全套 **84/84（380 断言）**；浏览器验证：页面渲染/中文文案/未配置引导/日志区
+- [x] 文档：docs/update-center.md（GitHub 建仓/Deploy Key/git 部署/发版流程/回滚/FAQ）+ 宝塔手册部署方式改 git clone 优先
+
 **M3 剩余路线（按优先级）**
 
 - [ ] 搜索与筛选升级：Meilisearch 接入（多语言分词 + 全属性分面）
