@@ -1,0 +1,17 @@
+{
+    "name": "AutoSeo",
+    "alias": "autoseo",
+    "description": "全自动 SEO：文章发布即自动生成 SEO 标题/描述（AI）、推送到 IndexNow 搜索引擎网络（Bing/Yandex 即时收录）、自动刷新 sitemap 时间戳。零人工干预。",
+    "keywords": [
+        "seo",
+        "indexnow",
+        "automation"
+    ],
+    "priority": 0,
+    "providers": [
+        "Modules\\AutoSeo\\Providers\\AutoSeoServiceProvider"
+    ],
+    "files": [],
+    "category": "seo",
+    "version": "1.0.0"
+}

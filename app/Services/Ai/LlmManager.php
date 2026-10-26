@@ -53,6 +53,7 @@ class LlmManager
             'error' => $ok ? null : mb_substr($response->body(), 0, 2000),
         ]);
 
+        if (app()->environment("testing")) { logger()->info("llm resp", ["status" => $response->status(), "body" => mb_substr($response->body(), 0, 60), "url_used" => rtrim($provider["base_url"], "/")."/chat/completions", "model" => $provider["model"]]); }
         if (! $ok) {
             throw new RuntimeException(
                 "LLM 调用失败 [{$providerName}]：".mb_substr($response->body(), 0, 300)

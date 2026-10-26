@@ -4,5 +4,6 @@
     "AiContentWriter": true,
     "MailNotifier": true,
     "WhatsAppChat": true,
-    "UpdateCenter": true
+    "UpdateCenter": true,
+    "AutoSeo": true
 }

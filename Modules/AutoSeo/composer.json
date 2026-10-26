@@ -1,0 +1,8 @@
+{
+    "name": "modules/auto-seo",
+    "autoload": {
+        "psr-4": {
+            "Modules\\AutoSeo\\": "app/"
+        }
+    }
+}
