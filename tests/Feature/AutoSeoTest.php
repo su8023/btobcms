@@ -64,6 +64,7 @@ class AutoSeoTest extends TestCase
         $tdkContent = json_encode([
             'seo_title' => 'Valve Sourcing Guide | Aples',
             'seo_description' => 'Complete guide to sourcing stainless steel valves from China with AQL quality control and OEM support.',
+            'keywords' => 'valve supplier, stainless valve, China manufacturer',
         ], JSON_UNESCAPED_UNICODE);
         $tdkBody = [
             'choices' => [['message' => ['content' => $tdkContent]]],
@@ -119,7 +120,7 @@ class AutoSeoTest extends TestCase
 
     public function test_ai_seo_generation_skipped_when_meta_complete(): void
     {
-        // 标题+描述都齐的 TDK 不重复生成（省 token）；IndexNow 推送照常
+        // 标题+描述+关键词都齐的 TDK 不重复生成（省 token）；IndexNow 推送照常
         $post = Post::create([
             'type' => 'post',
             'slug' => 'has-meta-'.uniqid(),
@@ -133,6 +134,7 @@ class AutoSeoTest extends TestCase
             'metable_id' => $post->id,
             'title' => ['en' => 'Existing SEO Title'],
             'description' => ['en' => 'Existing SEO description with enough text.'],
+            'keywords' => ['en' => 'existing, keywords'],
         ]);
 
         Http::fake(['*' => Http::response([], 200)]);

@@ -118,6 +118,11 @@ class AiStudioTest extends TestCase
         $this->assertSame(Post::STATUS_DRAFT, $post->status, '必须是草稿态（待人工审）');
         $this->assertTrue($post->is_ai_generated);
         $this->assertSame('How to Choose Stainless Steel Valves', $post->getTranslation('title', 'en'));
+
+        // 方案阶段的关键词应直接落到 seo_meta
+        $meta = \App\Models\SeoMeta::where('metable_type', Post::class)->where('metable_id', $post->id)->first();
+        $this->assertNotNull($meta, 'AI 写作室草稿应预置 seo_meta.keywords');
+        $this->assertSame('valve supplier', $meta->getTranslation('keywords', 'en'));
     }
 
     public function test_write_requires_title_and_outline(): void

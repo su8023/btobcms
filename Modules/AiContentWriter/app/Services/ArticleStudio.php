@@ -154,7 +154,7 @@ PROMPT],
 
         $slug = $this->uniqueSlug((string) ($data['slug'] ?? '') ?: Str::slug($title));
 
-        return Post::create([
+        $post = Post::create([
             'type' => 'post',
             'slug' => $slug,
             'status' => Post::STATUS_DRAFT,
@@ -163,6 +163,18 @@ PROMPT],
             'excerpt' => [$lang => (string) ($data['excerpt'] ?? '')],
             'content' => [$lang => (string) ($data['html'] ?? '')],
         ]);
+
+        // 方案阶段的 SEO 关键词直接落库（写完即有，发布时 AutoSeo 只需补标题/描述）
+        $keywords = implode(', ', $plan['keywords'] ?? []);
+        if ($keywords !== '') {
+            \App\Models\SeoMeta::create([
+                'metable_type' => Post::class,
+                'metable_id' => $post->id,
+                'keywords' => [$lang => $keywords],
+            ]);
+        }
+
+        return $post;
     }
 
     protected function extractJson(string $raw): string
