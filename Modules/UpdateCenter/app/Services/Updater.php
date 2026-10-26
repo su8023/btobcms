@@ -100,7 +100,10 @@ class Updater
             // 7. 性能缓存重建
             $this->artisan(['optimize'], $log, '重建 config/route/view 缓存');
 
-            // 8. 恢复访问
+            // 8. 队列 worker 优雅重启（旧代码常驻内存，必须加载新版本）
+            $this->artisan(['queue:restart'], $log, '重启队列 worker');
+
+            // 9. 恢复访问
             $this->artisan(['up'], $log, '退出维护模式');
             $log[] = '=== 更新完成 ✓ 当前版本 '.$targetTag.' ===';
             $this->writeLog($log);
