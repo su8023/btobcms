@@ -77,7 +77,9 @@ class GitService
 
     public function isDirty(): bool
     {
-        return $this->run(['status', '--porcelain'], 30)['out'] !== '';
+        // 只看已跟踪文件的修改：服务器自有文件（宝塔 .user.ini、本地上传产物等）
+        // 是常态，不应阻断更新
+        return $this->run(['status', '--porcelain', '--untracked-files=no'], 30)['out'] !== '';
     }
 
     public function fetch(): void
