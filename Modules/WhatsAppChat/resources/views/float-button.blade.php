@@ -10,7 +10,10 @@
 @endphp
 @if($waEnabled && $waPhone !== '')
     @php
-        $waUrl = 'https://wa.me/'.$waPhone.'?text='.urlencode((string) plugin_setting('whatsapp-chat', 'message', ''));
+        // wa.me 要求纯数字国际号码（如 85291986504）：
+        // 去掉 + 号、空格、连字符、括号——带 + 的链接在安卓 WhatsApp 上打不开会话
+        $waPhoneDigits = preg_replace('/[^0-9]/', '', $waPhone);
+        $waUrl = 'https://wa.me/'.$waPhoneDigits.'?text='.urlencode((string) plugin_setting('whatsapp-chat', 'message', ''));
         $waLabel = $waBubble !== '' ? $waBubble : 'Chat on WhatsApp';
     @endphp
     <style>
