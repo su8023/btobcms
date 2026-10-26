@@ -51,7 +51,11 @@ class UpdateCenterPage extends Page
         }
         $latest = $client->latest();
 
-        return ($latest !== null && $latest['tag'] !== config('version.version') && $latest['tag'] !== '') ? '!' : null;
+        // 版本比对以 git tag 为准（config/version.php 可能滞后）
+        $current = \Modules\UpdateCenter\Services\GitService::fromSettings()->currentTag()
+            ?? (string) config('version.version');
+
+        return ($latest !== null && $latest['tag'] !== $current && $latest['tag'] !== '') ? '!' : null;
     }
 
     // ---- 页面数据 ----
@@ -80,13 +84,16 @@ class UpdateCenterPage extends Page
 
     public function mount(): void
     {
-        $this->currentVersion = (string) config('version.version');
         $this->configured = GitHubReleases::fromSettings() !== null;
         $this->repo = (string) plugin_setting('update-center', 'github_repo', '');
 
         $git = \Modules\UpdateCenter\Services\GitService::fromSettings();
         $this->gitTag = $git->currentTag();
         $this->gitCommit = $git->currentCommit();
+
+        // 当前版本以 git tag 为准（自愈）：config/version.php 可能因断链停留在旧值
+        $this->currentVersion = $this->gitTag ?? (string) config('version.version');
+
         $this->preflightProblems = $this->configured ? Updater::fromSettings()->preflight() : [];
 
         if (! $this->configured) {

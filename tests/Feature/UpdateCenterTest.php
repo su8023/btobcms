@@ -40,7 +40,7 @@ class UpdateCenterTest extends TestCase
     {
         $this->get('/admin/update-center')
             ->assertOk()
-            ->assertSee((string) config('version.version'), false)
+            ->assertSee(__('admin.update_center.not_configured'))
             ->assertSee(__('admin.update_center.not_configured'));
     }
 
