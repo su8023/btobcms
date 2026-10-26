@@ -99,6 +99,12 @@ class InstallController extends Controller
         } catch (Throwable) {
         }
 
+        // 发布 Livewire 静态资源：避免生产模式 JS 走 404 状态路由（部分浏览器/代理拒绝执行导致登录无响应）
+        try {
+            Artisan::call('vendor:publish', ['--tag' => 'livewire:assets', '--force' => true]);
+        } catch (Throwable) {
+        }
+
         if (! is_link(public_path('storage'))) {
             try {
                 Artisan::call('storage:link');
