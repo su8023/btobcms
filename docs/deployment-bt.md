@@ -27,20 +27,29 @@
 装好后进 **PHP 8.4 → 设置 → 安装扩展**，确认以下已装（未装的点安装）：
 
 ```
-fileinfo  gd(curl 自带)  intl  bcmath  zip  exif  redis(暂不需要)  pdo_mysql
+fileinfo  pcntl(队列必需)  intl  bcmath  zip  exif  pdo_mysql
 ```
 
-（mbstring/openssl/xml 等默认自带。）
+（mbstring/openssl/xml/gd 等默认自带。）
+
+> ⚠️ **海外服务器**：扩展从国内源下载源码编译，常超时失败。先在软件商店 → 右上角设置 → 切换**境外线路**，再装。
+> 扩展编译报 `Cannot find autoconf`：终端执行 `apt update && apt install -y autoconf automake gcc make` 后重试。
 
 ## 2. 放开 PHP 禁用函数（关键坑）
 
 **PHP 8.4 → 设置 → 禁用函数**，删除以下函数（Composer 与 artisan 需要）：
 
 ```
-putenv  proc_open  proc_get_status  symlink  pcntl_signal
+putenv  proc_open  proc_get_status  symlink
+pcntl_signal  pcntl_async_signals  pcntl_alarm  pcntl_fork
+pcntl_wait  pcntl_waitpid  pcntl_get_last_error
 ```
 
-不放开的表现：composer 报错、`storage:link` 失败、队列启动失败。
+**以及列表里所有 `pcntl` 开头的函数，全部删除**（队列 worker 靠它们处理信号，不删会反复崩溃报 `Call to undefined function pcntl_signal()`）。
+
+不放开的表现：composer 报错、`storage:link` 失败、**队列 worker 反复崩溃**。
+
+> 删完到「服务」标签重启一次 PHP 8.4 确保生效；验证：`php -r "var_dump(function_exists('pcntl_signal'));"` 输出 true。
 
 ## 3. 创建站点
 
@@ -154,6 +163,8 @@ client_max_body_size 20m;
 
 ### 9a. 队列 worker（邮件/飞书通知靠它）
 
+> 前提：第 2 步的 pcntl 禁用函数已全部放开、pcntl 扩展已安装——否则任务会反复崩溃进入 FATAL。
+
 装宝塔插件 **「进程守护管理器」（Supervisor）** → 添加守护进程：
 
 - 名称：`btobcms-queue`
@@ -247,6 +258,8 @@ location ~ /\.(env|git) { deny all; }
 | 页面样式全丢 | 运行目录没选 /public 或伪静态没配 |
 | 上传插件 zip 失败 | `chmod -R 775 storage`；zip 里不能多包一层目录 |
 | 后台登录按钮无反应/登录后弹回 | Livewire 脚本未加载：v1.0.6 起安装时自动发布静态资源。老站点修复：`php artisan vendor:publish --tag=livewire:assets --force` |
+| 队列 worker 报 `Call to undefined function pcntl_signal()` | pcntl 函数仍在禁用列表——见第 2 步全部删除；或 pcntl 扩展未装——见第 1 步 |
+| 扩展安装失败（日志报 autoconf / 下载超时） | 装 autoconf（`apt install -y autoconf automake gcc make`）；海外服务器切换软件商店境外线路重试 |
 
 ## 重装（已部署站点重新走安装向导）
 
