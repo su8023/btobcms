@@ -138,8 +138,15 @@ class Updater
 
     private function composerInstall(array &$log, bool $quiet = false): void
     {
+        // 队列 worker 环境可能没有 HOME（composer 必需）——指向站点内可写目录
+        $composerHome = storage_path('app/composer-home');
+        if (! is_dir($composerHome)) {
+            @mkdir($composerHome, 0775, true);
+        }
+
         $result = Process::path(base_path())
             ->timeout(600)
+            ->env(['HOME' => $composerHome, 'COMPOSER_HOME' => $composerHome])
             ->run([$this->composer, 'install', '--no-dev', '--optimize-autoloader', '--no-interaction']);
         if ($result->exitCode() !== 0) {
             throw new RuntimeException('composer install 失败：'.mb_substr($result->errorOutput() ?: $result->output(), 0, 300));
