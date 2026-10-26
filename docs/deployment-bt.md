@@ -246,6 +246,7 @@ location ~ /\.(env|git) { deny all; }
 | sitemap 里是 localhost | .env 的 APP_URL 没改 |
 | 页面样式全丢 | 运行目录没选 /public 或伪静态没配 |
 | 上传插件 zip 失败 | `chmod -R 775 storage`；zip 里不能多包一层目录 |
+| 后台登录按钮无反应/登录后弹回 | Livewire 脚本未加载：v1.0.6 起安装时自动发布静态资源。老站点修复：`php artisan vendor:publish --tag=livewire:assets --force` |
 
 ## 重装（已部署站点重新走安装向导）
 
