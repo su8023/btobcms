@@ -34,7 +34,6 @@ class StudioController extends Controller
                 $data['lang'] ?? 'en',
             );
         } catch (Throwable $e) {
-            if (app()->environment('testing')) { logger()->info('ctrl plan err', ["m" => $e->getMessage()]); }
             return response()->json(['ok' => false, 'error' => $e->getMessage()], 422);
         }
 
@@ -62,7 +61,6 @@ class StudioController extends Controller
         try {
             $post = $studio->write($data['plan'], $data['lang'] ?? 'en', $data['words'] ?? null);
         } catch (Throwable $e) {
-            if (app()->environment('testing')) { logger()->info('ctrl plan err', ["m" => $e->getMessage()]); }
             return response()->json(['ok' => false, 'error' => $e->getMessage()], 422);
         }
 
