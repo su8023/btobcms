@@ -34,6 +34,22 @@ class GitHubReleases
      */
     public function releases(int $perPage = 20): array
     {
+        // 结果缓存 30 分钟：导航徽章每次后台加载都会读取，
+        // 匿名限流 60 次/小时会很快耗尽并导致更新中心报错
+        return cache()->remember(
+            'update-center.releases.'.md5($this->repo.'|'.$this->token),
+            now()->addMinutes(30),
+            fn () => $this->fetchReleases($perPage),
+        );
+    }
+
+    /**
+     * @return array<int, array{tag: string, name: string, date: ?string, notes: string, url: string, prerelease: bool}>
+     *
+     * @throws ConnectionException|\RuntimeException
+     */
+    protected function fetchReleases(int $perPage): array
+    {
         $response = Http::timeout(10)
             ->withHeaders(array_filter([
                 'Authorization' => $this->token !== '' ? 'Bearer '.$this->token : null,
