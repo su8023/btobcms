@@ -9,6 +9,7 @@ use App\Http\Controllers\Site\PostController;
 use App\Http\Controllers\Site\ProductController;
 use App\Http\Controllers\Site\ServiceController;
 use App\Http\Controllers\Site\SitemapController;
+use App\Http\Middleware\DetectVisitorLocale;
 use App\Http\Middleware\SetLocale;
 use Illuminate\Support\Facades\Route;
 
@@ -45,7 +46,7 @@ $registerSiteRoutes = function (string $locale): void {
 
 $default = config('site.default_locale');
 
-Route::middleware([SetLocale::class.":{$default}"])
+Route::middleware([DetectVisitorLocale::class, SetLocale::class.":{$default}"])
     ->group(function () use ($registerSiteRoutes, $default) {
         $registerSiteRoutes($default);
     });
