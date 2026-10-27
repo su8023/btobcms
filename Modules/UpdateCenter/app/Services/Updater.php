@@ -72,7 +72,7 @@ class Updater
 
         try {
             // 1. 维护模式（访客看到 503 维护页，不是报错页面）
-            $this->artisan(['down'], $log, '进入维护模式');
+            $this->artisan('down', [], $log, '进入维护模式');
 
             // 2. 数据库备份（失败即中止——没有退路的更新不做）
             $backupFile = $this->backupDatabase($log);
@@ -95,16 +95,16 @@ class Updater
             $this->composerInstall($log);
 
             // 6. 数据库迁移
-            $this->artisan(['migrate', '--force'], $log, '数据库迁移');
+            $this->artisan('migrate', ['--force' => true], $log, '数据库迁移');
 
             // 7. 性能缓存重建
-            $this->artisan(['optimize'], $log, '重建 config/route/view 缓存');
+            $this->artisan('optimize', [], $log, '重建 config/route/view 缓存');
 
             // 8. 队列 worker 优雅重启（旧代码常驻内存，必须加载新版本）
-            $this->artisan(['queue:restart'], $log, '重启队列 worker');
+            $this->artisan('queue:restart', [], $log, '重启队列 worker');
 
             // 9. 恢复访问
-            $this->artisan(['up'], $log, '退出维护模式');
+            $this->artisan('up', [], $log, '退出维护模式');
             $log[] = '=== 更新完成 ✓ 当前版本 '.$targetTag.' ===';
             $this->writeLog($log);
 
@@ -115,14 +115,14 @@ class Updater
             try {
                 $this->git->checkout($startingTag);
                 $this->composerInstall($log, quiet: true);
-                $this->artisan(['optimize'], $log, '回滚后重建缓存', quiet: true);
-                $this->artisan(['up'], $log, '恢复访问', quiet: true);
+                $this->artisan('optimize', [], $log, '回滚后重建缓存', quiet: true);
+                $this->artisan('up', [], $log, '恢复访问', quiet: true);
                 $log[] = '>>> 回滚完成，站点已恢复 '.$startingTag.' 版本';
             } catch (Throwable $rollbackError) {
                 $log[] = '!!! 回滚也失败：'.$rollbackError->getMessage();
                 $log[] = '!!! 请人工介入：ssh 到服务器执行 git checkout '.$startingTag.' 与 php artisan up';
                 try {
-                    $this->artisan(['up'], $log, '尽力恢复访问', quiet: true);
+                    $this->artisan('up', [], $log, '尽力恢复访问', quiet: true);
                 } catch (Throwable) {
                 }
             }
@@ -131,9 +131,9 @@ class Updater
         }
     }
 
-    private function artisan(array $command, array &$log, string $label, bool $quiet = false): void
+    private function artisan(string $command, array $parameters, array &$log, string $label, bool $quiet = false): void
     {
-        Artisan::call($command[0], array_slice($command, 1) ?: []);
+        Artisan::call($command, $parameters);
         $out = trim(Artisan::output());
         $log[] = ($quiet ? '' : '✓ ').$label.($out !== '' && ! $quiet ? '：'.mb_substr($out, 0, 120) : '');
         $this->writeLog($log);
