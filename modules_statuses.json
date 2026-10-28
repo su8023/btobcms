@@ -7,5 +7,6 @@
     "UpdateCenter": true,
     "AutoSeo": true,
     "LinkWeaver": true,
-    "LeadLens": true
+    "LeadLens": true,
+    "GeoBoost": true
 }

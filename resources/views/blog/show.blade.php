@@ -18,6 +18,10 @@
                 <p class="article-excerpt">{{ $post->excerpt }}</p>
             @endif
             <div class="article-body">{!! $post->content !!}</div>
+
+            @foreach(\App\Support\Slots::get('post_bottom') as $postBottomView)
+                @include($postBottomView)
+            @endforeach
         </article>
 
         <a class="btn btn-ghost" href="{{ localized_route('blog.index') }}">← {{ __('site.blog.back') }}</a>

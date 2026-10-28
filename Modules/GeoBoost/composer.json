@@ -1,0 +1,8 @@
+{
+    "name": "modules/geo-boost",
+    "autoload": {
+        "psr-4": {
+            "Modules\\GeoBoost\\": "app/"
+        }
+    }
+}

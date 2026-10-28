@@ -1,0 +1,13 @@
+{
+    "name": "GeoBoost",
+    "alias": "geo-boost",
+    "description": "GEO 生成式引擎优化：文章 FAQ 结构化数据（FAQPage JSON-LD，同时拿谷歌富摘要）、AI 引擎来访追踪看板（ChatGPT/Perplexity 等引流趋势）、动态 llms.txt 增强近期文章。零 token 成本看板 + 可控 AI 调用。",
+    "keywords": ["geo", "faq", "ai-search"],
+    "priority": 0,
+    "providers": [
+        "Modules\\GeoBoost\\Providers\\GeoBoostServiceProvider"
+    ],
+    "files": [],
+    "category": "growth",
+    "version": "1.0.0"
+}

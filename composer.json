@@ -52,6 +52,7 @@
             "Modules\\AutoSeo\\": "Modules/AutoSeo/app/",
             "Modules\\LinkWeaver\\": "Modules/LinkWeaver/app/",
             "Modules\\LeadLens\\": "Modules/LeadLens/app/",
+            "Modules\\GeoBoost\\": "Modules/GeoBoost/app/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/"
         }

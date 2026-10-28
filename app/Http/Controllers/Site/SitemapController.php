@@ -57,10 +57,13 @@ class SitemapController extends Controller
             "Disallow: /admin\n\n".
             // GEO：明确欢迎 AI 搜索引擎抓取（生成式引擎优化）
             "User-agent: GPTBot\nAllow: /\n\n".
+            "User-agent: OAI-SearchBot\nAllow: /\n\n".
+            "User-agent: ChatGPT-User\nAllow: /\n\n".
             "User-agent: ClaudeBot\nAllow: /\n\n".
             "User-agent: PerplexityBot\nAllow: /\n\n".
             "User-agent: Google-Extended\nAllow: /\n\n".
             "User-agent: Applebot-Extended\nAllow: /\n\n".
+            "User-agent: Bytespider\nAllow: /\n\n".
             'Sitemap: '.route('sitemap.index')."\n";
 
         return response($content, 200)->header('Content-Type', 'text/plain; charset=UTF-8');
@@ -136,6 +139,25 @@ class SitemapController extends Controller
             foreach ($products as $product) {
                 $link = localized_route('products.show', ['slug' => $product->slug]);
                 $lines[] = '- ['.$product->name.']('.$link.')';
+            }
+        }
+
+        // 近期文章 + 一句话摘要：AI 引擎引用内容的直接素材（含 excerpt 才列出）
+        $posts = Post::published()
+            ->where('type', 'post')
+            ->orderByDesc('published_at')
+            ->take(15)
+            ->get()
+            ->filter(fn ($post) => filled($post->excerpt));
+
+        if ($posts->isNotEmpty()) {
+            $lines[] = '';
+            $lines[] = '## Recent articles';
+            $lines[] = '';
+
+            foreach ($posts as $post) {
+                $link = localized_route('blog.show', ['slug' => $post->slug]);
+                $lines[] = '- ['.$post->title.']('.$link.'): '.mb_substr(strip_tags((string) $post->excerpt), 0, 140);
             }
         }
 
