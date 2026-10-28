@@ -28,33 +28,37 @@ class EditPost extends EditRecord
 
     protected function getHeaderActions(): array
     {
-        return [
-            Action::make('replaceLinks')
-                ->label(__('admin.posts.replace_links'))
-                ->icon('heroicon-o-link')
-                ->color('gray')
-                ->action(fn () => $this->replaceProductLinks()),
+        return array_merge(
+            // 插件提供的编辑器动作（AI 填充/翻译/SEO 体检等，约定式发现）
+            \App\Support\PluginPostActions::forPage('edit'),
+            [
+                Action::make('replaceLinks')
+                    ->label(__('admin.posts.replace_links'))
+                    ->icon('heroicon-o-link')
+                    ->color('gray')
+                    ->action(fn () => $this->replaceProductLinks()),
 
-            Action::make('publish')
-                ->label(__('admin.posts.publish'))
-                ->icon('heroicon-o-check-circle')
-                ->color('success')
-                ->requiresConfirmation()
-                ->visible(fn () => $this->record->status !== 'published')
-                ->action(function (): void {
-                    $this->record->update([
-                        'status' => 'published',
-                        'published_at' => $this->record->published_at ?? now(),
-                    ]);
+                Action::make('publish')
+                    ->label(__('admin.posts.publish'))
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->visible(fn () => $this->record->status !== 'published')
+                    ->action(function (): void {
+                        $this->record->update([
+                            'status' => 'published',
+                            'published_at' => $this->record->published_at ?? now(),
+                        ]);
 
-                    Notification::make()
-                        ->title(__('admin.posts.published'))
-                        ->success()
-                        ->send();
-                }),
+                        Notification::make()
+                            ->title(__('admin.posts.published'))
+                            ->success()
+                            ->send();
+                    }),
 
-            DeleteAction::make(),
-        ];
+                DeleteAction::make(),
+            ],
+        );
     }
 
     /**

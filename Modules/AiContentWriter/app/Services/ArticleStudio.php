@@ -19,7 +19,15 @@ class ArticleStudio
     public function __construct(
         private readonly LlmManager $llm,
     ) {
-        // 自定义模型：数据库设置优先于 .env（仅本插件生成时生效）
+        self::applyCustomProvider();
+    }
+
+    /**
+     * 自定义模型覆盖：数据库设置优先于 .env（写作室与翻译共用）。
+     * 静态方法供各服务构造器调用，保证无论先实例化谁覆盖都生效。
+     */
+    public static function applyCustomProvider(): void
+    {
         $baseUrl = (string) plugin_setting('ai-content-writer', 'custom_base_url', '');
         $apiKey = (string) plugin_setting('ai-content-writer', 'custom_api_key', '');
         $model = (string) plugin_setting('ai-content-writer', 'custom_model', '');
@@ -95,14 +103,31 @@ PROMPT],
     }
 
     /**
-     * 第二步：按（可能被用户编辑过的）方案生成全文并建草稿。
+     * 编辑页「AI 填充」用：按方案生成内容但不落库，返回原始产物。
      *
-     * @param  array{title: string, outline: list<array{h2: string, points: list<string>}>, keywords: list<string>, faq: list<string>, angle?: string}  $plan
-     * @return Post
+     * @param  array{title: string, outline: list<array{h2: string, points: list<string>}>, keywords: list<string>, faq: list<array{q: string}>, angle?: string}  $plan
+     * @return array{slug: string, excerpt: string, html: string, keywords: list<string>}
      *
      * @throws RuntimeException
      */
-    public function write(array $plan, string $lang = 'en', ?int $words = null): Post
+    public function compose(array $plan, string $lang = 'en', ?int $words = null): array
+    {
+        $generated = $this->generateContent($plan, $lang, $words);
+
+        return [
+            'slug' => $generated['slug'],
+            'excerpt' => $generated['excerpt'],
+            'html' => $generated['html'],
+            'keywords' => array_values(array_map('strval', $plan['keywords'] ?? [])),
+        ];
+    }
+
+    /**
+     * @return array{slug: string, excerpt: string, html: string}
+     *
+     * @throws RuntimeException
+     */
+    protected function generateContent(array $plan, string $lang, ?int $words): array
     {
         $title = trim((string) ($plan['title'] ?? ''));
         if ($title === '' || empty($plan['outline'])) {
@@ -148,11 +173,31 @@ PROMPT],
         ], purpose: 'article.generate');
 
         $data = json_decode($this->extractJson($raw), true);
-        if (! is_array($data) || blank($data['title'] ?? null) && blank($title)) {
+        if (! is_array($data) || blank($data['html'] ?? null)) {
             throw new RuntimeException('AI 返回的正文无法解析，请重试。');
         }
 
-        $slug = $this->uniqueSlug((string) ($data['slug'] ?? '') ?: Str::slug($title));
+        return [
+            'slug' => (string) ($data['slug'] ?? ''),
+            'excerpt' => (string) ($data['excerpt'] ?? ''),
+            'html' => (string) $data['html'],
+        ];
+    }
+
+    /**
+     * 第二步：按（可能被用户编辑过的）方案生成全文并建草稿。
+     *
+     * @param  array{title: string, outline: list<array{h2: string, points: list<string>}>, keywords: list<string>, faq: list<string>, angle?: string}  $plan
+     * @return Post
+     *
+     * @throws RuntimeException
+     */
+    public function write(array $plan, string $lang = 'en', ?int $words = null): Post
+    {
+        $title = trim((string) ($plan['title'] ?? ''));
+        $generated = $this->generateContent($plan, $lang, $words);
+
+        $slug = $this->uniqueSlug($generated['slug'] ?: Str::slug($title));
 
         $post = Post::create([
             'type' => 'post',
@@ -160,8 +205,8 @@ PROMPT],
             'status' => Post::STATUS_DRAFT,
             'is_ai_generated' => true,
             'title' => [$lang => $title],
-            'excerpt' => [$lang => (string) ($data['excerpt'] ?? '')],
-            'content' => [$lang => (string) ($data['html'] ?? '')],
+            'excerpt' => [$lang => $generated['excerpt']],
+            'content' => [$lang => $generated['html']],
         ]);
 
         // 方案阶段的 SEO 关键词直接落库（写完即有，发布时 AutoSeo 只需补标题/描述）

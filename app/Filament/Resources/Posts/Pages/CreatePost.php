@@ -19,4 +19,10 @@ class CreatePost extends CreateRecord
             PostPublished::dispatch($this->getRecord());
         }
     }
+
+    protected function getHeaderActions(): array
+    {
+        // 插件提供的编辑器动作（AI 填充/SEO 体检等，约定式发现）
+        return \App\Support\PluginPostActions::forPage('create');
+    }
 }
