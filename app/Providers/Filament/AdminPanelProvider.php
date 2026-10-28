@@ -42,6 +42,8 @@ class AdminPanelProvider extends PanelProvider
                 'primary' => Color::Amber,
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
+            // 插件 CRUD 资源：约定式发现 Modules/{Name}/app/Filament/Resources/*Resource.php
+            ->resources(\App\Support\PluginPages::discoverResources())
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             // 插件后台页面：约定式自动发现 Modules/{Name}/app/Filament/Pages/*.php
             // 插件自带后台页零核心改动；模块停用后 Provider 不加载，页面自动消失

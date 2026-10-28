@@ -5,5 +5,7 @@
     "MailNotifier": true,
     "WhatsAppChat": true,
     "UpdateCenter": true,
-    "AutoSeo": true
+    "AutoSeo": true,
+    "LinkWeaver": true,
+    "LeadLens": true
 }

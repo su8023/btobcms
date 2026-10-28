@@ -39,6 +39,14 @@ class Inquiry extends Model
         return $this->hasMany(InquiryItem::class);
     }
 
+    /**
+     * LeadLens 插件提供的评分增强（hasOne，模块停用后不访问即无影响）。
+     */
+    public function enrichment()
+    {
+        return $this->hasOne(\Modules\LeadLens\Models\InquiryEnrichment::class);
+    }
+
     public function followups()
     {
         return $this->hasMany(InquiryFollowup::class)->latest();

@@ -1,0 +1,8 @@
+{
+    "name": "modules/link-weaver",
+    "autoload": {
+        "psr-4": {
+            "Modules\\LinkWeaver\\": "app/"
+        }
+    }
+}

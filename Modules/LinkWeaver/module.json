@@ -1,0 +1,13 @@
+{
+    "name": "LinkWeaver",
+    "alias": "link-weaver",
+    "description": "智能内链网：维护关键词→目标页词典，文章发布时自动在正文首次出现处织入内链（避开已有链接、每篇限量、可追溯撤销），持续把博客权重导向产品/行业页。",
+    "keywords": ["seo", "internal-links", "automation"],
+    "priority": 0,
+    "providers": [
+        "Modules\\LinkWeaver\\Providers\\LinkWeaverServiceProvider"
+    ],
+    "files": [],
+    "category": "seo",
+    "version": "1.0.0"
+}

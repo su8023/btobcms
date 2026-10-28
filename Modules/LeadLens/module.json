@@ -1,0 +1,13 @@
+{
+    "name": "LeadLens",
+    "alias": "lead-lens",
+    "description": "询盘雷达：询盘进来自动增强（邮箱域名企业识别、公司官网猜测）并按规则评分 0~100 打热度标签（热/温/冷），后台按热度排序跟进，销售一眼知道先跟谁。",
+    "keywords": ["leads", "scoring", "crm"],
+    "priority": 0,
+    "providers": [
+        "Modules\\LeadLens\\Providers\\LeadLensServiceProvider"
+    ],
+    "files": [],
+    "category": "growth",
+    "version": "1.0.0"
+}

@@ -1,0 +1,1 @@
+# 占位：Git 不追踪空目录，缺目录会让全新 clone 上 optimize(view:cache) 报错

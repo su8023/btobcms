@@ -1,0 +1,8 @@
+{
+    "name": "modules/lead-lens",
+    "autoload": {
+        "psr-4": {
+            "Modules\\LeadLens\\": "app/"
+        }
+    }
+}

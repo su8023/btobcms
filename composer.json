@@ -50,6 +50,8 @@
             "Modules\\UpdateCenter\\Database\\Factories\\": "Modules/UpdateCenter/database/factories/",
             "Modules\\UpdateCenter\\Database\\Seeders\\": "Modules/UpdateCenter/database/seeders/",
             "Modules\\AutoSeo\\": "Modules/AutoSeo/app/",
+            "Modules\\LinkWeaver\\": "Modules/LinkWeaver/app/",
+            "Modules\\LeadLens\\": "Modules/LeadLens/app/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/"
         }

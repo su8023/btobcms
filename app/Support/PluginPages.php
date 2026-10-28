@@ -39,4 +39,32 @@ class PluginPages
 
         return $pages;
     }
+
+    /**
+     * 插件 CRUD 资源约定式发现（与 discover() 同约定）：
+     *   Modules/{Name}/app/Filament/Resources/{Any}Resource.php
+     *   → 类名 Modules\{Name}\Filament\Resources\{Any}Resource
+     * 仅扫描顶层 *Resource.php，其 Pages/Schemas/Tables 子目录作为资源一部分。
+     */
+    public static function discoverResources(): array
+    {
+        $resources = [];
+
+        foreach (Module::allEnabled() as $module) {
+            $name = $module->getName();
+            $dir = module_path($name, 'app/Filament/Resources');
+            if (! is_dir($dir)) {
+                continue;
+            }
+
+            foreach (glob($dir.'/*Resource.php') ?: [] as $file) {
+                $class = "Modules\\{$name}\\Filament\\Resources\\".basename($file, '.php');
+                if (class_exists($class)) {
+                    $resources[] = $class;
+                }
+            }
+        }
+
+        return $resources;
+    }
 }
