@@ -1,0 +1,2 @@
+# 占位文件：Git 不追踪空目录，nwidart 为每个模块注册 views 命名空间，
+# 缺目录会让 php artisan optimize（view:cache）在全新 clone 上报错。

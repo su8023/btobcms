@@ -133,8 +133,13 @@ class Updater
 
     private function artisan(string $command, array $parameters, array &$log, string $label, bool $quiet = false): void
     {
-        Artisan::call($command, $parameters);
+        $exitCode = Artisan::call($command, $parameters);
         $out = trim(Artisan::output());
+        if ($exitCode !== 0) {
+            // 缓存构建这类失败必须显式暴露：否则 optimize 失败被静默吞掉，
+            // 站点带旧配置继续跑，问题滞后才爆发
+            throw new RuntimeException("{$label} 失败（exit {$exitCode}）：".mb_substr($out, 0, 200));
+        }
         $log[] = ($quiet ? '' : '✓ ').$label.($out !== '' && ! $quiet ? '：'.mb_substr($out, 0, 120) : '');
         $this->writeLog($log);
     }
