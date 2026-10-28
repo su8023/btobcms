@@ -121,4 +121,25 @@ class InstallWizardTest extends TestCase
             'db_database' => '',
         ])->assertSessionHasErrors(['db_database', 'db_host', 'db_username', 'app_name', 'admin_email', 'admin_password']);
     }
+
+    public function test_env_quotes_special_char_credentials(): void
+    {
+        // 宝塔随机密码常见杀手字符：# 空格 $ 引号 反斜杠——裸写进 .env 会被
+        // dotenv 当注释截断或解析报错，装完即数据库连不上
+        $password = 'p@ss #1 $"x" \\end';
+
+        $this->post('/install', [
+            'db_connection' => 'sqlite',
+            'db_database' => 'storage/app/install-test.sqlite',
+            'db_password' => $password,
+            'app_name' => 'X "Quoted" Co',
+            'admin_name' => 'Boss',
+            'admin_email' => 'boss2@example.com',
+            'admin_password' => 'Secret@12345',
+        ])->assertRedirect('/install/done');
+
+        $parsed = \Dotenv\Dotenv::parse(File::get(base_path('.env')));
+        $this->assertSame($password, $parsed['DB_PASSWORD'] ?? null, '特殊字符密码必须无损写入 .env');
+        $this->assertSame('X "Quoted" Co', $parsed['APP_NAME'] ?? null, '含引号的站点名必须无损写入 .env');
+    }
 }

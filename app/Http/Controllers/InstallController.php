@@ -251,10 +251,7 @@ class InstallController extends Controller
         $scheme = request()->isSecure() ? 'https' : 'http';
         $appUrl = $scheme.'://'.request()->getHost();
 
-        $appName = str_replace(['"', "'"], '', $data['app_name']);
-        if (str_contains($appName, ' ')) {
-            $appName = '"'.$appName.'"';
-        }
+        $appName = $this->envValue($data['app_name']);
 
         // SQLite 必须写绝对路径：不同请求/进程的 CWD 不一致时相对路径直接连不上
         $dbDatabase = $db['database'];
@@ -266,6 +263,8 @@ class InstallController extends Controller
         }
 
         // 键不带等号（与下方行内正则捕获组一致），避免重复键：dotenv 不可变模式下首值生效
+        // 密码/用户名等一律经 envValue 引号化：宝塔生成的密码常含 # 空格 $ 等字符，
+        // 裸写会被 dotenv 当注释截断或解析失败，导致安装后数据库连不上
         $replacements = [
             'APP_NAME' => 'APP_NAME='.$appName,
             'APP_ENV' => 'APP_ENV=production',
@@ -274,11 +273,11 @@ class InstallController extends Controller
             'APP_URL' => 'APP_URL='.$appUrl,
             'APP_TIMEZONE' => 'APP_TIMEZONE=Asia/Shanghai',
             'DB_CONNECTION' => 'DB_CONNECTION='.$db['connection'],
-            'DB_HOST' => 'DB_HOST='.$db['host'],
+            'DB_HOST' => 'DB_HOST='.$this->envValue($db['host']),
             'DB_PORT' => 'DB_PORT='.$db['port'],
-            'DB_DATABASE' => 'DB_DATABASE='.$dbDatabase,
-            'DB_USERNAME' => 'DB_USERNAME='.$db['username'],
-            'DB_PASSWORD' => 'DB_PASSWORD='.$db['password'],
+            'DB_DATABASE' => 'DB_DATABASE='.$this->envValue($dbDatabase),
+            'DB_USERNAME' => 'DB_USERNAME='.$this->envValue($db['username']),
+            'DB_PASSWORD' => 'DB_PASSWORD='.$this->envValue($db['password']),
         ];
 
         $lines = [];
@@ -312,6 +311,23 @@ class InstallController extends Controller
         }
 
         File::put(base_path('.env'), implode("\n", $lines)."\n");
+    }
+
+    /**
+     * dotenv 值安全序列化：纯安全字符裸写，其余双引号包裹并转义。
+     * 覆盖密码含 # 空格 $ 引号 反斜杠等宝塔随机密码常见字符。
+     */
+    private function envValue(?string $value): string
+    {
+        $value = (string) $value;
+        if ($value === '') {
+            return '';
+        }
+        if (preg_match('/^[A-Za-z0-9._\-\/:+]+$/', $value)) {
+            return $value;
+        }
+
+        return '"'.str_replace(['\\', '"', '$'], ['\\\\', '\\"', '\$'], $value).'"';
     }
 
     /**

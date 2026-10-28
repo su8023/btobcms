@@ -31,9 +31,11 @@ Thumbs.db
 
 # 项目运行时产物（不上仓库）
 /database/*.sqlite
+/storage/app/*.key
 /storage/app/installed.lock
 /storage/app/seo-audits
 /storage/app/update-center.log
 /storage/app/backups
+/storage/app/composer-home/
 /bootstrap/cache/*.php
 btobcms-deploy-*.zip

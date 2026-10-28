@@ -17,10 +17,14 @@ class DatabaseSeeder extends Seeder
 
     public function run(): void
     {
-        User::firstOrCreate(
-            ['email' => 'admin@btobcms.local'],
-            ['name' => 'Admin', 'password' => 'Admin@2026'],
-        );
+        // 弱密码默认管理员仅限本地/测试环境：生产的管理员由安装向导创建。
+        // 防止生产误跑 php artisan db:seed 后留下 Admin@2026 弱口令账号。
+        if (! app()->environment('production')) {
+            User::firstOrCreate(
+                ['email' => 'admin@btobcms.local'],
+                ['name' => 'Admin', 'password' => 'Admin@2026'],
+            );
+        }
 
         $this->call(ContentSeeder::class);
     }
