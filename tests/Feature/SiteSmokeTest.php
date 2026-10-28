@@ -246,7 +246,7 @@ class SiteSmokeTest extends TestCase
             'message' => 'Need 500 pcs of DN50 gate valves, CIF Los Angeles.',
             'product_ids' => [1],
             'utm' => ['source' => 'google', 'medium' => 'cpc'],
-            'landing_url' => '/product/gate-valve-dn50',
+            'landing_url' => 'https://example.com/product/gate-valve-dn50',
             'source' => 'product',
         ]);
 

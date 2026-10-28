@@ -162,19 +162,20 @@ class PostActions
                 }
 
                 if ($translated !== []) {
-                    // 翻译已改记录：用公开 API 重填表单反映最新内容
+                    // 只填新翻译的语言键（fillPartially）：保留表单里未保存的其他修改，
+                    // 全量 fill 会把已编辑内容的未保存修改静默覆盖回库值
                     $record = $livewire->getRecord();
-                    $data = [];
-                    foreach ($record->translatable ?? [] as $field) {
-                        $data[$field] = $record->getTranslations($field);
-                    }
                     $meta = $record->seoMeta;
-                    $data['seo'] = [
-                        'title' => $meta?->getTranslations('title') ?? [],
-                        'description' => $meta?->getTranslations('description') ?? [],
-                        'keywords' => $meta?->getTranslations('keywords') ?? [],
-                    ];
-                    $livewire->form->fill($data);
+                    $state = [];
+                    foreach ($translated as $locale) {
+                        foreach (['title', 'excerpt', 'content'] as $field) {
+                            $state[$field.'.'.$locale] = $record->getTranslation($field, $locale);
+                        }
+                        foreach (['title', 'description', 'keywords'] as $field) {
+                            $state['seo.'.$field.'.'.$locale] = (string) $meta?->getTranslation($field, $locale, false);
+                        }
+                    }
+                    $livewire->form->fillPartially($state, array_keys($state));
                 }
 
                 Notification::make()

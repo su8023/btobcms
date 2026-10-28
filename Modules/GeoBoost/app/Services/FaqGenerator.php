@@ -15,7 +15,10 @@ class FaqGenerator
     public function __construct(
         private readonly LlmManager $llm,
     ) {
-        \Modules\AiContentWriter\Services\ArticleStudio::applyCustomProvider();
+        // 自定义模型覆盖来自 AiContentWriter 的设置：模块可独立停用，先做存在性防御
+        if (class_exists(\Modules\AiContentWriter\Services\ArticleStudio::class)) {
+            \Modules\AiContentWriter\Services\ArticleStudio::applyCustomProvider();
+        }
     }
 
     /**
@@ -78,6 +81,8 @@ PROMPT],
                 ]);
             }
         });
+
+        cache()->forget('geoboost.faqs.'.$post->id.'.'.$locale);
 
         return $faqs->count();
     }

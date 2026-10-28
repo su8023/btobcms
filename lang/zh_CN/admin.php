@@ -7,6 +7,7 @@ return [
         'system' => '系统',
         'plugins' => '插件',
         'themes' => '主题',
+        'growth' => '增长',
     ],
 
     'themes' => [

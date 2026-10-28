@@ -163,6 +163,76 @@ class LinkWeaverTest extends TestCase
         $this->assertSame([], $links);
     }
 
+    public function test_never_weaves_inside_code_or_script(): void
+    {
+        LinkTerm::create(['keyword' => 'gate valve manufacturer', 'target' => '/product/gate-valve']);
+
+        [$html, $links] = app(Weaver::class)->weaveHtml(
+            '<p>gate valve manufacturer intro.</p><pre>gate valve manufacturer in code</pre><script>var x = "gate valve manufacturer";</script>',
+            LinkTerm::all(),
+            3,
+        );
+
+        $this->assertSame(1, $links !== [] ? 1 : 0);
+        $this->assertSame(1, substr_count($html, '<a href='), '只有正文纯文本被织，code/script 内不动');
+        $this->assertStringContainsString('<pre>gate valve manufacturer in code</pre>', $html);
+        $this->assertStringContainsString('var x = "gate valve manufacturer"', $html);
+    }
+
+    public function test_ascii_word_boundary_avoids_inner_match(): void
+    {
+        LinkTerm::create(['keyword' => 'valve', 'target' => '/x']);
+
+        [$html, $links] = app(Weaver::class)->weaveHtml(
+            '<p>The valvebody assembly and the valve itself.</p>',
+            LinkTerm::all(),
+            3,
+        );
+
+        // valvebody 内的 valve 不织，独立词 valve 织
+        $this->assertSame(1, count($links));
+        $this->assertStringContainsString('The valvebody assembly and the <a href="/x">valve</a> itself.</p>', $html);
+    }
+
+    public function test_weaves_multibyte_text(): void
+    {
+        // 锁定偏移契约：splitText 按字符（码点）切分，stripos 给字节偏移——
+        // 多字节前缀（阿语 2 字节/西语 á）后锚文本必须完整，否则就是偏移错位
+        LinkTerm::create(['keyword' => 'gate valve manufacturer', 'target' => '/x']);
+
+        [$html, $links] = app(Weaver::class)->weaveHtml(
+            '<p>صمام البوابة gate valve manufacturer جودة عالية.</p>',
+            LinkTerm::all(),
+            3,
+        );
+
+        $this->assertSame(1, count($links), '每个词全文档只织一次');
+        $this->assertStringContainsString(
+            'صمام البوابة <a href="/x">gate valve manufacturer</a>',
+            $html,
+            '多字节前缀后的锚文本不得错位',
+        );
+    }
+
+    public function test_weaves_after_accented_multibyte_prefix(): void
+    {
+        // 西语重音字符（2 字节）在匹配点之前：字节直传会错位切断锚文本
+        LinkTerm::create(['keyword' => 'gate valve manufacturer', 'target' => '/x']);
+
+        [$html, $links] = app(Weaver::class)->weaveHtml(
+            '<p>válvula de compuerta gate valve manufacturer calidad.</p>',
+            LinkTerm::all(),
+            3,
+        );
+
+        $this->assertSame(1, count($links));
+        $this->assertStringContainsString(
+            'válvula de compuerta <a href="/x">gate valve manufacturer</a> calidad.</p>',
+            $html,
+            '重音前缀后的锚文本必须完整',
+        );
+    }
+
     public function test_reweave_all_applies_to_existing_posts(): void
     {
         $post = Post::create([

@@ -32,7 +32,7 @@ class LinkTermResource extends Resource
 
     public static function getNavigationGroup(): string|\UnitEnum|null
     {
-        return '增长'; // @phpstan-ignore-line
+        return __('admin.groups.growth');
     }
 
     public static function getNavigationLabel(): string

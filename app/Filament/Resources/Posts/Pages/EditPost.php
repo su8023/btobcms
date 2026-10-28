@@ -16,12 +16,21 @@ class EditPost extends EditRecord
 {
     protected static string $resource = PostResource::class;
 
+    /** beforeSave 捕获的状态跃迁前值：syncOriginal 在 save 返回前执行，afterSave 里 getOriginal 已是新值 */
+    protected ?string $statusBeforeSave = null;
+
+    protected function beforeSave(): void
+    {
+        $this->statusBeforeSave = (string) $this->getRecord()->getOriginal('status');
+    }
+
     protected function afterSave(): void
     {
         if ((string) $this->getRecord()->status === 'published'
-            && (string) $this->getRecord()->getOriginal('status') !== 'published') {
+            && $this->statusBeforeSave !== 'published') {
             PostPublished::dispatch($this->getRecord());
         }
+        $this->statusBeforeSave = null;
     }
 
     use SavesSeoAndMedia;
@@ -45,10 +54,16 @@ class EditPost extends EditRecord
                     ->requiresConfirmation()
                     ->visible(fn () => $this->record->status !== 'published')
                     ->action(function (): void {
+                        // 直接 update 绕过页面 save 流程，跃迁需在此补发 PostPublished
+                        $wasPublished = (string) $this->record->status === 'published';
                         $this->record->update([
                             'status' => 'published',
                             'published_at' => $this->record->published_at ?? now(),
                         ]);
+
+                        if (! $wasPublished) {
+                            PostPublished::dispatch($this->record);
+                        }
 
                         Notification::make()
                             ->title(__('admin.posts.published'))

@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\Post;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -51,6 +52,18 @@ class AppServiceProvider extends ServiceProvider
         // 文章创建时自动记录作者（后台手动创建与 AI 生成都生效）
         Post::creating(function (Post $post) {
             $post->author_id ??= Auth::id();
+        });
+
+        // 301 规则变更即时失效缓存：否则编辑/删除后旧跳转还要挂 1 小时
+        \App\Models\Redirect::saved(function (\App\Models\Redirect $redirect) {
+            Cache::forget('redirect:'.$redirect->from_path);
+            // from_path 被改过的场合，旧路径的缓存一并失效
+            if ($redirect->wasChanged('from_path')) {
+                Cache::forget('redirect:'.$redirect->getOriginal('from_path'));
+            }
+        });
+        \App\Models\Redirect::deleted(function (\App\Models\Redirect $redirect) {
+            Cache::forget('redirect:'.$redirect->from_path);
         });
 
         // 主题视图覆盖的即时应用由 ApplyTheme 中间件按请求处理（见 ThemeManager::apply）

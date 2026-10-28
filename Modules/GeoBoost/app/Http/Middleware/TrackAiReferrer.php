@@ -35,8 +35,12 @@ class TrackAiReferrer
                 }
             }
 
-            // 自家域名上的引用不算引擎引流
-            if ($engine === null || str_contains($host, (string) parse_url(config('app.url'), PHP_URL_HOST))) {
+            // 自家域名上的引用不算引擎引流：严格相等比较（str_contains 会把
+            // app.url 为空时的空 needle 当作命中、或短域名误杀相似域名）
+            $appHost = strtolower((string) parse_url((string) config('app.url'), PHP_URL_HOST));
+            $isSelfReferral = $appHost !== '' && strcasecmp($host, $appHost) === 0;
+
+            if ($engine === null || $isSelfReferral) {
                 return $response;
             }
 

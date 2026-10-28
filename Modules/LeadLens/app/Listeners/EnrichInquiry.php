@@ -21,12 +21,7 @@ class EnrichInquiry
     public function handle(InquiryCreated $event): void
     {
         try {
-            $inquiry = $event->inquiry;
-
-            InquiryEnrichment::updateOrCreate(
-                ['inquiry_id' => $inquiry->id],
-                $this->scorer->score($inquiry),
-            );
+            $this->scorer->enrich($event->inquiry);
         } catch (Throwable $e) {
             Log::warning('LeadLens: 询盘评分失败', [
                 'inquiry' => $event->inquiry->id,

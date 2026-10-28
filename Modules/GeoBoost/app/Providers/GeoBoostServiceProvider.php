@@ -3,9 +3,11 @@
 namespace Modules\GeoBoost\Providers;
 
 use App\Support\Slots;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Event;
 use Modules\GeoBoost\Http\Middleware\TrackAiReferrer;
 use Modules\GeoBoost\Listeners\CleanupPostFaqs;
+use Modules\GeoBoost\Models\AiVisit;
 use Nwidart\Modules\Support\ModuleServiceProvider;
 
 class GeoBoostServiceProvider extends ModuleServiceProvider
@@ -33,5 +35,13 @@ class GeoBoostServiceProvider extends ModuleServiceProvider
 
         // 文章删除时清理其 FAQ（morph 约束删除亦可，此处显式处理软删场景）
         Event::listen('eloquent.deleting: '.\App\Models\Post::class, CleanupPostFaqs::class);
+    }
+
+    /**
+     * 模块调度：每日批量清理 180 天前的 AI 来访记录（MassPrunable）。
+     */
+    protected function configureSchedules(\Illuminate\Console\Scheduling\Schedule $schedule): void
+    {
+        $schedule->command('model:prune --model='.AiVisit::class)->dailyAt('03:20');
     }
 }

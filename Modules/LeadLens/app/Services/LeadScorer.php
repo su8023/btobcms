@@ -3,6 +3,7 @@
 namespace Modules\LeadLens\Services;
 
 use App\Models\Inquiry;
+use Modules\LeadLens\Models\InquiryEnrichment;
 
 /**
  * 线索评分器：询盘基础信息 → 0~100 分 + 热/温/冷分层。
@@ -24,6 +25,17 @@ class LeadScorer
         'mail.ru', 'yandex.com', 'yandex.ru', 'gmx.com',
         '163.com', '126.com', 'qq.com', 'foxmail.com', 'sina.com', 'yeah.net',
     ];
+
+    /**
+     * 评分并落库（upsert）：新询盘监听与历史补评共用。
+     */
+    public function enrich(Inquiry $inquiry): InquiryEnrichment
+    {
+        return InquiryEnrichment::updateOrCreate(
+            ['inquiry_id' => $inquiry->id],
+            $this->score($inquiry),
+        );
+    }
 
     /**
      * @return array{score: int, tier: string, email_domain: ?string, is_free_email: bool, company_site: ?string, details: list<array{item: string, points: int}>}

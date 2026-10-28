@@ -17,17 +17,27 @@ class IndexNow
 {
     /**
      * 获取（必要时生成）站点密钥。
+     * 并发首生成安全：LOCK_EX 串行写入；写后回读为准——并发下本进程生成的
+     * key 可能被另一 worker 覆盖，推送必须用与 /{key}.txt 落盘一致的值，
+     * 否则所有权验证静默失败。
      */
     public static function key(): string
     {
         $file = (string) config('autoseo.key_file');
 
         if (is_file($file)) {
-            return trim((string) file_get_contents($file));
+            $existing = trim((string) file_get_contents($file));
+            if ($existing !== '') {
+                return $existing;
+            }
         }
 
-        $key = bin2hex(random_bytes(16));
-        @file_put_contents($file, $key);
+        @file_put_contents($file, bin2hex(random_bytes(16)), LOCK_EX);
+
+        $key = trim((string) @file_get_contents($file));
+        if ($key === '') {
+            throw new RuntimeException("IndexNow 密钥文件不可写：{$file}（检查 storage/app 权限）");
+        }
 
         return $key;
     }

@@ -37,22 +37,31 @@ class OptimizeAndSubmitPost implements ShouldQueue
     }
 
     /**
-     * AI 生成 SEO 标题/描述/关键词：仅补缺失字段，已有内容不覆盖。
+     * AI 生成 SEO 标题/描述/关键词：逐语言检测缺失并补全（已有内容不覆盖）。
+     * 只处理文章实际有翻译内容的语言——空语言不生成孤立 SEO。
      */
     protected function generateSeoMeta(Post $post): void
     {
         try {
-            $lang = app()->getLocale();
-            $title = trim((string) $post->getTranslation('title', $lang));
-            $excerpt = trim((string) $post->getTranslation('excerpt', $lang));
-            $content = mb_substr(strip_tags((string) $post->getTranslation('content', $lang)), 0, 3000);
+            $existing = SeoMeta::firstOrNew(['metable_type' => Post::class, 'metable_id' => $post->id]);
 
-            $existing = SeoMeta::where('metable_type', Post::class)->where('metable_id', $post->id)->first();
-            $needsTitle = ! $existing || blank($existing->getTranslation('title', $lang));
-            $needsDesc = ! $existing || blank($existing->getTranslation('description', $lang));
-            $needsKeywords = ! $existing || blank($existing->getTranslation('keywords', $lang));
+            foreach (site_locales() as $lang) {
+                $title = trim((string) $post->getTranslation('title', $lang, false));
+                if ($title === '') {
+                    continue; // 该语言没有内容，跳过
+                }
 
-            if (($needsTitle || $needsDesc || $needsKeywords) && $title !== '') {
+                $needsTitle = blank($existing->getTranslation('title', $lang, false));
+                $needsDesc = blank($existing->getTranslation('description', $lang, false));
+                $needsKeywords = blank($existing->getTranslation('keywords', $lang, false));
+
+                if (! ($needsTitle || $needsDesc || $needsKeywords)) {
+                    continue; // 该语言 TDK 齐全
+                }
+
+                $excerpt = trim((string) $post->getTranslation('excerpt', $lang, false));
+                $content = mb_substr(strip_tags((string) $post->getTranslation('content', $lang, false)), 0, 3000);
+
                 $fields = implode('、', array_filter([
                     $needsTitle ? 'seo_title' : '',
                     $needsDesc ? 'seo_description' : '',
@@ -62,7 +71,7 @@ class OptimizeAndSubmitPost implements ShouldQueue
                 $raw = app(LlmManager::class)->chat([
                     ['role' => 'system', 'content' => '你是 SEO 专家。只输出 JSON。'],
                     ['role' => 'user', 'content' => <<<PROMPT
-为以下文章生成 SEO 元信息（只需输出：{$fields}）。
+用 {$lang} 为以下文章生成 SEO 元信息（只需输出：{$fields}）。
 标题：{$title}
 摘要：{$excerpt}
 正文开头：{$content}
@@ -73,17 +82,16 @@ PROMPT],
 
                 $data = json_decode((string) (preg_match('/\{.*\}/s', $raw, $m) ? $m[0] : ''), true) ?: [];
 
-                $meta = SeoMeta::firstOrNew(['metable_type' => Post::class, 'metable_id' => $post->id]);
                 if ($needsTitle && ! blank($data['seo_title'] ?? null)) {
-                    $meta->setTranslation('title', $lang, (string) $data['seo_title']);
+                    $existing->setTranslation('title', $lang, (string) $data['seo_title']);
                 }
                 if ($needsDesc && ! blank($data['seo_description'] ?? null)) {
-                    $meta->setTranslation('description', $lang, (string) $data['seo_description']);
+                    $existing->setTranslation('description', $lang, (string) $data['seo_description']);
                 }
                 if ($needsKeywords && ! blank($data['keywords'] ?? null)) {
-                    $meta->setTranslation('keywords', $lang, (string) $data['keywords']);
+                    $existing->setTranslation('keywords', $lang, (string) $data['keywords']);
                 }
-                $meta->save();
+                $existing->save();
             }
         } catch (Throwable $e) {
             Log::warning('AutoSeo: TDK 生成失败', ['post' => $post->id, 'e' => $e->getMessage()]);

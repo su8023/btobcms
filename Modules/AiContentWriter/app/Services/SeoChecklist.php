@@ -53,9 +53,18 @@ class SeoChecklist
                     $problems[] = "[{$label}] 有 ".($imgs - $imgsWithAlt)." 张图片缺 alt 属性";
                 }
 
-                // 内链
-                $internalLinks = preg_match_all('/<a\b[^>]*href=["\']\/(?!\/)[^"\']*["\']/i', $content);
-                if ($internalLinks === 0) {
+                // 站内链接：相对路径或含本站域名的绝对链接都算
+                $appHost = strtolower((string) parse_url((string) config('app.url'), PHP_URL_HOST));
+                $hasInternalLink = false;
+                if (preg_match_all('/<a\b[^>]*href=["\']([^"\']*)["\']/i', $content, $m)) {
+                    foreach ($m[1] as $href) {
+                        if (preg_match('#^/[^/]#', $href) || ($appHost !== '' && str_contains(strtolower($href), $appHost))) {
+                            $hasInternalLink = true;
+                            break;
+                        }
+                    }
+                }
+                if (! $hasInternalLink) {
                     $problems[] = "[{$label}] 正文没有站内链接，建议加入产品/行业页内链（可在发布后用内链词典回织）";
                 }
             }
@@ -95,7 +104,7 @@ class SeoChecklist
         return $problems;
     }
 
-    /** HTML 词数（英文按空格分词，CJK 按字符） */
+    /** HTML 词数：Unicode 感知——拉丁/西里尔/阿语按词切，中日韩按字计（str_word_count 会把重音词切碎） */
     protected function wordCount(string $html): int
     {
         $text = trim(preg_replace('/\s+/u', ' ', strip_tags($html)) ?? '');
@@ -104,9 +113,9 @@ class SeoChecklist
             return 0;
         }
 
-        preg_match_all('/[\x{4e00}-\x{9fff}]/u', $text, $cjk);
-        $latin = preg_replace('/[\x{4e00}-\x{9fff}]/u', ' ', $text);
+        preg_match_all('/[\p{Han}\p{Hiragana}\p{Katakana}\p{Hangul}]/u', $text, $cjk);
+        $words = preg_match_all("/[\p{L}\p{N}][\p{L}\p{N}'\-]*/u", preg_replace('/[\p{Han}\p{Hiragana}\p{Katakana}\p{Hangul}]+/u', ' ', $text) ?? '');
 
-        return count($cjk[0] ?? []) + str_word_count((string) $latin);
+        return count($cjk[0] ?? []) + (int) $words;
     }
 }

@@ -24,7 +24,7 @@ class InquiryController extends Controller
             'product_ids' => ['nullable', 'array', 'max:50'],
             'product_ids.*' => ['integer', 'exists:products,id'],
             'source' => ['nullable', 'string', 'max:32'],
-            'landing_url' => ['nullable', 'string', 'max:500'],
+            'landing_url' => ['nullable', 'string', 'max:500', 'url:http,https'],
             'referrer' => ['nullable', 'string', 'max:500'],
             'utm' => ['nullable', 'array'],
             // honeypot：正常用户不会填写

@@ -7,6 +7,7 @@ return [
         'system' => 'System',
         'plugins' => 'Plugins',
         'themes' => 'Themes',
+        'growth' => 'Growth',
     ],
 
     'themes' => [

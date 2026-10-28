@@ -19,15 +19,18 @@ class SendInquiryNotification implements ShouldQueue
             return;
         }
 
+        // lark_md 转义：买家输入里的 * [ ] ` 会被飞书卡片当 markdown 渲染，剥掉
+        $clean = fn (?string $v): string => str_replace(['*', '[', ']', '`'], '', (string) $v);
+
         $lines = [
             '**询盘 #'.$inquiry->id.'**',
-            '- 客户：'.$inquiry->name.($inquiry->company ? '（'.$inquiry->company.'）' : ''),
-            '- 邮箱：'.$inquiry->email,
-            '- 电话：'.($inquiry->phone ?: '—'),
-            '- 国家：'.($inquiry->country ?: '未知'),
-            '- 来源：'.$inquiry->source,
-            '- 落地页：'.($inquiry->landing_url ?: '—'),
-            '- 内容：'.mb_substr((string) $inquiry->message, 0, 300),
+            '- 客户：'.$clean($inquiry->name).($inquiry->company ? '（'.$clean($inquiry->company).'）' : ''),
+            '- 邮箱：'.$clean($inquiry->email),
+            '- 电话：'.$clean($inquiry->phone ?: '—'),
+            '- 国家：'.$clean($inquiry->country ?: '未知'),
+            '- 来源：'.$clean($inquiry->source),
+            '- 落地页：'.$clean($inquiry->landing_url ?: '—'),
+            '- 内容：'.mb_substr($clean($inquiry->message), 0, 300),
         ];
 
         $result = FeishuClient::sendCard(

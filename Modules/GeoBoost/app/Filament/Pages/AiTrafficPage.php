@@ -22,7 +22,7 @@ class AiTrafficPage extends Page
 
     public static function getNavigationGroup(): string|\UnitEnum|null
     {
-        return '增长';
+        return __('admin.groups.growth');
     }
 
     public static function getNavigationLabel(): string

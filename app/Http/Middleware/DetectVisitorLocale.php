@@ -45,7 +45,7 @@ class DetectVisitorLocale
     ];
 
     /** 已知爬虫/预览抓取器 UA 片段：一律不跳转 */
-    protected const BOT_UA_PATTERN = '/bot|crawl|spider|slurp|facebookexternalhit|whatsapp|telegram|twitterbot|slackbot|discordapp|embedly|headlesschrome|lighthouse|pagespeed|pingdom|uptime/i';
+    protected const BOT_UA_PATTERN = '/bot|crawl|spider|slurp|facebookexternalhit|whatsapp|telegram|twitterbot|slackbot|discordapp|embedly|headlesschrome|lighthouse|pagespeed|pingdom|uptime|google-inspectiontool|googleother|applebot/i';
 
     public function handle(Request $request, Closure $next): mixed
     {

@@ -1,11 +1,16 @@
 @php
     /** @var \App\Models\Post $post */
-    $faqs = \Modules\GeoBoost\Models\GeoFaq::query()
-        ->where('faqable_type', \App\Models\Post::class)
-        ->where('faqable_id', $post->id)
-        ->where('locale', app()->getLocale())
-        ->orderBy('sort')
-        ->get();
+    // FAQ 变更少而读多：5 分钟缓存，生成/删除/文章删除时失效
+    $faqs = cache()->remember(
+        'geoboost.faqs.'.$post->id.'.'.app()->getLocale(),
+        now()->addMinutes(5),
+        fn () => \Modules\GeoBoost\Models\GeoFaq::query()
+            ->where('faqable_type', \App\Models\Post::class)
+            ->where('faqable_id', $post->id)
+            ->where('locale', app()->getLocale())
+            ->orderBy('sort')
+            ->get(),
+    );
 @endphp
 
 @if ($faqs->isNotEmpty())

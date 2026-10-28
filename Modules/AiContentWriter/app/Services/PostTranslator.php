@@ -37,6 +37,12 @@ class PostTranslator
             throw new RuntimeException('文章缺少源语言标题或正文，无法翻译');
         }
 
+        // 成本护栏：整篇 HTML 进 prompt，超长文一次翻译的 token 成本失控且输出易被截断
+        $wordCount = str_word_count(strip_tags($source['content']));
+        if ($wordCount > 8000) {
+            throw new RuntimeException("正文约 {$wordCount} 词，超过单次翻译上限（8000 词）。请精简后翻译，或分段处理。");
+        }
+
         $meta = $post->seoMeta;
         $translated = [];
 
@@ -55,19 +61,22 @@ class PostTranslator
                 }
             }
 
-            if ($meta !== null) {
-                $metaTranslations = [
-                    'title' => [$locale => (string) ($data['seo_title'] ?? '')],
-                    'description' => [$locale => (string) ($data['seo_description'] ?? '')],
-                    'keywords' => [$locale => (string) ($data['seo_keywords'] ?? '')],
-                ];
-                foreach ($metaTranslations as $field => $values) {
-                    if (filled($values[$locale])) {
-                        $meta->setTranslation($field, $locale, $values[$locale]);
-                    }
-                }
-                $meta->save();
+            if ($meta === null) {
+                // 文章从没填过 SEO：创建空元数据行，让翻译结果有落点
+                $meta = $post->seoMeta()->create();
             }
+
+            $metaTranslations = [
+                'title' => [$locale => (string) ($data['seo_title'] ?? '')],
+                'description' => [$locale => (string) ($data['seo_description'] ?? '')],
+                'keywords' => [$locale => (string) ($data['seo_keywords'] ?? '')],
+            ];
+            foreach ($metaTranslations as $field => $values) {
+                if (filled($values[$locale])) {
+                    $meta->setTranslation($field, $locale, $values[$locale]);
+                }
+            }
+            $meta->save();
 
             $post->save();
             $translated[] = $locale;
