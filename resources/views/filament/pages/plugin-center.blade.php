@@ -77,6 +77,34 @@
         .dark .bpcb-settings-link:hover { color: var(--gray-200, #eceef3); background: rgba(255,255,255,.06); }
         .bpcb-settings-link span[aria-hidden] { margin-inline-start: auto; }
 
+        /* 卡片内使用教程展开块 */
+        .bpcb-docs { margin-top: 10px; }
+        .bpcb-docs summary {
+            display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+            padding: 5px 10px; border-radius: 8px; list-style: none;
+            font-size: .78rem; font-weight: 650; color: var(--primary-600, #c2780c);
+            transition: all .14s ease;
+        }
+        .bpcb-docs summary::-webkit-details-marker { display: none; }
+        .bpcb-docs summary:hover { background: var(--gray-100, #f3f4f6); }
+        .dark .bpcb-docs summary { color: var(--primary-400, #f0b34e); }
+        .bpcb-docs-body {
+            margin-top: 8px; padding: 12px 14px; border-radius: 10px;
+            background: var(--gray-50, #f8f9fb); border: 1px solid var(--gray-200, #e2e6ee);
+            font-size: .82rem; line-height: 1.75; color: var(--gray-700, #3b4459);
+        }
+        .dark .bpcb-docs-body { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.09); color: var(--gray-300, #c3c9d6); }
+        .bpcb-docs-body h4 { font-weight: 700; margin: 10px 0 4px; font-size: .84rem; }
+        .bpcb-docs-body h4:first-child { margin-top: 0; }
+        .bpcb-docs-body ol, .bpcb-docs-body ul { margin: 4px 0 8px; padding-inline-start: 18px; }
+        .bpcb-docs-body li { margin: 3px 0; }
+        .bpcb-docs-body code {
+            padding: 1px 5px; border-radius: 5px; font-size: .78rem;
+            background: var(--gray-200, #e2e6ee); color: var(--gray-800, #1b2537);
+        }
+        .dark .bpcb-docs-body code { background: rgba(255,255,255,.1); color: var(--gray-200, #eceef3); }
+        .bpcb-docs-body p { margin: 4px 0; }
+
         /* 开关 */
         .bpcb-switch {
             position: relative; flex-shrink: 0; margin-top: 3px;
@@ -144,6 +172,13 @@
                                         {{ __('admin.plugins.settings') }}
                                         <span aria-hidden="true">→</span>
                                     </a>
+                                @endif
+
+                                @if($this->hasDocs($plugin['name']))
+                                    <details class="bpcb-docs">
+                                        <summary>📖 使用教程</summary>
+                                        <div class="bpcb-docs-body">{!! $this->docs($plugin['name']) !!}</div>
+                                    </details>
                                 @endif
                             </div>
 

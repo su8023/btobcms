@@ -120,7 +120,7 @@ class PluginCenter extends Page
      */
     public function getPlugins(): array
     {
-        $order = ['notification', 'ai', 'service', 'marketing', 'seo', 'integration', 'general'];
+        $order = ['notification', 'ai', 'service', 'marketing', 'seo', 'integration', 'growth', 'productivity', 'performance', 'system', 'general'];
         $grouped = [];
 
         /** @var \Nwidart\Modules\Module $module */
@@ -185,5 +185,19 @@ class PluginCenter extends Page
     public function settingsUrl(string $name): string
     {
         return \App\Filament\Pages\PluginSettingsPage::getUrl(['plugin' => $name]);
+    }
+
+    /* ----------------------------------------------------------
+     | 插件使用教程：约定 Modules\{Name}\Support\Docs::content()
+     * --------------------------------------------------------- */
+
+    public function hasDocs(string $name): bool
+    {
+        return \App\Support\PluginDocs::has($name);
+    }
+
+    public function docs(string $name): string
+    {
+        return (string) \App\Support\PluginDocs::content($name);
     }
 }

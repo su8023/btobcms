@@ -250,17 +250,32 @@ class PluginSettingsPage extends Page
 
     public function content(Schema $schema): Schema
     {
-        return $schema->components([
-            Form::make([EmbeddedSchema::make('form')])
-                ->id('form')
-                ->livewireSubmitHandler('save')
-                ->footer([
-                    Actions::make([
-                        Action::make('save')
-                            ->label(__('admin.plugins.settings_save'))
-                            ->action('save'),
-                    ]),
+        $docs = $this->plugin !== null ? \App\Support\PluginDocs::content($this->plugin) : null;
+
+        $components = [];
+
+        // 插件使用教程（约定 Modules\{Name}\Support\Docs）：设置表单上方折叠展示
+        if ($docs !== null) {
+            $components[] = Section::make('📖 使用教程')
+                ->description('这个插件是什么、怎么配置、日常怎么用')
+                ->collapsible()
+                ->persistCollapsed()
+                ->schema([
+                    \Filament\Schemas\Components\Html::make($docs),
+                ]);
+        }
+
+        $components[] = Form::make([EmbeddedSchema::make('form')])
+            ->id('form')
+            ->livewireSubmitHandler('save')
+            ->footer([
+                Actions::make([
+                    Action::make('save')
+                        ->label(__('admin.plugins.settings_save'))
+                        ->action('save'),
                 ]),
-        ]);
+            ]);
+
+        return $schema->components($components);
     }
 }
