@@ -180,6 +180,18 @@ class InstallController extends Controller
         $checks[] = ['label' => '.env.example 模板存在', 'pass' => File::exists(base_path('.env.example')), 'hint' => '缺失则向导使用内置模板'];
         $checks[] = ['label' => '禁用函数已放开（proc_open）', 'pass' => function_exists('proc_open'), 'hint' => '宝塔：PHP 设置 → 禁用函数 中删除'];
 
+        // APP_URL 会按当前访问域名固化进 .env（队列侧的收录推送/审计/GSC 都用它）：
+        // 用 IP 或临时域名装完，换正式域名后这些功能全部指向错误地址
+        $host = (string) request()->getHost();
+        $isIp = filter_var($host, FILTER_VALIDATE_IP) !== false;
+        $checks[] = [
+            'label' => '通过正式域名访问（当前：'.$host.'）',
+            'pass' => ! $isIp && $host !== '' && $host !== 'localhost' && $host !== '127.0.0.1',
+            'hint' => $isIp
+                ? '⚠ 当前用 IP 访问，APP_URL 将固化为 IP！请先在宝塔绑定正式域名并通过域名访问后再安装'
+                : '先配好 DNS 与站点域名，再用最终域名安装',
+        ];
+
         return $checks;
     }
 
