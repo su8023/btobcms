@@ -53,6 +53,11 @@
             "Modules\\LinkWeaver\\": "Modules/LinkWeaver/app/",
             "Modules\\LeadLens\\": "Modules/LeadLens/app/",
             "Modules\\GeoBoost\\": "Modules/GeoBoost/app/",
+            "Modules\\TransCoverage\\": "Modules/TransCoverage/app/",
+            "Modules\\GscPulse\\": "Modules/GscPulse/app/",
+            "Modules\\LeadMagnet\\": "Modules/LeadMagnet/app/",
+            "Modules\\TrustBuilder\\": "Modules/TrustBuilder/app/",
+            "Modules\\ImageForge\\": "Modules/ImageForge/app/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/"
         }

@@ -1,0 +1,8 @@
+{
+    "name": "modules/trust-builder",
+    "autoload": {
+        "psr-4": {
+            "Modules\\TrustBuilder\\": "app/"
+        }
+    }
+}

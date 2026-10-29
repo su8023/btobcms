@@ -1,0 +1,8 @@
+{
+    "name": "modules/trans-coverage",
+    "autoload": {
+        "psr-4": {
+            "Modules\\TransCoverage\\": "app/"
+        }
+    }
+}

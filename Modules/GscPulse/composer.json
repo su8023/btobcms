@@ -1,0 +1,8 @@
+{
+    "name": "modules/gsc-pulse",
+    "autoload": {
+        "psr-4": {
+            "Modules\\GscPulse\\": "app/"
+        }
+    }
+}

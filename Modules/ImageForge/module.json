@@ -1,0 +1,15 @@
+{
+    "name": "ImageForge",
+    "alias": "image-forge",
+    "description": "图片优化：GD 自动转 WebP+picture 帮助函数+批量转换命令",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\ImageForge\\Providers\\ImageForgeServiceProvider"
+    ],
+    "files": [
+        "app/Support/helpers.php"
+    ],
+    "category": "performance",
+    "version": "1.0.0"
+}

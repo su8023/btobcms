@@ -8,5 +8,10 @@
     "AutoSeo": true,
     "LinkWeaver": true,
     "LeadLens": true,
-    "GeoBoost": true
+    "GeoBoost": true,
+    "TransCoverage": true,
+    "GscPulse": true,
+    "LeadMagnet": true,
+    "TrustBuilder": true,
+    "ImageForge": true
 }

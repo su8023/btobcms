@@ -32,5 +32,7 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- ImageForge 等测试动态生成大图，GD 内存需高于 CLI 默认 128M -->
+        <ini name="memory_limit" value="512M"/>
     </php>
 </phpunit>

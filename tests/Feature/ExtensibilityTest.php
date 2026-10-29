@@ -106,7 +106,9 @@ class ExtensibilityTest extends TestCase
         \App\Support\Slots::push('body_top', 'whatsappchat::floating-button');
         \App\Support\Slots::push('footer_before', 'whatsappchat::floating-button');
 
-        $this->assertCount(1, \App\Support\Slots::get('body_top'));
-        $this->assertCount(1, \App\Support\Slots::get('footer_before'));
+        // 用「包含自身推入项」断言而非精确计数：插件可自由向插槽注册视图
+        // （如 TrustBuilder 信任条也占 footer_before），计数会随插件增减变化
+        $this->assertContains('whatsappchat::floating-button', \App\Support\Slots::get('body_top'));
+        $this->assertContains('whatsappchat::floating-button', \App\Support\Slots::get('footer_before'));
     }
 }

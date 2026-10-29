@@ -19,8 +19,10 @@
         <div class="product-layout">
             <div class="product-gallery">
                 @if($firstImage)
-                    <img src="{{ Storage::url($firstImage->path) }}"
-                         alt="{{ $firstImage->getTranslation('alt', app()->getLocale()) }}">
+                    {{-- ImageForge 提供 picture/webp；模块停用时退化为原生 img --}}
+                    {!! function_exists('imageforge_picture')
+                        ? \imageforge_picture($firstImage->path, $firstImage->getTranslation('alt', app()->getLocale()))
+                        : '<img src="'.e(Storage::url($firstImage->path)).'" alt="'.e($firstImage->getTranslation('alt', app()->getLocale())).'" loading="lazy">' !!}
                 @else
                     <div class="product-gallery__placeholder">{{ mb_strtoupper(mb_substr($product->name, 0, 1)) }}</div>
                 @endif

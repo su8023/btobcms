@@ -1,0 +1,8 @@
+{
+    "name": "modules/image-forge",
+    "autoload": {
+        "psr-4": {
+            "Modules\\ImageForge\\": "app/"
+        }
+    }
+}

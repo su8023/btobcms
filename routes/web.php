@@ -61,6 +61,33 @@ foreach (array_values(array_diff(config('site.locales'), [$default])) as $locale
 
 /*
 |--------------------------------------------------------------------------
+| 插件前台路由约定
+|--------------------------------------------------------------------------
+| 模块提供 routes/site.php 即在每个语言组内被 include：
+| 文件内可用 $locale（当前语言），路由名需按约定带语言前缀
+| （默认语言 'cases.index'，其他 "{$locale}.cases.index"），
+| 以配合 localized_route()/locale_alternates() 的解析规则。
+*/
+
+foreach (\Nwidart\Modules\Facades\Module::allEnabled() as $siteRoutesModule) {
+    $siteRoutesFile = module_path($siteRoutesModule->getName(), 'routes/site.php');
+    if (! is_file($siteRoutesFile)) {
+        continue;
+    }
+
+    foreach (array_merge([$default], array_values(array_diff(config('site.locales'), [$default]))) as $locale) {
+        $prefix = $locale === $default ? '' : $locale;
+
+        Route::prefix($prefix)
+            ->middleware([SetLocale::class.":{$locale}"])
+            ->group(function () use ($siteRoutesFile, $locale): void {
+                include $siteRoutesFile;
+            });
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
 | SEO 路由
 |--------------------------------------------------------------------------
 */

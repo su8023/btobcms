@@ -1,0 +1,13 @@
+{
+    "name": "LeadMagnet",
+    "alias": "lead-magnet",
+    "description": "资料磁铁：下载换邮箱，签名下载链接+线索落库+飞书通知",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\LeadMagnet\\Providers\\LeadMagnetServiceProvider"
+    ],
+    "files": [],
+    "category": "growth",
+    "version": "1.0.0"
+}

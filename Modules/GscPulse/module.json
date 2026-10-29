@@ -1,0 +1,13 @@
+{
+    "name": "GscPulse",
+    "alias": "gsc-pulse",
+    "description": "GSC 数据回流：每日拉取谷歌搜索数据，临门一脚榜/衰退预警/新词发现",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\GscPulse\\Providers\\GscPulseServiceProvider"
+    ],
+    "files": [],
+    "category": "seo",
+    "version": "1.0.0"
+}

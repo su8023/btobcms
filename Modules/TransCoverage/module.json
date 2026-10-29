@@ -1,0 +1,13 @@
+{
+    "name": "TransCoverage",
+    "alias": "trans-coverage",
+    "description": "翻译覆盖率看板：内容×语言矩阵，一键 AI 补翻缺失语言",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\TransCoverage\\Providers\\TransCoverageServiceProvider"
+    ],
+    "files": [],
+    "category": "productivity",
+    "version": "1.0.0"
+}

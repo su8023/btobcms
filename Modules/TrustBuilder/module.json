@@ -1,0 +1,13 @@
+{
+    "name": "TrustBuilder",
+    "alias": "trust-builder",
+    "description": "信任背书：客户案例/认证证书，前台案例页+全站信任条",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\TrustBuilder\\Providers\\TrustBuilderServiceProvider"
+    ],
+    "files": [],
+    "category": "growth",
+    "version": "1.0.0"
+}

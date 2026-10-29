@@ -1,0 +1,8 @@
+{
+    "name": "modules/lead-magnet",
+    "autoload": {
+        "psr-4": {
+            "Modules\\LeadMagnet\\": "app/"
+        }
+    }
+}
