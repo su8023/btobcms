@@ -45,8 +45,16 @@
         </x-filament::section>
 
         <x-filament::section class="mt-6">
-            <x-slot name="heading">Google OAuth 应用凭据</x-slot>
-            <x-slot name="description">在 Google Cloud Console 创建 OAuth 客户端（Web 应用），并把回调 URI 填为：{{ route('gsc-pulse.callback') }}</x-slot>
+            <x-slot name="heading">连接谷歌看板：跟着做 4 步（约 5 分钟）</x-slot>
+            <x-slot name="description">
+                <ol class="list-decimal ps-5 space-y-1 text-sm">
+                    <li>打开 <a href="https://console.cloud.google.com/" target="_blank" rel="noopener" class="fi-link">Google Cloud Console</a> 新建一个项目（一路默认下一步即可）。</li>
+                    <li>在顶部搜索框输入「Google Search Console API」，点进去点<b>「启用」</b>（漏了这步，稍后连接会报错）。</li>
+                    <li>「凭据」→「创建凭据」→ OAuth 客户端 ID → 应用类型选<b>「Web 应用」</b>，在「已获授权的重定向 URI」里粘贴下面这行：<br>
+                        <code class="mt-1 inline-block rounded bg-gray-100 px-2 py-1 text-xs dark:bg-white/10">{{ route('gsc-pulse.callback') }}</code></li>
+                    <li>把生成的 <b>Client ID</b> 和 <b>Client Secret</b> 填到下方并保存，然后点上面的「连接 Google」。卡在哪一步，把页面截图发给技术人员。</li>
+                </ol>
+            </x-slot>
             <div class="max-w-xl space-y-4">
                 <div>
                     <label class="mb-1 block text-sm font-medium">Client ID</label>

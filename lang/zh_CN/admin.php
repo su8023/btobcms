@@ -134,7 +134,7 @@ return [
                 'advanced' => '高级选项',
             ],
         ],
-        'footer' => '开发你自己的插件——参见 docs/plugin-development.md。在 module.json 中声明 "category" 即可归类到此处。',
+        'footer' => '提示：每个插件卡片都有「📖 使用教程」。想要新功能？联系技术管理员即可按插件方式加装。',
     ],
 
     'settings' => [
@@ -175,7 +175,8 @@ return [
         'status' => '状态',
         'name' => '名称',
         'code' => '编码',
-        'slug' => 'Slug',
+        'slug' => '网址标识',
+        'slug_helper' => '网页地址的最后一段，只能用小写英文、数字和连字符（如 how-to-choose-gate-valve）。点「AI 填充」会自动生成。',
         'type' => '类型',
         'unit' => '单位',
         'value' => '值',

@@ -49,7 +49,21 @@
                             <tbody>
                                 @foreach($report['issues'] as $issue)
                                     <tr class="border-t border-gray-100 dark:border-gray-800">
-                                        <td class="py-1 font-mono text-xs">{{ $issue['type'] }}</td>
+@php
+                                        // 小白可读的问题类型映射（未收录的类型原样显示）
+                                        $issueTypeLabels = [
+                                            'title_missing' => '页面缺标题',
+                                            'title_too_long' => '标题太长（谷歌会截断）',
+                                            'title_too_short' => '标题太短（浪费排名机会）',
+                                            'h1_missing' => '页面缺主标题（H1）',
+                                            'h1_multiple' => '主标题（H1）不止一个',
+                                            'meta' => '页面描述问题',
+                                            'canonical_missing' => '缺重复页面标记（canonical）',
+                                            'canonical' => '重复页面标记（canonical）问题',
+                                        ];
+                                        $issueTypeLabel = $issueTypeLabels[$issue['type']] ?? $issue['type'];
+                                    @endphp
+                                        <td class="py-1 text-xs">{{ $issueTypeLabel }}</td>
                                         <td class="py-1"><a class="fi-link" href="{{ $issue['url'] }}" target="_blank" rel="noopener">{{ \Illuminate\Support\Str::limit($issue['url'], 60) }}</a></td>
                                         <td class="py-1 text-gray-500">{{ $issue['detail'] ?? '—' }}</td>
                                     </tr>

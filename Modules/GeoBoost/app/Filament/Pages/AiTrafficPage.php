@@ -14,7 +14,7 @@ class AiTrafficPage extends Page
 {
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-cpu-chip';
 
-    protected static ?int $navigationSort = 32;
+    protected static ?int $navigationSort = 37;
 
     protected static ?string $slug = 'ai-traffic';
 

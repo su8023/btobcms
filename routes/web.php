@@ -101,7 +101,7 @@ foreach (\Nwidart\Modules\Facades\Module::allEnabled() as $siteRoutesModule) {
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap.index');
 
 Route::get('/sitemap-{section}.xml', [SitemapController::class, 'section'])
-    ->whereIn('section', ['pages', 'industries', 'categories', 'products', 'posts'])
+    ->whereIn('section', ['pages', 'industries', 'categories', 'products', 'posts', 'cases'])
     ->name('sitemap.section');
 
 Route::get('/robots.txt', [SitemapController::class, 'robots'])->name('robots');

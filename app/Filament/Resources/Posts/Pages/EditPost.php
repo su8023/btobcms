@@ -52,6 +52,9 @@ class EditPost extends EditRecord
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->requiresConfirmation()
+                    ->modalHeading('确认发布？')
+                    ->modalDescription('文章将立即出现在网站上（已翻译的语言同时上线）。发布后系统自动补全 SEO 信息并推送给搜索引擎，随时可以回来修改。')
+                    ->modalSubmitActionLabel('立即发布')
                     ->visible(fn () => $this->record->status !== 'published')
                     ->action(function (): void {
                         // 直接 update 绕过页面 save 流程，跃迁需在此补发 PostPublished

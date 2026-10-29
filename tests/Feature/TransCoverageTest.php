@@ -322,7 +322,7 @@ class TransCoverageTest extends TestCase
             ->assertSee('翻译覆盖率')
             ->assertSee('内容总数')
             ->assertSee('完全翻译率')
-            ->assertSee('总缺口数')
+            ->assertSee('待补翻的语言缺口')
             ->assertSee('覆盖矩阵')
             ->assertSee('缺 SEO')
             ->assertSee('AI 补翻缺失语言')

@@ -51,6 +51,7 @@ class ProductForm
 
                     TextInput::make('slug')
                         ->label(__('admin.common.slug'))
+                        ->helperText(__('admin.common.slug_helper'))
                         ->required()
                         ->maxLength(255)
                         ->unique(ignoreRecord: true),

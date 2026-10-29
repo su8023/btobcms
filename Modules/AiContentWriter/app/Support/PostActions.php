@@ -43,7 +43,7 @@ class PostActions
             ->icon('heroicon-o-sparkles')
             ->color('gray')
             ->modalHeading('AI 填充文章内容')
-            ->modalDescription('AI 生成标题、摘要、正文与 SEO 关键词并填入下方表单（不落库），生成后可自由编辑再保存/发布。')
+            ->modalDescription('AI 生成标题、摘要、正文与 SEO 关键词并填入下方表单（不落库），生成后可自由编辑再保存/发布。注意：所选语言下当前表单的内容（含未保存的修改）会被 AI 新内容替换。推荐顺序：AI 填充 → AI 翻译 → SEO 体检 → 发布。')
             ->form([
                 TextInput::make('topic')
                     ->label('主题 / 核心关键词')

@@ -26,8 +26,9 @@ class LlmManager
         $provider = config("ai.providers.{$providerName}");
 
         if (! $provider || blank($provider['key'] ?? null)) {
+            // 抛错文案面向运营小白：所有 AI 功能（写作室/填充/翻译/FAQ/自动 SEO）共用此处
             throw new RuntimeException(
-                "AI 服务未配置：请在 .env 中为 provider [{$providerName}] 设置 API Key（参见 config/ai.php）。"
+                'AI 服务还没配置好：请联系管理员，在「插件中心 → AI 内容写作 → 设置」里填入 AI 接口密钥并保存。'
             );
         }
 

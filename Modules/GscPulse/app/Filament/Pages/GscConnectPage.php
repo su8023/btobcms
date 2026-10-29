@@ -17,7 +17,7 @@ class GscConnectPage extends Page
 {
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-link';
 
-    protected static ?int $navigationSort = 31;
+    protected static ?int $navigationSort = 39;
 
     protected static ?string $slug = 'gsc-pulse-connect';
 

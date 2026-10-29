@@ -24,7 +24,7 @@ class AiStudio extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedPencilSquare;
 
-    protected static ?int $navigationSort = 31;
+    protected static ?int $navigationSort = 40;
 
     protected static ?string $slug = 'ai-studio';
 

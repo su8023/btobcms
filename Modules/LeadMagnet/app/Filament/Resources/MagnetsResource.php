@@ -26,7 +26,7 @@ class MagnetsResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentArrowDown;
 
-    protected static ?int $navigationSort = 32;
+    protected static ?int $navigationSort = 31;
 
     protected static ?string $recordTitleAttribute = 'slug';
 

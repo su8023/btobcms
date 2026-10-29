@@ -21,7 +21,7 @@
                 </div>
             </div>
             <div class="fi-widget p-4 rounded-xl bg-white shadow dark:bg-gray-900">
-                <div class="text-sm text-gray-500">总缺口数（内容 × 语言）</div>
+                <div class="text-sm text-gray-500">待补翻的语言缺口</div>
                 <div class="text-3xl font-bold {{ $stats['total_gaps'] > 0 ? 'text-danger-500' : 'text-success-500' }}">
                     {{ number_format($stats['total_gaps']) }}
                 </div>
@@ -31,7 +31,7 @@
         {{-- ===== AI 补翻缺失语言 ===== --}}
         <x-filament::section class="mt-6">
             <x-slot name="heading">AI 补翻缺失语言</x-slot>
-            <x-slot name="description">选择文章后一键补齐其全部缺失语言的标题/摘要/正文与 SEO 元数据（调用 AiContentWriter 的翻译服务，逐语言一次 AI 调用）。</x-slot>
+            <x-slot name="description">选一篇文章，AI 自动把它缺的语言全部翻译好（含 SEO 标题描述），几分钟完成。</x-slot>
             @if (! \Modules\TransCoverage\Services\TranslationFixer::available())
                 <p class="text-sm text-warning-600">
                     未安装 AiContentWriter 插件，AI 补翻不可用；下方矩阵仍可正常查看缺口。

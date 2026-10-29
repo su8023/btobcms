@@ -28,7 +28,7 @@ class LinkTermResource extends Resource
 
     protected static string|\BackedEnum|null $navigationIcon = Heroicon::OutlinedLink;
 
-    protected static ?int $navigationSort = 31;
+    protected static ?int $navigationSort = 36;
 
     public static function getNavigationGroup(): string|\UnitEnum|null
     {

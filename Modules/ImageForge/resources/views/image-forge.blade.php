@@ -4,16 +4,16 @@
         <div class="fi-section">
             <div class="grid gap-4 md:grid-cols-3">
                 <div class="fi-widget p-4 rounded-xl bg-white shadow dark:bg-gray-900">
-                    <div class="text-sm text-gray-500">public 盘图片总数</div>
+                    <div class="text-sm text-gray-500">网站图片总数</div>
                     <div class="text-3xl font-bold">{{ number_format($imageCount) }}</div>
                 </div>
                 <div class="fi-widget p-4 rounded-xl bg-white shadow dark:bg-gray-900">
-                    <div class="text-sm text-gray-500">已有 WebP 副本</div>
+                    <div class="text-sm text-gray-500">已优化（生成 WebP）</div>
                     <div class="text-3xl font-bold">{{ number_format($webpCount) }}</div>
                 </div>
                 <div class="fi-widget p-4 rounded-xl bg-white shadow dark:bg-gray-900">
-                    <div class="text-sm text-gray-500">估算节省空间</div>
-                    <div class="text-3xl font-bold">{{ number_format($savedBytes / 1024, 1) }} KB</div>
+                    <div class="text-sm text-gray-500">已为网站节省的图片体积</div>
+                    <div class="text-3xl font-bold">{{ $savedBytes >= 1048576 ? number_format($savedBytes / 1048576, 1).' MB' : number_format($savedBytes / 1024, 1).' KB' }}</div>
                 </div>
             </div>
         </div>

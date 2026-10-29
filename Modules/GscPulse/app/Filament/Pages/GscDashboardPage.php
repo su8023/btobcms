@@ -22,7 +22,7 @@ class GscDashboardPage extends Page
 {
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-chart-bar';
 
-    protected static ?int $navigationSort = 33;
+    protected static ?int $navigationSort = 34;
 
     protected static ?string $slug = 'gsc-pulse';
 

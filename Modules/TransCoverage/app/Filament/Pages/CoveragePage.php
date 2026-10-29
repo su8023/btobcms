@@ -19,7 +19,7 @@ class CoveragePage extends Page
 {
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-language';
 
-    protected static ?int $navigationSort = 33;
+    protected static ?int $navigationSort = 35;
 
     protected static ?string $slug = 'trans-coverage';
 

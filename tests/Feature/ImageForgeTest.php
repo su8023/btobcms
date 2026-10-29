@@ -219,7 +219,7 @@ class ImageForgeTest extends TestCase
 
         $this->get('/admin/image-forge')
             ->assertOk()
-            ->assertSee('public 盘图片总数')
-            ->assertSee('估算节省空间');
+            ->assertSee('网站图片总数')
+            ->assertSee('已为网站节省的图片体积');
     }
 }

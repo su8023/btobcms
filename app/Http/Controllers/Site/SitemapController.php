@@ -16,7 +16,7 @@ class SitemapController extends Controller
     public function index(): Response
     {
         $sections = [];
-        foreach (['pages', 'industries', 'categories', 'products', 'posts'] as $section) {
+        foreach (['pages', 'industries', 'categories', 'products', 'posts', 'cases'] as $section) {
             $sections[] = route('sitemap.section', ['section' => $section]);
         }
 
@@ -41,6 +41,10 @@ class SitemapController extends Controller
             'posts' => $this->modelUrls(
                 Post::published()->orderBy('id')->get(),
                 'blog.show',
+            ),
+            'cases' => $this->modelUrls(
+                \Modules\TrustBuilder\Models\TrustCase::query()->published()->orderBy('id')->get(),
+                'cases.show',
             ),
             default => abort(404),
         };
@@ -106,6 +110,7 @@ class SitemapController extends Controller
             '- [Blog]('.localized_route('blog.index').'): sourcing guides',
             '- [Industries]('.localized_route('industries.index').'): industry-specific sourcing solutions',
             '- [Services]('.localized_route('services.index').'): OEM/ODM, quality control, logistics, sourcing',
+            '- [Case studies]('.localized_route('cases.index').'): customer success stories and delivery records',
             '',
         ];
 

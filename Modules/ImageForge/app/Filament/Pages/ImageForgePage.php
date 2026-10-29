@@ -18,7 +18,7 @@ class ImageForgePage extends Page
 {
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-photo';
 
-    protected static ?int $navigationSort = 33;
+    protected static ?int $navigationSort = 38;
 
     protected static ?string $slug = 'image-forge';
 
@@ -97,7 +97,8 @@ class ImageForgePage extends Page
         });
 
         Notification::make()
-            ->title($dispatched > 0 ? "已派发 {$dispatched} 个转换任务" : '没有需要转换的图片附件')
+            ->title($dispatched > 0 ? "已开始处理 {$dispatched} 张图片，通常几分钟内完成" : '所有图片都已优化过，无需转换')
+            ->body($dispatched > 0 ? '本页的「已优化」数字会随之增加；如长时间不变，请联系技术确认队列运行正常。' : null)
             ->success()
             ->send();
     }

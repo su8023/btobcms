@@ -85,7 +85,7 @@ class MagnetDownloadController extends Controller
             'download' => $download->id,
         ]);
 
-        // 发信失败不阻塞流程：下载记录已存在，后台可见，用户可重试提交触发重发
+        // 发信失败不阻塞流程：下载记录已存在，用户可重试提交触发重发
         try {
             Mail::to($data['email'])->send(new MagnetLinkMail($magnet, $url));
         } catch (\Throwable $e) {
@@ -94,6 +94,20 @@ class MagnetDownloadController extends Controller
                 'email' => $data['email'],
                 'e' => $e->getMessage(),
             ]);
+
+            // 运营端可见（否则买家等不到邮件而运营毫不知情）：通知全部管理员
+            try {
+                \App\Models\User::query()->chunkById(100, function ($admins) use ($magnet, $data): void {
+                    foreach ($admins as $admin) {
+                        \Filament\Notifications\Notification::make()
+                            ->title('资料磁铁：下载邮件发送失败')
+                            ->body("买家 {$data['email']} 申请了「{$magnet->title}」但邮件没发出去——通常是邮箱发送配置问题。请检查发件邮箱设置，或用你自己的邮箱手动发送资料。")
+                            ->danger()
+                            ->sendToDatabase($admin);
+                    }
+                });
+            } catch (\Throwable) {
+            }
         }
 
         return $this->redirectToLanding($magnet);

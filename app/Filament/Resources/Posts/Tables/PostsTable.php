@@ -65,6 +65,9 @@ class PostsTable
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->emptyStateHeading('还没有文章')
+            ->emptyStateDescription('两种方式开始：点右上角「新建」自己写；或去左侧「AI 写作室」，填一个主题让 AI 帮你写好草稿。')
+            ->emptyStateIcon('heroicon-o-document-text');
     }
 }

@@ -29,7 +29,7 @@ class CaseResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTrophy;
 
-    protected static ?int $navigationSort = 31;
+    protected static ?int $navigationSort = 32;
 
     protected static ?string $recordTitleAttribute = 'slug';
 

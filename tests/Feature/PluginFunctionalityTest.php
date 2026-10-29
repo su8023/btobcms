@@ -148,7 +148,7 @@ class PluginFunctionalityTest extends TestCase
         $exit = Artisan::call('ai:article', ['topic' => 'test topic']);
 
         $this->assertSame(1, $exit);
-        $this->assertStringContainsString('AI 服务未配置', Artisan::output());
+        $this->assertStringContainsString('AI 服务还没配置好', Artisan::output());
 
         // 未落库任何文章
         $this->assertSame(0, \App\Models\Post::count());
