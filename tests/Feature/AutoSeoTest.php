@@ -37,6 +37,17 @@ class AutoSeoTest extends TestCase
         parent::tearDown();
     }
 
+    public function test_indexnow_key_file_served_at_txt_route(): void
+    {
+        // IndexNow 协议标准验证路径是 /{key}.txt（带 .txt 后缀）
+        $key = \Modules\AutoSeo\Support\IndexNow::key();
+        $this->get("/{$key}.txt")->assertOk()->assertSee($key);
+
+        // 非法 key 一律 404
+        $this->get("/".str_repeat("a", 31).".txt")->assertNotFound();
+        $this->get("/".str_repeat("a", 32))->assertNotFound();
+    }
+
     public function test_indexnow_key_is_stable_and_hex32(): void
     {
         $k1 = \Modules\AutoSeo\Support\IndexNow::key();

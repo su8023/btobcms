@@ -18,6 +18,9 @@ class AppServiceProvider extends ServiceProvider
         // 防止测试进程/Octane 中上一个实例的插件注入泄漏到当前请求
         \App\Support\Slots::flush();
 
+        // Setting 的请求内记忆化同理：清空防跨实例/跨测试污染
+        \App\Models\Setting::flushMemo();
+
         // 全新部署（无 .env、无安装锁）：给安装向导可运行的最低运行时配置，
         // 避免 session/cache 默认走 database、APP_KEY 缺失导致 /install 自身 500。
         if (! $this->app->runningInConsole()

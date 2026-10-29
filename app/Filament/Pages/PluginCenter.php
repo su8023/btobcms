@@ -158,8 +158,15 @@ class PluginCenter extends Page
         }
 
         $module->isEnabled()
-            ? $module->disable()
-            : $module->enable();
+            ? $module->enable()
+            : $module->disable();
+
+        // 常驻队列 worker 持有旧模块注册（nwidart 清单是进程级静态缓存），
+        // 不重启的话停用的插件在 worker 里继续推送、新启用的不生效
+        try {
+            Artisan::call('queue:restart');
+        } catch (\Throwable) {
+        }
 
         Notification::make()
             ->title(__('admin.plugins.toggled', [

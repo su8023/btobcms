@@ -33,5 +33,14 @@ class TrustBuilderServiceProvider extends ModuleServiceProvider
 
         // 插件样式（案例卡片/图集/信任条专属类）：注入 head 插槽，</head> 前加载
         Slots::push('head', 'trustbuilder::styles');
+
+        // 信任条 5 分钟缓存的内容失效：案例/证书增删改即刻生效
+        foreach ([\Modules\TrustBuilder\Models\TrustCase::class, \Modules\TrustBuilder\Models\TrustCertification::class] as $trustModel) {
+            foreach (['saved', 'deleted'] as $trustEvent) {
+                \Illuminate\Support\Facades\Event::listen("eloquent.{$trustEvent}: {$trustModel}", function (): void {
+                    \Illuminate\Support\Facades\Cache::forget('trust-builder:trust-bar');
+                });
+            }
+        }
     }
 }

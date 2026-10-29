@@ -86,8 +86,14 @@ class Updater
                 throw new RuntimeException("远程不存在 tag {$targetTag}");
             }
 
+            // 3.5 备份运行时注册状态：composer.json 的 PSR-4（含 zip 上传插件的映射）
+            //     与 modules_statuses.json（含管理员手工启停状态）都不在 tag 里，
+            //     不备份的话 git checkout 会把它们还原——上传插件静默报废、启停状态丢失
+            $this->preserveRuntimeState($log);
+
             // 4. 切换版本
             $this->git->checkout($targetTag);
+            $this->restoreRuntimeState($log);
             $log[] = "✓ 已切换到 {$targetTag}";
             $this->writeLog($log);
 
@@ -128,6 +134,85 @@ class Updater
             }
             $this->writeLog($log);
             throw $e;
+        }
+    }
+
+    /**
+     * 备份 checkout 前的运行时注册文件（进程内存持有，不落盘避免与 git 冲突）。
+     */
+    private array $runtimeStateBackup = [];
+
+    private function preserveRuntimeState(array &$log): void
+    {
+        $this->runtimeStateBackup = [];
+
+        foreach (['composer.json', 'modules_statuses.json'] as $file) {
+            $path = base_path($file);
+            $this->runtimeStateBackup[$file] = is_file($path)
+                ? (string) file_get_contents($path)
+                : null;
+        }
+    }
+
+    /**
+     * checkout 后恢复运行时注册：
+     *   - composer.json：以 tag 版为底，补回 tag 中已消失、但模块目录仍存在的 PSR-4 条目（zip 上传插件）；
+     *   - modules_statuses.json：以 tag 版为底，覆盖恢复备份中模块目录仍存在的条目（保留启停意图 + 上传插件），
+     *     目录已被新版本删除的模块条目自然剔除。
+     */
+    private function restoreRuntimeState(array &$log): void
+    {
+        foreach (['composer.json', 'modules_statuses.json'] as $file) {
+            $backup = $this->runtimeStateBackup[$file] ?? null;
+            if ($backup === null) {
+                continue;
+            }
+
+            $backupData = json_decode($backup, true);
+            $path = base_path($file);
+            $currentData = is_file($path)
+                ? (json_decode((string) file_get_contents($path), true) ?? [])
+                : [];
+
+            if (! is_array($backupData)) {
+                continue;
+            }
+
+            if ($file === 'composer.json') {
+                $backupPsr4 = $backupData['autoload']['psr-4'] ?? [];
+                $currentPsr4 = &$currentData['autoload']['psr-4'];
+                $restored = 0;
+
+                foreach ($backupPsr4 as $namespace => $dir) {
+                    if (! isset($currentPsr4[$namespace])
+                        && is_dir(base_path($dir))) {
+                        $currentPsr4[$namespace] = $dir;
+                        $restored++;
+                    }
+                }
+                unset($currentPsr4);
+
+                if ($restored > 0) {
+                    file_put_contents($path, json_encode($currentData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n");
+                    $log[] = "✓ 已恢复 {$restored} 条 PSR-4 映射（含 zip 上传插件）";
+                }
+            } else {
+                $restored = 0;
+
+                foreach ($backupData as $moduleName => $enabled) {
+                    // 模块目录在 checkout 后仍存在才恢复（新版本移除的模块不再登记）
+                    if (is_dir(base_path("Modules/{$moduleName}"))
+                        && (! array_key_exists($moduleName, $currentData) || $currentData[$moduleName] !== $enabled)) {
+                        $currentData[$moduleName] = $enabled;
+                        $restored++;
+                    }
+                }
+
+                if ($restored > 0) {
+                    file_put_contents($path, json_encode($currentData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n");
+                    $log[] = "✓ 已恢复 {$restored} 条插件启用状态（上传插件 + 手工启停）";
+                }
+            }
         }
     }
 

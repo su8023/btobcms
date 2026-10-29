@@ -29,11 +29,13 @@ class AiSeoAuditorServiceProvider extends ModuleServiceProvider
         try {
             $schedule->command('seo:audit')
                 ->dailyAt(sprintf('%02d:00', $hour))
+                // 全站串行爬取最坏 ~17 分钟，防上一轮未结束时 cron 再拉起一轮
+                ->withoutOverlapping()
                 ->when(fn () => plugin_setting('ai-seo-auditor', 'enabled', true) !== false
                     && plugin_setting('ai-seo-auditor', 'enabled', true) !== 'false');
         } catch (\Throwable) {
             // 设置表不可用时按默认时间执行
-            $schedule->command('seo:audit')->dailyAt(sprintf('%02d:00', $hour));
+            $schedule->command('seo:audit')->dailyAt(sprintf('%02d:00', $hour))->withoutOverlapping();
         }
     }
 }

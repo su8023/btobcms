@@ -6,9 +6,18 @@
     // 信任条不应出现在案例页自身（路由名带语言前缀，两种模式都要排除）
     $trustBarOnCasesPage = request()->routeIs('cases.*', '*.cases.*');
 
-    // 证书名徽章（最多 6 个，按 sort 升序）+ 已发布案例数
-    $trustBarCertificates = $trustBarOnCasesPage ? collect() : \Modules\TrustBuilder\Models\TrustCertification::query()->sorted()->limit(6)->get();
-    $trustBarCasesCount = $trustBarOnCasesPage ? 0 : \Modules\TrustBuilder\Models\TrustCase::query()->published()->count();
+    // 证书/案例变动频率极低而每页都渲染：5 分钟缓存（后台保存/删除时失效，见 Provider）
+    $trustBarData = $trustBarOnCasesPage ? null : cache()->remember(
+        'trust-builder:trust-bar',
+        now()->addMinutes(5),
+        fn () => [
+            'certificates' => \Modules\TrustBuilder\Models\TrustCertification::query()->sorted()->limit(6)->get(),
+            'casesCount' => \Modules\TrustBuilder\Models\TrustCase::query()->published()->count(),
+        ],
+    );
+
+    $trustBarCertificates = $trustBarData['certificates'] ?? collect();
+    $trustBarCasesCount = $trustBarData['casesCount'] ?? 0;
 @endphp
 
 @if(! $trustBarOnCasesPage && ($trustBarCertificates->isNotEmpty() || $trustBarCasesCount > 0))

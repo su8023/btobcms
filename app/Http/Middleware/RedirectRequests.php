@@ -19,13 +19,18 @@ class RedirectRequests
         $path = '/'.ltrim($request->path(), '/');
 
         try {
-            // 只缓存标量数组（缓存模型对象跨进程反序列化不可靠）；未命中不缓存，新增规则立即生效
+            // 命中缓存标量数组 → 跳转；未命中写负缓存（哨兵 0）5 分钟：
+            // 匿名流量 99% 不在 301 表里，避免每个 GET 都回源查询
             $cached = Cache::get("redirect:{$path}");
 
             if (is_array($cached)) {
                 Redirect::query()->where('from_path', $path)->increment('hits');
 
                 return redirect($cached['to'], $cached['code']);
+            }
+
+            if ($cached === 0) {
+                return $next($request);
             }
 
             $redirect = Redirect::query()->where('from_path', $path)->first(['to_path', 'code']);
@@ -36,6 +41,8 @@ class RedirectRequests
 
                 return redirect($redirect->to_path, $redirect->code);
             }
+
+            Cache::put("redirect:{$path}", 0, now()->addMinutes(5));
         } catch (\Throwable) {
             // 表未迁移等异常时放行，不阻塞请求
             return $next($request);

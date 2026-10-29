@@ -54,5 +54,20 @@ class GscPulseServiceProvider extends ModuleServiceProvider
                 Log::warning('[GscPulse] 每日回流失败：'.$e->getMessage());
             }
         })->name('gsc-pulse.daily-fetch')->dailyAt('06:10')->withoutOverlapping();
+
+        // 明细保留 90 天：看板只用 28 天窗口，防 page×query×country 三维行数无限膨胀
+        $schedule->call(function (): void {
+            try {
+                $pruned = \Modules\GscPulse\Models\GscDaily::query()
+                    ->where('date', '<', now()->subDays(90))
+                    ->delete();
+
+                if ($pruned > 0) {
+                    Log::info("[GscPulse] 清理 90 天前明细 {$pruned} 行。");
+                }
+            } catch (Throwable $e) {
+                Log::warning('[GscPulse] 明细清理失败：'.$e->getMessage());
+            }
+        })->name('gsc-pulse.prune')->dailyAt('06:40');
     }
 }

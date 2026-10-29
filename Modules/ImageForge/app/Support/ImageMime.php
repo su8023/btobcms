@@ -9,14 +9,17 @@ class ImageMime
 {
     /**
      * 优先看 mime 字段（image/* 且非 image/webp），mime 缺失时回退 path 后缀。
+     * mime 命中后仍校验扩展白名单：SVG（GD 不可解码）与 GIF（动画会丢帧）不派发转换。
      */
     public static function convertible(?string $mime, ?string $path): bool
     {
         $mime = trim((string) $mime);
 
         if ($mime !== '') {
-            return str_starts_with(strtolower($mime), 'image/')
-                && ! str_starts_with(strtolower($mime), 'image/webp');
+            if (! str_starts_with(strtolower($mime), 'image/')
+                || str_starts_with(strtolower($mime), 'image/webp')) {
+                return false;
+            }
         }
 
         $extension = strtolower(pathinfo((string) $path, PATHINFO_EXTENSION));

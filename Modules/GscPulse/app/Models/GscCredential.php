@@ -16,6 +16,9 @@ class GscCredential extends Model
     {
         return [
             'token_expires_at' => 'datetime',
+            // OAuth token 属长期凭据：加密落库（APP_KEY 驱动），DB 泄露不直接泄露授权
+            'access_token' => 'encrypted',
+            'refresh_token' => 'encrypted',
         ];
     }
 

@@ -33,7 +33,7 @@
     @php($graphs = isset($jsonLd['@type']) ? [$jsonLd] : (array_values(array_filter(is_array($jsonLd) ? $jsonLd : []))))
     @foreach($graphs as $graph)
         @if(is_array($graph))
-            <script type="application/ld+json">{!! json_encode($graph, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
+            <script type="application/ld+json">{!! json_encode($graph, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
         @endif
     @endforeach
 @else
@@ -46,5 +46,5 @@
         'url' => $canonical,
         'inLanguage' => app()->getLocale(),
         'isPartOf' => ['@id' => localized_route('home').'#website'],
-    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
+    ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
 @endif

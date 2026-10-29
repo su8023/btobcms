@@ -78,8 +78,14 @@ foreach (\Nwidart\Modules\Facades\Module::allEnabled() as $siteRoutesModule) {
     foreach (array_merge([$default], array_values(array_diff(config('site.locales'), [$default]))) as $locale) {
         $prefix = $locale === $default ? '' : $locale;
 
+        $siteMiddleware = [SetLocale::class.":{$locale}"];
+        if ($locale === $default) {
+            // 与核心默认语言组一致：插件前台页也做访客语言检测
+            $siteMiddleware[] = DetectVisitorLocale::class;
+        }
+
         Route::prefix($prefix)
-            ->middleware([SetLocale::class.":{$locale}"])
+            ->middleware($siteMiddleware)
             ->group(function () use ($siteRoutesFile, $locale): void {
                 include $siteRoutesFile;
             });

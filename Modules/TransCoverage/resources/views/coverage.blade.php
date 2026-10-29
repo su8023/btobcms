@@ -88,7 +88,7 @@
                                         {{ $row['title'] }}
                                     </td>
                                     @foreach ($locales as $locale)
-                                        @php($status = $row['statuses'][$locale])
+                                        @php($status = $row['statuses'][$locale] ?? 'missing')
                                         <td class="px-1 text-center"
                                             title="{{ $locale }}：{{ $statusText[$status] }}">
                                             <span class="fi-badge fi-badge-color-{{ $statusColor[$status] }}">

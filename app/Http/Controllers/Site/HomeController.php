@@ -32,7 +32,7 @@ class HomeController extends Controller
             });
 
         $latestProducts = Product::published()
-            ->with('category')
+            ->with(['category', 'images'])
             ->orderByDesc('id')
             ->take(8)
             ->get();

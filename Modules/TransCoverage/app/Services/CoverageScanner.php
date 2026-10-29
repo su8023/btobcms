@@ -34,12 +34,14 @@ class CoverageScanner
     }
 
     /**
-     * 当前缓存 key：内容变化后 max(updated_at) 随之变化，key 即更换。
+     * 当前缓存 key：内容变化后 max(updated_at) 随之变化，key 即更换；
+     * 携带语言清单——站点改 site.locales 后矩阵列集变化，旧缓存不能复用。
      */
     public function cacheKey(): string
     {
         return self::CACHE_PREFIX.md5(
             Post::query()->max('updated_at').'|'.Product::query()->max('updated_at')
+            .'|'.implode(',', site_locales())
         );
     }
 

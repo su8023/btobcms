@@ -101,6 +101,33 @@ class LeadMagnetTest extends TestCase
         $this->assertStringContainsString('/download/file/', $url);
     }
 
+    public function test_duplicate_submission_within_window_reuses_record(): void
+    {
+        $magnet = $this->makeMagnet();
+        Mail::fake();
+
+        $this->post("/download/{$magnet->slug}", ['email' => 'buyer@example.com'])->assertRedirect();
+        $this->post("/download/{$magnet->slug}", ['email' => 'buyer@example.com'])->assertRedirect();
+
+        // 防刷：同邮箱 16h 内重复提交只建一份下载记录、一条询盘
+        $this->assertSame(1, MagnetDownload::where('email', 'buyer@example.com')->count());
+        $this->assertSame(1, Inquiry::where('email', 'buyer@example.com')->count());
+        Mail::assertSent(MagnetLinkMail::class, 2); // 但链接邮件重发
+    }
+
+    public function test_submit_dispatches_inquiry_created(): void
+    {
+        $magnet = $this->makeMagnet();
+        Mail::fake();
+
+        // 与核心询盘同契约：LeadLens 评分/飞书通知都挂在 InquiryCreated 上
+        \Illuminate\Support\Facades\Event::fake([\App\Events\InquiryCreated::class]);
+
+        $this->post("/download/{$magnet->slug}", ['email' => 'lead@example.com'])->assertRedirect();
+
+        \Illuminate\Support\Facades\Event::assertDispatched(\App\Events\InquiryCreated::class);
+    }
+
     public function test_signed_url_downloads_the_file(): void
     {
         Mail::fake();

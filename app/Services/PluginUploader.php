@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use FilesystemIterator;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Process;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -137,6 +138,17 @@ class PluginUploader
                 $steps[] = '已按参数跳过 composer dump-autoload';
             } else {
                 $steps[] = $this->refreshAutoload();
+            }
+
+            // 9. 执行迁移：带数据表的插件不跑迁移，首次触达即 SQL 报错
+            try {
+                Artisan::call('migrate', ['--force' => true]);
+                $output = trim(Artisan::output());
+                $steps[] = $output !== ''
+                    ? '迁移完成：'.mb_substr($output, -120)
+                    : '迁移完成（无待执行项）';
+            } catch (\Throwable $e) {
+                $steps[] = '迁移失败（插件已启用，请 SSH 执行 php artisan migrate）：'.$e->getMessage();
             }
 
             return ['ok' => true, 'name' => $name, 'category' => $category, 'version' => $version, 'steps' => $steps];

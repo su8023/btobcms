@@ -14,7 +14,7 @@ class ProductController extends Controller
         $q = trim((string) $request->query('q', ''));
 
         $products = Product::published()
-            ->with('category')
+            ->with(['category', 'images'])
             ->when($q !== '', function ($query) use ($q) {
                 $query->whereRaw('lower(name) like ?', ['%'.mb_strtolower($q).'%']);
             })
@@ -39,6 +39,7 @@ class ProductController extends Controller
         $product->increment('views');
 
         $related = Product::published()
+            ->with(['category', 'images'])
             ->where('category_id', $product->category_id)
             ->whereKeyNot($product->getKey())
             ->take(4)

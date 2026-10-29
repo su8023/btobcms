@@ -278,6 +278,10 @@ class InstallController extends Controller
             'DB_DATABASE' => 'DB_DATABASE='.$this->envValue($dbDatabase),
             'DB_USERNAME' => 'DB_USERNAME='.$this->envValue($db['username']),
             'DB_PASSWORD' => 'DB_PASSWORD='.$this->envValue($db['password']),
+            // 生产性能基线：file 驱动在高并发下每请求多次磁盘 IO，
+            // database 驱动随 DB 走（迁移自带 sessions/cache 表），宝塔装完即最优默认
+            'SESSION_DRIVER' => 'SESSION_DRIVER=database',
+            'CACHE_STORE' => 'CACHE_STORE=database',
         ];
 
         $lines = [];
