@@ -3,6 +3,9 @@
 > 面向 BtoBcms 的可开发插件方案库。每个插件独立成模块（沿用 nwidart 架构），
 > 按投入产出比排序。GEO = Generative Engine Optimization，指针对 ChatGPT /
 > Perplexity / Google AI Overviews 等 AI 搜索引擎的优化。
+>
+> **进度（v1.2.3）**：LinkWeaver ✅、LeadLens ✅、GeoBoost ✅、编辑器 AI 提效（填充/翻译/体检）✅。
+> 第二轮提案见文末「第二轮提案」。
 
 ## 现状盘点（已具备的基础）
 
@@ -142,3 +145,111 @@ AI 写作室产出的文章目前内链为零。
 1. Google Business Profile + Bing Places 注册（供应商搜索直接展示，权重外链）
 2. 每个行业页配套 1 条 YouTube 工厂/产线视频嵌入（停留时长 + 视频搜索入口）
 3. GSC 后台手动提交一次全语言 sitemap，配合 IndexNow 加速首批收录
+
+---
+
+# 第二轮提案（v1.2.3 后）
+
+站点现状：刚上线、内容量小、插件生态已成型（内链/评分/GEO/AI 生产齐备）。
+当前阶段的核心矛盾是**没有数据回流**和**流量太小**，方案按此排序。
+
+## A. 插件推荐（按投入产出排序）
+
+### A1. TransCoverage 翻译覆盖率看板 ⭐ 最快见效（1~2 天，零 AI 成本）
+
+8 语言运营的实际痛点：AI 翻译是单篇操作，但**没有全局视野**——哪些产品/文章
+缺哪种语言、SEO 元数据缺哪种语言，全靠一个个点开看。
+
+- 扫描 Post/Product/Category 的 title/content/excerpt 与 SeoMeta 各语言填充情况
+- 后台看板：矩阵视图（内容 × 语言，绿/黄/红），按「缺语言数」排序
+- 每行一键「AI 翻译缺失语言」按钮（复用 PostTranslator，产品类复用同逻辑）
+- 可选：每周队列扫描 + 飞书摘要（"本周新增 12 篇西语缺口"）
+- 表：无新表，纯查询聚合 + 缓存
+
+### A2. GSC Pulse 谷歌数据回流 ⭐ 内容决策地基（4~5 天，需一次 OAuth）
+
+（原路线图第 4 项，提级）没有数据回流的 SEO 是盲打。站点已有内容生产闭环，
+缺的就是"什么词该写/该改"的输入。
+
+- OAuth2 授权 GSC → 每日队列拉取近 28 天 searchAnalytics（query/page/国家）
+- 临门一脚榜（排名 4~15、展现>100 的词）→ 一键跳 AI 填充预填关键词
+- 衰退预警（周环比 -30% 页面）+ 新词发现（有展现零点击）
+- 分语言统计（8 个子目录分开看），与 TransCoverage 互补
+- 表：`gsc_credentials`、`gsc_daily`
+
+### A3. LeadMagnet 资料磁铁（3~4 天，邮件列表资产）
+
+（原路线图第 5 项）B2B 首访 97% 不发询盘。「下载 2026 价格表 PDF / OEM 能力手册」
+换邮箱是外贸最经典的转化器。
+
+- 后台定义磁铁（slug + 文件 + 落地页文案）→ 公开页 /download/{slug}（8 语言可 SEO）
+- 提交邮箱 → 签名下载链接邮件（16 小时有效）→ 落库为线索 + 飞书通知
+- 可选 3 天自动跟进邮件
+- 表：`lead_magnets`、`magnet_downloads`
+
+### A4. TrustBuilder 信任背书（3~4 天，转化 + SEO 双吃）🆕 新增
+
+B2B 买家决策链条里信任信号权重极高，目前站点完全空白：
+
+- 后台维护：客户案例（行业/国家/场景/图）、认证证书、工厂实拍、团队
+- 前台 /case-studies 列表 + 详情页（8 语言，进 sitemap，case study 是 SEO 内容金矿）
+- 案例页 Organization/Review JSON-LD；产品页/关于页自动注入"相关案例"区块
+- 表：`cases`（多语言）、`certifications`
+
+### A5. ImageForge 图片优化（2~3 天，Core Web Vitals）🆕 新增
+
+composer 里没有任何图片处理库，上传原图直接进前台：
+
+- Filament 上传时自动转 WebP + 生成多尺寸（Filament 自带 resizing，缺 WebP）
+- 前台 `<img>` 补 srcset/width/height（消 CLS）+ loading="lazy"
+- 历史 attachments 批量转换 artisan 命令
+- 依赖：intervention/image + php-gd（宝塔已装 gd）
+
+### A6. PageForge 程序化落地页（7~10 天，等站点信任度起来再开）
+
+（原路线图第 6 项，维持押后）18 行业 × 类目 × 修饰词 × 8 语言 = 数千长尾页。
+风险：内容不足会被判 doorway page。**建议 GSC Pulse 数据确认收录健康后再启动**。
+
+### A7. QuoteFlow 报价 PDF（按需，询盘 >10/天时）
+
+（原路线图第 7 项，维持按需）询盘篮 → 自动报价单 PDF 邮件回复。
+
+## B. 站点层面优化（不写新插件）
+
+### B1. 页面缓存（性能，收益最大）⭐ 立即可做
+
+访客流量 99% 是匿名 GET，Nginx fastcgi_cache 可把 TTFB 从几百 ms 降到 <50ms：
+
+- 宝塔站点配置加 fastcgi_cache（跳过条件：登录 cookie、`/admin`、POST、
+  查询串非空、`Set-Cookie` 响应头存在）
+- **注意**：DetectVisitorLocale 的 302 必须排除在缓存外（仅缓存 200）
+- 谷歌 CLS/TTFB 直接影响排名，这个比任何插件性价比都高
+
+### B2. 安全加固（1 天内）
+
+- 后台 `/admin` 改为隐蔽路径或加 IP 白名单（宝塔层），robots 已 Disallow
+- 管理员账号开两步验证（Filament 有官方插件）
+- 登录失败限流确认（Filament 默认有 throttle，确认阈值）
+
+### B3. 运维兜底（半天）
+
+- 宝塔计划任务：每日整站备份（代码+库）到异地（OSS/S3/另一台机）
+- 上线 Uptime 监控（UptimeRobot 免费档）+ 飞书 webhook 告警
+- `GA4_ID` 填入 .env（已有 gtag 支持）——没有流量数据谈不上优化
+
+### B4. 内容运营节奏（持续）
+
+- 每周 2~3 篇 AI 写作室文章（先 en，发布后 AI 翻译到 es/pt——竞争小）
+- 每篇文章走一遍：AI 填充 → SEO 体检 → AI 生成 FAQ → AI 翻译 → 发布（内链自动织）
+- 每月看一次 AutoSeo 审计 + GSC Pulse（上线后）调整关键词方向
+
+## C. 推荐执行顺序
+
+| 周 | 动作 | 理由 |
+|---|---|---|
+| 本周 | B1 页面缓存 + B3 备份/监控/GA4 | 半天~1 天运维，立即受益 |
+| 本周 | A1 TransCoverage | 1~2 天，8 语言运营立刻可感知 |
+| 下周 | A2 GSC Pulse | 数据地基，之后所有内容决策有依据 |
+| 第 3 周 | A3 LeadMagnet | 流量开始进来前备好转化器 |
+| 第 4 周 | A4 TrustBuilder | 转化率补强 |
+| 流量起量后 | A5 → A6 → A7 | 性能微调与规模化 |
