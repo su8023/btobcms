@@ -16,6 +16,14 @@ class UpdateCenterServiceProvider extends ModuleServiceProvider
         parent::boot();
 
         $this->mergeConfigFrom(__DIR__.'/../../config/config.php', 'update-center');
+
+        // 容器绑定：SelfUpdater 的 repo/token 只能来自插件设置。
+        // 若直接 app(SelfUpdater::class)，Laravel 容器会用标量参数的默认值
+        // （空串）实例化 → 更新时误报「未配置 GitHub 仓库」。
+        $this->app->bind(
+            \Modules\UpdateCenter\Services\SelfUpdater::class,
+            fn () => \Modules\UpdateCenter\Services\SelfUpdater::fromSettings(),
+        );
     }
 
     /**

@@ -98,6 +98,23 @@ class UpdateCenterTest extends TestCase
         $this->assertNull(GitHubReleases::fromSettings());
     }
 
+    public function test_container_resolves_updater_with_configured_repo(): void
+    {
+        // 回归：容器解析 SelfUpdater 时必须带插件设置里的 repo/token，
+        // 否则更新会误报「未配置 GitHub 仓库」
+        Setting::put('plugin.UpdateCenter', [
+            'github_repo' => 'su8023/btobcms',
+            'github_token' => 'gho_test',
+        ]);
+
+        $updater = app(\Modules\UpdateCenter\Services\SelfUpdater::class);
+
+        $reflection = new \ReflectionProperty($updater, 'repo');
+        $reflection->setAccessible(true);
+
+        $this->assertSame('su8023/btobcms', $reflection->getValue($updater));
+    }
+
     public function test_updater_preflight_has_no_git_or_composer_dependency(): void
     {
         // WordPress 式自更新只依赖自身能力（zip 扩展/可写目录），不再要求 git 与 composer

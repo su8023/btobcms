@@ -152,7 +152,9 @@ class UpdateCenterPage extends Page
             return;
         }
 
-        $updater = app(SelfUpdater::class);
+        // 必须用 fromSettings()：容器解析标量参数（repo/token）会退回默认值，
+        // 导致「未配置仓库」——这些值只能从插件设置注入。
+        $updater = SelfUpdater::fromSettings();
         if (! $updater->acquireLock()) {
             Notification::make()->title('已有更新任务在执行（可能是另一个管理员刚点过）')->danger()->send();
 
@@ -171,7 +173,7 @@ class UpdateCenterPage extends Page
                 ->persistent()
                 ->send();
         } catch (Throwable $e) {
-            $state = app(SelfUpdater::class)->state() ?? [];
+            $state = SelfUpdater::fromSettings()->state() ?? [];
             Notification::make()
                 ->title('更新中断于「'.($state['step'] ?? '未知').'」步骤')
                 ->body('原因：'.mb_substr($e->getMessage(), 0, 300).'｜站点目前处于维护模式。点顶部「继续更新」从断点恢复；如需立即恢复访客访问可点「恢复访问并放弃」。')
@@ -190,7 +192,7 @@ class UpdateCenterPage extends Page
     /** 断点恢复 */
     public function resumeUpdate(): void
     {
-        $updater = app(SelfUpdater::class);
+        $updater = SelfUpdater::fromSettings();
 
         if (! $updater->acquireLock()) {
             Notification::make()->title('已有更新任务在执行，请稍候')->danger()->send();
@@ -224,7 +226,7 @@ class UpdateCenterPage extends Page
     /** 放弃中断的更新：先回滚已覆盖的文件，再恢复访客访问 */
     public function abortInterrupted(): void
     {
-        $updater = app(SelfUpdater::class);
+        $updater = SelfUpdater::fromSettings();
 
         try {
             $updater->rollback();
