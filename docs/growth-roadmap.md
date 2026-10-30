@@ -7,7 +7,7 @@
 > **进度（v1.3.0）**：LinkWeaver ✅、LeadLens ✅、GeoBoost ✅、编辑器 AI 提效 ✅、
 > 第二轮全部落地：TransCoverage ✅、GscPulse ✅、LeadMagnet ✅、TrustBuilder ✅、ImageForge ✅。
 > 剩 PageForge（等 GSC 数据）/QuoteFlow（询盘量起后）。
-> 线上站点 www.aples.xyz 已于 v1.3.6 起接入一键更新闭环。运维项（fastcgi_cache/备份/监控/GA4）见「第二轮提案 B 组」，需在宝塔面板操作。
+> 线上站点 www.aples.xyz 已于 v1.3.6 起接入一键更新闭环；v1.4.0 起改为 WordPress 式自更新（自包含包 + 断点恢复，服务器不再需要 git/composer/队列 worker）。发版流程见 docs/release-build.md。运维项（fastcgi_cache/备份/监控/GA4）见「第二轮提案 B 组」，需在宝塔面板操作。
 
 ## 现状盘点（已具备的基础）
 
