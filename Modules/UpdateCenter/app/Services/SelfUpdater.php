@@ -383,34 +383,47 @@ class SelfUpdater
             throw new RuntimeException("Release {$tag} 未附带安装包 btobcms-{$tag}.zip");
         }
 
-        // 下载到 .part，绝不直接写最终文件
-        @unlink($partPath);
-        $resp = Http::timeout(300)
-            ->withHeaders($this->githubHeaders())
-            ->accept('application/octet-stream')
-            ->sink($partPath)
-            ->get($asset['url']);
+        // 下载到 .part，绝不直接写最终文件。
+        // 大包经 GitHub 中转偶发传输截断（表现为哈希不匹配）：
+        // 字节数 + SHA-256 + zip 三重校验，未通过自动重试（共 3 次）。
+        $expectedDigest = $this->expectedDigest($asset);
+        $expectedSize = (int) ($asset['size'] ?? 0);
+        $actual = '';
 
-        if (! $resp->successful() || ! is_file($partPath) || filesize($partPath) === 0) {
+        for ($attempt = 1; $attempt <= 3; $attempt++) {
+            @unlink($partPath);
+            $resp = Http::timeout(300)
+                ->withHeaders($this->githubHeaders())
+                ->accept('application/octet-stream')
+                ->sink($partPath)
+                ->get($asset['url']);
+
+            if (! $resp->successful() || ! is_file($partPath) || filesize($partPath) === 0) {
+                $reason = 'HTTP '.$resp->status();
+            } elseif ($expectedSize > 0 && filesize($partPath) !== $expectedSize) {
+                $reason = '传输截断（'.round(filesize($partPath) / 1048576, 1).' MB，预期 '.round($expectedSize / 1048576, 1).' MB）';
+            } else {
+                $actual = (string) hash_file('sha256', $partPath);
+
+                if ($expectedDigest !== null && ! hash_equals($expectedDigest, $actual)) {
+                    $reason = 'SHA-256 不匹配';
+                } elseif (! $this->zipLooksValid($partPath)) {
+                    $reason = '无法作为 zip 打开';
+                } else {
+                    break; // 本轮下载完整可用
+                }
+            }
+
             @unlink($partPath);
 
-            throw new RuntimeException('安装包下载失败：HTTP '.$resp->status());
-        }
+            if ($attempt < 3) {
+                $log[] = '⚠ 第 '.$attempt.' 次下载校验未通过（'.$reason.'），自动重试…';
+                sleep(2);
 
-        // 校验 1：GitHub asset 的 digest（sha256:…）
-        $expected = $this->expectedDigest($asset);
-        $actual = hash_file('sha256', $partPath);
-        if ($expected !== null && ! hash_equals($expected, (string) $actual)) {
-            @unlink($partPath);
+                continue;
+            }
 
-            throw new RuntimeException('安装包 SHA-256 校验失败，已丢弃下载文件');
-        }
-
-        // 校验 2：必须是可打开的 zip
-        if (! $this->zipLooksValid($partPath)) {
-            @unlink($partPath);
-
-            throw new RuntimeException('安装包损坏（无法作为 zip 打开）');
+            throw new RuntimeException('安装包连续 3 次下载校验未通过（最后原因：'.$reason.'）');
         }
 
         rename($partPath, $zipPath); // 原子落地
