@@ -26,6 +26,16 @@ return Application::configure(basePath: dirname(__DIR__))
         // 询盘记录的才是买家真实 IP 而非 CDN 节点 IP。
         // 注意：at:'*' 意味着客户端可伪造 XFF——若站点不经代理直接暴露，请改回默认。
         $middleware->trustProxies(at: '*');
+
+        // 更新中心进入维护模式时，后台面板与 Livewire 端点必须保持可达：
+        // 否则更新进程一旦被中断，管理员将无法点击「继续更新 / 恢复访问」，
+        // 站点会永久停在 503，只能 SSH 救。
+        $middleware->preventRequestsDuringMaintenance(except: [
+            'admin',
+            'admin/*',
+            'livewire/*',
+            'up',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

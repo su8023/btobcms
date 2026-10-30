@@ -1,14 +1,18 @@
 <x-filament-panels::page>
+    {{-- 中断横幅：断点继续 / 放弃 --}}
+    @if($this->resumable())
+        <x-filament::section class="border-warning-500">
+            <x-slot:heading>⚠ 上次更新中断于「{{ $this->interruptedStep() }}」步骤（目标 {{ $this->interruptedTag() }}）</x-slot:heading>
+            <x-slot:description>站点当前处于维护模式（访客看到 503）。点顶部「继续更新」从断点恢复；若想暂时恢复访客访问，点「恢复访问并放弃」。</x-slot:description>
+        </x-filament::section>
+    @endif
+
     {{-- 当前版本 vs 最新版本 --}}
     <div class="mb-4 grid gap-4 md:grid-cols-3">
         <x-filament::section>
             <x-slot:heading>{{ __('admin.update_center.current_version') }}</x-slot:heading>
             <p class="text-2xl font-bold">{{ $currentVersion }}</p>
-            @if($gitTag || $gitCommit)
-                <p class="text-xs text-gray-500 mt-1">git: {{ $gitTag ?? $gitCommit }}</p>
-            @else
-                <p class="text-xs text-gray-500 mt-1">{{ __('admin.update_center.git_na') }}</p>
-            @endif
+            <p class="text-xs text-gray-500 mt-1">{{ __('admin.update_center.git_na') }}</p>
         </x-filament::section>
 
         <x-filament::section>
@@ -36,7 +40,7 @@
         </x-filament::section>
     </div>
 
-    {{-- 升级前置问题（git 未装/非 git 仓库/有本地改动） --}}
+    {{-- 升级前置问题（缺 zip 扩展/目录不可写） --}}
     @if($preflightProblems !== [])
         <x-filament::section class="border-danger-500">
             <x-slot:heading>{{ __('admin.update_center.preflight_problems') }}</x-slot:heading>
@@ -67,7 +71,7 @@
                             <p class="font-semibold text-sm">
                                 {{ $release['tag'] }}
                                 @if($release['prerelease'])
-                                    <span class="ml-1 text-xs text-warning-600">pre-release</span>
+                                    <span class="ml-1 text-xs text-warning-600">测试版</span>
                                 @endif
                                 @if($release['tag'] === $currentVersion)
                                     <span class="ml-1 text-xs text-success-600">{{ __('admin.update_center.current_badge') }}</span>

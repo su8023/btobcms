@@ -8,14 +8,15 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
-use Modules\UpdateCenter\Jobs\RunUpdate;
 use Modules\UpdateCenter\Services\GitHubReleases;
-use Modules\UpdateCenter\Services\Updater;
+use Modules\UpdateCenter\Services\SelfUpdater;
+use Throwable;
 use UnitEnum;
 
 /**
- * 更新中心：当前版本 vs GitHub 最新 Release、变更说明、历史版本、一键升级、执行日志。
- * 更新在队列中执行（维护模式+备份+回滚见 Updater），页面轮询日志。
+ * 更新中心：WordPress 式自更新。
+ * 点更新 → 同步执行（下载自包含包 → 维护模式 → 解压覆盖 → 迁移 → 缓存重建 → 恢复访问），
+ * 不依赖队列 worker / git / composer；中断后可从断点继续。
  */
 class UpdateCenterPage extends Page
 {
@@ -44,16 +45,18 @@ class UpdateCenterPage extends Page
 
     public static function getNavigationBadge(): ?string
     {
-        // 有新版本时导航出红点提示
+        // 断点中断优先提示「!」；否则有新版本提示
+        $updater = SelfUpdater::fromSettings();
+        if ($updater->isResumable()) {
+            return '!';
+        }
+
         $client = GitHubReleases::fromSettings();
         if ($client === null) {
             return null;
         }
         $latest = $client->latest();
-
-        // 版本比对以 git tag 为准（config/version.php 可能滞后）
-        $current = \Modules\UpdateCenter\Services\GitService::fromSettings()->currentTag()
-            ?? (string) config('version.version');
+        $current = (string) config('version.version');
 
         return ($latest !== null && $latest['tag'] !== $current && $latest['tag'] !== '') ? '!' : null;
     }
@@ -69,10 +72,6 @@ class UpdateCenterPage extends Page
 
     public string $currentVersion = '';
 
-    public ?string $gitTag = null;
-
-    public ?string $gitCommit = null;
-
     public string $githubError = '';
 
     /** @var list<string> */
@@ -82,19 +81,17 @@ class UpdateCenterPage extends Page
 
     public string $repo = '';
 
+    public bool $updating = false;
+
     public function mount(): void
     {
         $this->configured = GitHubReleases::fromSettings() !== null;
         $this->repo = (string) plugin_setting('update-center', 'github_repo', '');
 
-        $git = \Modules\UpdateCenter\Services\GitService::fromSettings();
-        $this->gitTag = $git->currentTag();
-        $this->gitCommit = $git->currentCommit();
+        // 当前版本以 config/version.php 为准（每次发版随更新包自带）
+        $this->currentVersion = (string) config('version.version');
 
-        // 当前版本以 git tag 为准（自愈）：config/version.php 可能因断链停留在旧值
-        $this->currentVersion = $this->gitTag ?? (string) config('version.version');
-
-        $this->preflightProblems = $this->configured ? Updater::fromSettings()->preflight() : [];
+        $this->preflightProblems = SelfUpdater::preflight();
 
         if (! $this->configured) {
             $this->githubError = __('admin.update_center.not_configured');
@@ -109,7 +106,7 @@ class UpdateCenterPage extends Page
             ))->releases();
             $this->latestTag = $this->releases[0]['tag'] ?? null;
             $this->latestNotes = $this->releases[0]['notes'] ?? null;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $this->githubError = $e->getMessage();
         }
     }
@@ -119,6 +116,25 @@ class UpdateCenterPage extends Page
         return $this->latestTag !== null && $this->latestTag !== $this->currentVersion;
     }
 
+    public function resumable(): bool
+    {
+        return SelfUpdater::fromSettings()->isResumable();
+    }
+
+    public function interruptedTag(): ?string
+    {
+        return SelfUpdater::fromSettings()->state()['tag'] ?? null;
+    }
+
+    public function interruptedStep(): ?string
+    {
+        return SelfUpdater::fromSettings()->state()['step'] ?? null;
+    }
+
+    /**
+     * 一键更新：同步执行全流程（下载 → 维护 → 覆盖 → 迁移 → 缓存 → 恢复）。
+     * 更新器自身每步落状态文件；此处放宽执行时限并忽略用户中断（关标签页不杀更新）。
+     */
     public function updateTo(?string $tag = null): void
     {
         $target = $tag ?? $this->latestTag;
@@ -130,30 +146,143 @@ class UpdateCenterPage extends Page
 
             return;
         }
+        if ($this->updating) {
+            Notification::make()->title('更新正在进行中，请勿重复点击')->warning()->send();
 
-        RunUpdate::dispatch($target);
+            return;
+        }
+
+        $updater = app(SelfUpdater::class);
+        if (! $updater->acquireLock()) {
+            Notification::make()->title('已有更新任务在执行（可能是另一个管理员刚点过）')->danger()->send();
+
+            return;
+        }
+
+        $this->updating = true;
+        @set_time_limit(0);
+
+        try {
+            $updater->run($target);
+            Notification::make()
+                ->title('更新成功：已升级到 '.$target)
+                ->body('站点已自动完成下载、代码覆盖、数据库迁移与缓存重建。建议刷新页面并快速检查前台与询盘。')
+                ->success()
+                ->persistent()
+                ->send();
+        } catch (Throwable $e) {
+            $state = app(SelfUpdater::class)->state() ?? [];
+            Notification::make()
+                ->title('更新中断于「'.($state['step'] ?? '未知').'」步骤')
+                ->body('原因：'.mb_substr($e->getMessage(), 0, 300).'｜站点目前处于维护模式。点顶部「继续更新」从断点恢复；如需立即恢复访客访问可点「恢复访问并放弃」。')
+                ->danger()
+                ->persistent()
+                ->send();
+            report($e);
+        } finally {
+            $this->updating = false;
+            $updater->releaseLock();
+        }
+
+        $this->currentVersion = (string) config('version.version');
+    }
+
+    /** 断点恢复 */
+    public function resumeUpdate(): void
+    {
+        $updater = app(SelfUpdater::class);
+
+        if (! $updater->acquireLock()) {
+            Notification::make()->title('已有更新任务在执行，请稍候')->danger()->send();
+
+            return;
+        }
+
+        @set_time_limit(0);
+
+        try {
+            $updater->resume();
+            Notification::make()
+                ->title('更新已完成')
+                ->success()
+                ->send();
+        } catch (Throwable $e) {
+            Notification::make()
+                ->title('恢复仍失败：'.$e->getMessage())
+                ->body('站点仍在维护模式。请联系技术人员查看 storage/logs/laravel.log。')
+                ->danger()
+                ->persistent()
+                ->send();
+            report($e);
+        } finally {
+            $updater->releaseLock();
+        }
+
+        $this->currentVersion = (string) config('version.version');
+    }
+
+    /** 放弃中断的更新：先回滚已覆盖的文件，再恢复访客访问 */
+    public function abortInterrupted(): void
+    {
+        $updater = app(SelfUpdater::class);
+
+        try {
+            $updater->rollback();
+        } catch (Throwable $e) {
+            Notification::make()
+                ->title('回滚失败，站点可能仍处于半更新状态')
+                ->body($e->getMessage())
+                ->danger()
+                ->persistent()
+                ->send();
+
+            return;
+        }
+
+        $updater->abandon();
+
+        try {
+            \Illuminate\Support\Facades\Artisan::call('up');
+        } catch (Throwable) {
+        }
         Notification::make()
-            ->title(__('admin.update_center.started', ['tag' => $target]))
-            ->body(__('admin.update_center.started_hint'))
-            ->success()
+            ->title('已回滚并恢复访问（本次更新已放弃，可稍后重新发起）')
+            ->warning()
             ->send();
     }
 
     public function logTail(): string
     {
-        return Updater::readLogTail(50);
+        return SelfUpdater::readLogTail(50);
     }
 
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('resumeUpdate')
+                ->label('继续更新（'.$this->interruptedTag().' 断在第 '.$this->interruptedStep().' 步）')
+                ->color('warning')
+                ->icon(Heroicon::OutlinedPlayCircle)
+                ->requiresConfirmation()
+                ->modalHeading('继续上次中断的更新')
+                ->modalDescription('从断点继续执行剩余步骤（幂等：已完成的文件覆盖与迁移不会重复造成问题）。完成后自动恢复访问。')
+                ->action(fn () => $this->resumeUpdate())
+                ->visible(fn () => $this->resumable()),
+
+            Action::make('abortInterrupted')
+                ->label('恢复访问并放弃')
+                ->color('gray')
+                ->icon(Heroicon::OutlinedXCircle)
+                ->action(fn () => $this->abortInterrupted())
+                ->visible(fn () => $this->resumable()),
+
             Action::make('updateNow')
                 ->label(__('admin.update_center.update_now', ['tag' => $this->latestTag ?? '']))
                 ->color('success')
                 ->icon(Heroicon::OutlinedArrowUpCircle)
                 ->requiresConfirmation()
                 ->modalHeading(__('admin.update_center.confirm_heading'))
-                ->modalDescription(__('admin.update_center.confirm_desc'))
+                ->modalDescription(__('admin.update_center.confirm_desc').' 全程无需服务器命令行；若中途出问题会停在维护模式并可一键从断点继续。')
                 ->action(fn () => $this->updateTo())
                 ->visible(fn () => $this->hasUpdate() && $this->preflightProblems === []),
         ];

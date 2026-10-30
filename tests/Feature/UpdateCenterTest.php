@@ -7,7 +7,6 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Modules\UpdateCenter\Services\GitHubReleases;
-use Modules\UpdateCenter\Services\GitService;
 use Tests\TestCase;
 
 class UpdateCenterTest extends TestCase
@@ -40,7 +39,6 @@ class UpdateCenterTest extends TestCase
     {
         $this->get('/admin/update-center')
             ->assertOk()
-            ->assertSee(__('admin.update_center.not_configured'))
             ->assertSee(__('admin.update_center.not_configured'));
     }
 
@@ -61,11 +59,12 @@ class UpdateCenterTest extends TestCase
             ], 200),
         ]);
 
+        // 当前版本来自 config/version.php（发布包自带，随更新自动到位）
         $this->get('/admin/update-center')
             ->assertOk()
+            ->assertSee(config('version.version'))
             ->assertSee('v1.1.0')
             ->assertSee('October update')
-            ->assertSee("## What's new")
             ->assertSee(__('admin.update_center.update_available'));
     }
 
@@ -99,17 +98,11 @@ class UpdateCenterTest extends TestCase
         $this->assertNull(GitHubReleases::fromSettings());
     }
 
-    public function test_git_service_reads_current_tag_in_project_repo(): void
+    public function test_updater_preflight_has_no_git_or_composer_dependency(): void
     {
-        // 项目已 git init + tag v1.0.0（本仓库事实）
-        if (! is_dir(base_path('.git'))) {
-            $this->markTestSkipped('非 git 检出环境');
-        }
-        $git = new GitService('git', base_path());
-        // 允许 tag 后有后续提交：用 --tags 宽松描述验证 tag 可达
-        $r = $git->run(['describe', '--tags']);
-        $this->assertSame(0, $r['exit'], '仓库应存在可描述的 tag');
-        $this->assertTrue($git->tagExists('v1.0.0'));
-        $this->assertTrue($git->hasRemote() === false || $git->hasRemote() === true); // 本地无 remote 合法
+        // WordPress 式自更新只依赖自身能力（zip 扩展/可写目录），不再要求 git 与 composer
+        $problems = \Modules\UpdateCenter\Services\SelfUpdater::preflight();
+
+        $this->assertSame([], $problems);
     }
 }
