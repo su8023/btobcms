@@ -243,6 +243,35 @@ class SelfUpdater
     }
 
     /**
+     * 从本地上传的安装包更新（跳过 GitHub 下载环节）。
+     * 给 GitHub 不可达/限流/私有仓库无 token 等场景一条自助通路。
+     *
+     * @param  string  $zipPath  本地 zip 绝对路径
+     * @param  string  $tag      版本号（用于状态文件与备份目录）
+     * @return list<string>
+     */
+    public function installFromLocalPackage(string $zipPath, string $tag): array
+    {
+        $this->assertTag($tag);
+
+        if (! is_file($zipPath) || ! $this->zipLooksValid($zipPath)) {
+            throw new RuntimeException('上传的安装包无效（不是可打开的 zip）');
+        }
+
+        @mkdir($this->updateDir, 0775, true);
+        $target = $this->updateDir.'/'.$tag.'.zip';
+        @unlink($target);
+        if (! @copy($zipPath, $target)) {
+            throw new RuntimeException('安装包保存失败（storage/app 不可写？）');
+        }
+
+        $log = ["=== 开始更新 → {$tag}（本地上传安装包） ===", '✓ 安装包已接收（'.round(filesize($target) / 1048576, 1).' MB）'];
+
+        // 从解压步骤继续（下载已完成）
+        return $this->execute($tag, array_slice(self::STEPS, 2), $log);
+    }
+
+    /**
      * 断点恢复：从状态文件记录的步骤继续（全部幂等）。
      *
      * @return list<string>

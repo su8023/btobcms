@@ -253,6 +253,56 @@ class UpdateCenterPage extends Page
             ->send();
     }
 
+    /**
+     * 从本地上传的安装包更新（不依赖 GitHub API）。
+     */
+    public function updateFromLocalPackage(array $data): void
+    {
+        $tag = (string) ($data['tag'] ?? '');
+        // FileUpload 的值为路径数组（可多选），取第一个
+        $uploaded = $data['package'] ?? [];
+        $stored = is_array($uploaded) ? (string) ($uploaded[0] ?? '') : (string) $uploaded;
+
+        if ($stored === '' || ! is_file(storage_path($stored))) {
+            Notification::make()->title('请选择安装包文件')->danger()->send();
+
+            return;
+        }
+
+        $updater = SelfUpdater::fromSettings();
+        if (! $updater->acquireLock()) {
+            Notification::make()->title('已有更新任务在执行，请稍候')->danger()->send();
+
+            return;
+        }
+
+        $this->updating = true;
+        @set_time_limit(0);
+
+        try {
+            $updater->installFromLocalPackage(storage_path($stored), $tag);
+            Notification::make()
+                ->title('更新成功：已升级到 '.$tag)
+                ->body('已用本地上传的安装包完成覆盖、迁移与缓存重建。建议刷新页面检查前台。')
+                ->success()
+                ->persistent()
+                ->send();
+        } catch (Throwable $e) {
+            Notification::make()
+                ->title('更新中断：'.$e->getMessage())
+                ->body('站点可能处于维护模式。点顶部「继续更新」从断点恢复。')
+                ->danger()
+                ->persistent()
+                ->send();
+            report($e);
+        } finally {
+            $this->updating = false;
+            $updater->releaseLock();
+        }
+
+        $this->currentVersion = (string) config('version.version');
+    }
+
     public function logTail(): string
     {
         return SelfUpdater::readLogTail(50);
@@ -261,6 +311,28 @@ class UpdateCenterPage extends Page
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('localPackage')
+                ->label('本地上传安装包')
+                ->color('gray')
+                ->icon(Heroicon::OutlinedArrowUpTray)
+                ->modalHeading('从本地上传安装包更新')
+                ->modalDescription('下载站点的 btobcms-{版本}.zip 安装包后在此上传即可更新——不需要 GitHub 可达，适合网络受限或私有仓库场景。')
+                ->form([
+                    \Filament\Forms\Components\TextInput::make('tag')
+                        ->label('目标版本号')
+                        ->default($this->latestTag ?? '')
+                        ->required()
+                        ->maxLength(40),
+                    \Filament\Forms\Components\FileUpload::make('package')
+                        ->label('安装包（zip）')
+                        ->disk('local')
+                        ->directory('update-uploads')
+                        ->acceptedFileTypes(['application/zip', 'application/x-zip-compressed'])
+                        ->maxSize(204800)
+                        ->required(),
+                ])
+                ->action(fn (array $data) => $this->updateFromLocalPackage($data)),
+
             Action::make('resumeUpdate')
                 ->label('继续更新（'.$this->interruptedTag().' 断在第 '.$this->interruptedStep().' 步）')
                 ->color('warning')
