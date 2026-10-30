@@ -132,8 +132,13 @@ class UpdateCenterPage extends Page
     }
 
     /**
-     * 一键更新：同步执行全流程（下载 → 维护 → 覆盖 → 迁移 → 缓存 → 恢复）。
-     * 更新器自身每步落状态文件；此处放宽执行时限并忽略用户中断（关标签页不杀更新）。
+     * 一键更新：点击后派发「脱离的 CLI 子进程」执行全流程
+     * （下载 → 维护 → 覆盖 → 迁移 → 缓存 → 恢复），HTTP 请求立即返回。
+     *
+     * 为什么派发子进程而非同步执行：同步跑在 HTTP 请求里会被 nginx
+     * fastcgi 超时 / FPM request_terminate_timeout 杀掉（线上实测）；
+     * 子进程是独立 OS 进程，父请求死亡不影响它，且天然规避超时。
+     * 进度通过状态文件 + 日志轮询（页面 5s wire:poll）实时可见。
      */
     public function updateTo(?string $tag = null): void
     {
@@ -143,11 +148,6 @@ class UpdateCenterPage extends Page
         }
         if ($this->preflightProblems !== []) {
             Notification::make()->title(__('admin.update_center.preflight_blocked'))->danger()->send();
-
-            return;
-        }
-        if ($this->updating) {
-            Notification::make()->title('更新正在进行中，请勿重复点击')->warning()->send();
 
             return;
         }
@@ -162,31 +162,41 @@ class UpdateCenterPage extends Page
         }
 
         $this->updating = true;
-        @set_time_limit(0);
 
         try {
-            $updater->run($target);
+            // 以独立进程派发：proc_open 子进程在 FPM 杀掉本请求后继续运行
+            $php = PHP_OS_FAMILY === 'Windows' ? PHP_BINDIR.'\\php.exe' : PHP_BINDIR.'/php';
+            $descriptors = [1 => ['file', storage_path('app/update-apply.log'), 'a'], 2 => ['file', storage_path('app/update-apply.log'), 'a']];
+            $process = @proc_open(
+                escapeshellarg($php).' '.escapeshellarg(base_path('artisan')).' update:apply '.escapeshellarg($target),
+                $descriptors,
+                $pipes,
+                base_path(),
+                null,
+                ['bypass_shell' => true],
+            );
+
+            if (! is_resource($process)) {
+                throw new RuntimeException('无法派发更新进程（proc_open 不可用？检查禁用函数）');
+            }
+            proc_close($process); // 只等派发动作本身（瞬间），不等更新跑完
+
             Notification::make()
-                ->title('更新成功：已升级到 '.$target)
-                ->body('站点已自动完成下载、代码覆盖、数据库迁移与缓存重建。建议刷新页面并快速检查前台与询盘。')
-                ->success()
+                ->title('更新已启动：目标 '.$target)
+                ->body('后台进程正在执行下载 → 覆盖 → 迁移 → 缓存重建，通常 2~4 分钟。本页每 5 秒刷新进度，完成后刷新页面即可看到新版本。')
+                ->info()
                 ->persistent()
                 ->send();
         } catch (Throwable $e) {
-            $state = SelfUpdater::fromSettings()->state() ?? [];
             Notification::make()
-                ->title('更新中断于「'.($state['step'] ?? '未知').'」步骤')
-                ->body('原因：'.mb_substr($e->getMessage(), 0, 300).'｜站点目前处于维护模式。点顶部「继续更新」从断点恢复；如需立即恢复访客访问可点「恢复访问并放弃」。')
+                ->title('无法启动更新进程')
+                ->body(mb_substr($e->getMessage(), 0, 300))
                 ->danger()
                 ->persistent()
                 ->send();
-            report($e);
         } finally {
             $this->updating = false;
-            $updater->releaseLock();
         }
-
-        $this->currentVersion = (string) config('version.version');
     }
 
     /** 断点恢复 */

@@ -11,6 +11,10 @@ class UpdateCenterServiceProvider extends ModuleServiceProvider
 
     protected string $nameLower = 'updatecenter';
 
+    protected array $commands = [
+        \Modules\UpdateCenter\Console\Commands\ApplyUpdateCommand::class,
+    ];
+
     public function boot(): void
     {
         parent::boot();
