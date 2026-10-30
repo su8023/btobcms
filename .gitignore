@@ -42,3 +42,4 @@ btobcms-deploy-*.zip
 
 # 发布包构建产物（scripts/build-release.php 生成，体积大，不入仓库）
 /dist/
+cookies.txt
