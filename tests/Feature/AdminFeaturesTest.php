@@ -54,6 +54,12 @@ class AdminFeaturesTest extends TestCase
 
         // 联系页显示新邮箱
         $this->get('/contact')->assertOk()->assertSee('sales@acme.test');
+
+        // 首页 CTA 横幅也读取设置值（历史 bug：直接读 config 默认值 sales@example.com）
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('sales@acme.test')
+            ->assertDontSee('sales@example.com');
     }
 
     public function test_inquiry_export_csv_downloads_with_rows(): void

@@ -52,6 +52,20 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // 后台「站点设置」的联系方式合并进 config：站点设置存 DB，而全站 8+ 处
+        // （首页 CTA/行业页/服务页/邮件署名/llms.txt 等）直接读 config('site.contact.*')。
+        // 启动时用 DB 值覆盖 env 默认值，后台改一处全站生效（含队列，重启后生效）。
+        try {
+            foreach (['email', 'phone', 'address'] as $contactField) {
+                $value = \App\Models\Setting::get("site.contact.{$contactField}");
+                if (filled($value)) {
+                    config(["site.contact.{$contactField}" => is_string($value) ? $value : (string) $value]);
+                }
+            }
+        } catch (\Throwable) {
+            // 表未迁移（全新安装/测试引导阶段）时跳过：走 env 默认值
+        }
+
         // 文章创建时自动记录作者（后台手动创建与 AI 生成都生效）
         Post::creating(function (Post $post) {
             $post->author_id ??= Auth::id();

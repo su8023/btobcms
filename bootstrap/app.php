@@ -19,6 +19,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // 主题视图覆盖按请求应用（幂等，中途切换主题立即生效）
         $middleware->web(append: \App\Http\Middleware\ApplyTheme::class);
 
+        // 站点设置（联系方式等）按请求合并进 config——后台改完全站立即生效
+        $middleware->web(append: \App\Http\Middleware\ApplySiteSettings::class);
+
         // 生产部署在 Cloudflare/负载均衡之后：信任代理头（X-Forwarded-For），
         // 询盘记录的才是买家真实 IP 而非 CDN 节点 IP。
         // 注意：at:'*' 意味着客户端可伪造 XFF——若站点不经代理直接暴露，请改回默认。
