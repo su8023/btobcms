@@ -26,7 +26,7 @@ return [
         'upload_file' => '主题 ZIP 包',
         'upload_success' => '主题「:name」安装成功，可在列表中启用',
         'upload_failed' => '主题安装失败',
-        'footer' => '线下设计主题：按 themes/ocean/ 的结构创建 theme.json 与 assets/css/theme.css（覆盖 :root 配色变量即可全局换肤），打包 ZIP 后从「上传主题」安装。详见 docs/theme-development.md。',
+        'footer' => '提示：点「启用」即可整站换肤。想定制专属设计？联系技术管理员按规范制作主题包后从「上传主题」安装。',
     ],
 
     'plugins' => [

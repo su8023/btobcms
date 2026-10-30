@@ -26,7 +26,7 @@ return [
         'upload_file' => 'Theme ZIP package',
         'upload_success' => 'Theme ":name" installed — activate it from the list',
         'upload_failed' => 'Theme installation failed',
-        'footer' => 'Design themes offline: follow themes/ocean/ structure — create theme.json and assets/css/theme.css (override :root variables to reskin globally), pack a ZIP and install via "Upload Theme". See docs/theme-development.md.',
+        'footer' => 'Tip: click \\"Enable\\" to reskin the whole site. For a custom design, ask your admin to prepare and upload a theme package.',
     ],
 
     'plugins' => [
@@ -134,7 +134,7 @@ return [
                 'advanced' => 'Advanced',
             ],
         ],
-        'footer' => 'Write your own plugins — see docs/plugin-development.md. Declare "category" in module.json to place a plugin here.',
+        'footer' => 'Tip: every plugin card includes a user guide. Need a new feature? Ask your admin to install it as a plugin.',
     ],
 
     'settings' => [

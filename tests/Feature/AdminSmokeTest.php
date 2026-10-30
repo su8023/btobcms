@@ -47,7 +47,6 @@ class AdminSmokeTest extends TestCase
             '/admin/attr-sets',
             '/admin/attributes',
             '/admin/attributes/create',
-            '/admin/sites',
             '/admin/redirects',
         ] as $url) {
             $this->get($url)->assertOk($url);

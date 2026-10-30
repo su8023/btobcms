@@ -34,10 +34,7 @@ class MailNotifierServiceProvider extends ModuleServiceProvider
      *
      * @var string[]
      */
-    protected array $providers = [
-        EventServiceProvider::class,
-        RouteServiceProvider::class,
-    ];
+    protected array $providers = [];
 
     public function boot(): void
     {
