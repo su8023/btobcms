@@ -873,11 +873,12 @@ class SelfUpdater
      */
     protected function artisan(string $command, array $args = []): string
     {
-        // 线上实测（宝塔 FPM）：PHP_BINARY 在 FPM 请求里是 php-fpm 二进制，
-        // 执行 `php-fpm artisan down` 只会打出 usage 退出 64。CLI 要用
-        // PHP_BINDIR 下的 php（与 updateTo 派发子进程的解析保持一致）。
+        // 线上实测（宝塔）双重坑：FPM 下 PHP_BINARY 是 php-fpm 二进制（执行
+        // `php-fpm artisan down` 打 usage 退出 64）；宝塔 open_basedir 又让
+        // 站点目录之外的 is_file() 直接抛 ErrorException。所以直接用
+        // PHP_BINDIR 的 CLI 路径、不做存在性预检（open_basedir 不限制二进制执行）。
         $php = PHP_OS_FAMILY === 'Windows' ? PHP_BINDIR.'\\php.exe' : PHP_BINDIR.'/php';
-        if (! is_file($php)) {
+        if (PHP_BINDIR === '') {
             $php = PHP_BINARY;
         }
 
