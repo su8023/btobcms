@@ -61,7 +61,7 @@
 - [ ] 发布一条测试文章 → IndexNow 推送成功（日志无 warning，APP_URL 正确）
 - [ ] 提交一条测试询盘 → 飞书/邮件通知正常、线索雷达有评分
 - [ ] 磁铁 /download/{slug} 下载正常
-- [ ] 更新中心 preflight 全绿（git remote 指向仓库）
+- [ ] 更新中心 preflight 全绿（zip 扩展、目录可写、磁盘余量；v1.4.0 起不再检查 git remote）
 - [ ] HTTPS 证书生效、http 301 到 https
 
 ## 回滚

@@ -73,7 +73,7 @@ tar --exclude=node_modules --exclude=vendor --exclude=.git \
 #    排除 database.sqlite（本地开发库，生产用 MySQL）
 ```
 
-方式 A（**推荐：git 部署**，解锁后台一键更新中心）：
+方式 A（git 部署；v1.4.0 起更新中心不再依赖 git，与方式 B 均可配套使用）：
 
 ```bash
 # 服务器先配好 GitHub Deploy Key（见 docs/update-center.md 第一节）
@@ -82,7 +82,7 @@ git clone git@github.com:你的账号/btobcms.git 你的域名
 cd 你的域名 && git checkout v1.0.0
 ```
 
-方式 B（zip 上传，后续无法用更新中心）：
+方式 B（zip 上传，后续同样可用后台更新中心）：
 
 宝塔 **文件 → 进入站点目录 `/www/wwwroot/你的域名`**：
 先删掉默认的 `index.html`、`404.html`，上传 `btobcms.tar.gz` → 右键解压。
@@ -154,7 +154,7 @@ location / {
 
 ```nginx
 location ~ /\.(env|git) { deny all; }
-client_max_body_size 20m;
+client_max_body_size 256m;   # 更新中心「本地上传安装包」最大 200 MB（v1.4.9 起），须大于包体积
 ```
 
 4. **PHP 版本**确认 8.4。

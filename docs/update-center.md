@@ -2,6 +2,10 @@
 
 > 一次搭建后，改代码只需：本地 commit → push → GitHub 发 Release → 网站后台点一下「更新」。
 > 代码与数据分离：更新只换程序，不碰数据库 / 上传图片 / .env。
+>
+> ⚠️ **v1.4.0 起更新机制已改版**：不再走 git checkout + composer install，改为下载自包含 zip
+> 覆盖更新——**更新**不再需要 git / composer / 队列 worker（本文第一节 2、3 的 git 部署仅是
+> 初始部署的一种可选方式）。最新流程、恢复通道与修复纪要见 docs/release-build.md。
 
 ## 一、首次搭建（10 分钟）
 
@@ -53,9 +57,10 @@ git checkout v1.0.0        # 检出正式版本，不用 main 开发分支
 
 - **GitHub 仓库**：`your-name/btobcms`
 - **GitHub Token**：私有仓库必填（GitHub → Settings → Developer settings → Personal access tokens → Fine-grained，只给该仓库 Contents 只读权限）
-- git / composer 路径：默认 PATH 内不用填
+- 仅此两项——v1.4.0 起不再需要配置 git / composer 路径
 
-配置后「更新中心」页显示：当前版本 vs 最新 Release、变更说明、历史版本列表。
+配置后「更新中心」页显示：当前版本 vs 最新 Release、变更说明、版本列表，并提供
+「检查更新」（清缓存立即回源 GitHub）与「本地上传安装包」（不依赖 GitHub 的更新通道）。
 
 ## 二、日常发版流程
 
@@ -73,29 +78,35 @@ GitHub → Releases → Draft a new release
 网站后台 → 更新中心 → 看到 "有新版本可更新" → 点「更新到 v1.0.1」
 ```
 
-### 更新时发生了什么（全自动）
+### 更新时发生了什么（全自动，v1.4.0 起自包含 zip 版）
 
-1. 站点进入**维护模式**（访客看到维护页，不是报错）
-2. **备份数据库**（MySQL 用 mysqldump，SQLite 直接复制；保留最近 5 份）
-3. `git fetch --tags` → `git checkout v1.0.1`
-4. `composer install --no-dev` 同步依赖
+1. 从 GitHub 下载 `btobcms-{tag}.zip`，下载后做**三重校验**（字节数与 Release asset 声明比对 +
+   SHA-256 + zip 完整性，未通过自动重试共 3 次，v1.4.8）
+2. 站点进入**维护模式**（访客看到维护页，不是报错）
+3. **备份数据库**（MySQL 用 mysqldump，SQLite 直接复制；保留最近 5 份）
+4. 解压包内**全部代码 + vendor 生产依赖**，保留式覆盖站点（`.env`、`storage/`、数据库不动）
 5. `php artisan migrate --force` 数据库结构升级
 6. `php artisan optimize` 重建缓存
 7. 退出维护模式，站点恢复
 
+更新在后台 HTTP 请求内同步跑完，**不依赖队列 worker**；每步落状态文件
+`storage/app/update-state.json`，中断后点「继续更新」断点恢复（各步骤幂等）。
+
 **任一步失败：自动回滚**到更新前版本并恢复访问，失败原因写在日志区。
-前提检查不通过（git 未装 / 非 git 部署 / 服务器有未提交改动）时按钮不可用并列出原因。
+前置检查（preflight）不通过时按钮不可用并列出原因：缺 zip 扩展、关键目录不可写、
+磁盘余量不足 512 MB（git / composer 已不在检查之列）。
 
-## 三、回滚到任意历史版本
+## 三、回滚
 
-更新中心 → 历史版本列表 → 任意版本右侧「更新到此版本」（git checkout 旧 tag，同样走备份+回滚保护）。
+更新失败时自动回滚到更新前版本并恢复访问。需要手动回退到更早版本：从 GitHub Release 下载
+该版本的 `btobcms-{tag}.zip`（或后台「本地上传安装包」直传），再走一次同样的更新流程即可。
 
 ## 四、安全要点
 
 - 仓库**私有** + Deploy key 只读 + Token 最小权限（Contents: Read）
 - 更新功能仅登录管理员可用；`.env`/数据/上传文件不在 git 里，更新永不触碰
 - 每次更新自动产生数据库备份：`storage/app/backups/`（建议纳入异地同步）
-- 更新由队列 worker 执行——**确保进程守护在跑**（宝塔手册第 9 步）
+- 更新在后台 HTTP 请求内同步执行，**不依赖队列 worker**（worker 仍为邮件/飞书通知所需——确保进程守护在跑，宝塔手册第 9 步）
 
 ## 五、常见问题
 
@@ -103,6 +114,7 @@ GitHub → Releases → Draft a new release
 |---|---|
 | 页面显示"尚未配置 GitHub 仓库" | 插件设置里填 owner/repo |
 | 检测报 403 限流 | 匿名 API 60 次/小时上限，配置 Token 即提升到 5000 |
-| 前置检查：非 git 仓库 | 站点是 zip 上传部署的——按上面"首次搭建 3"重新 git clone 部署（或服务器 git init + remote add + fetch + checkout v1.0.0） |
-| 前置检查：有未提交改动 | 服务器上直接改过文件——`git status` 查看，`git stash` 或还原；确要保留设 `UPDATE_CENTER_ALLOW_DIRTY=true` |
-| 更新失败自动回滚了 | 看更新中心日志区的具体失败步骤（多为 composer 路径未配） |
+| 前置检查不通过 | 检查项：zip 扩展、storage/app 等目录可写、磁盘余量 ≥512 MB——按提示处理（git / composer 已不要求） |
+| 显示「已是最新」但 GitHub 有新版 | 点「检查更新」立即回源（v1.4.7 起提供）；否则等缓存过期，或靠 5 分钟节流自动复查 |
+| 下载报「传输截断 / SHA-256 不匹配」 | GitHub CDN 节流，v1.4.8 起自动重试共 3 次；仍失败走 docs/release-build.md 第七节两条恢复通道 |
+| 本地上传安装包报 must not be greater than 12288 kilobytes | 旧版本 Livewire 临时上传 12 MB 限制，v1.4.9 起放开到 200 MB；旧版本用文件管理器放 `storage/app/update/{tag}.zip` 后点「继续更新」 |

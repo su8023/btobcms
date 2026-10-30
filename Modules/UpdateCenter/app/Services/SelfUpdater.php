@@ -873,7 +873,15 @@ class SelfUpdater
      */
     protected function artisan(string $command, array $args = []): string
     {
-        $parts = [escapeshellarg(PHP_BINARY), escapeshellarg($this->basePath.'/artisan'), $command];
+        // 线上实测（宝塔 FPM）：PHP_BINARY 在 FPM 请求里是 php-fpm 二进制，
+        // 执行 `php-fpm artisan down` 只会打出 usage 退出 64。CLI 要用
+        // PHP_BINDIR 下的 php（与 updateTo 派发子进程的解析保持一致）。
+        $php = PHP_OS_FAMILY === 'Windows' ? PHP_BINDIR.'\\php.exe' : PHP_BINDIR.'/php';
+        if (! is_file($php)) {
+            $php = PHP_BINARY;
+        }
+
+        $parts = [escapeshellarg($php), escapeshellarg($this->basePath.'/artisan'), $command];
         foreach ($args as $k => $v) {
             $parts[] = '--'.$k.'='.escapeshellarg((string) $v);
         }
