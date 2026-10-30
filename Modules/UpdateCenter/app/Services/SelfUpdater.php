@@ -873,43 +873,64 @@ class SelfUpdater
      */
     protected function artisan(string $command, array $args = []): string
     {
-        // 线上实测（宝塔）双重坑：FPM 下 PHP_BINARY 是 php-fpm 二进制（执行
-        // `php-fpm artisan down` 打 usage 退出 64）；宝塔 open_basedir 又让
-        // 站点目录之外的 is_file() 直接抛 ErrorException。所以直接用
-        // PHP_BINDIR 的 CLI 路径、不做存在性预检（open_basedir 不限制二进制执行）。
-        $php = PHP_OS_FAMILY === 'Windows' ? PHP_BINDIR.'\\php.exe' : PHP_BINDIR.'/php';
-        if (PHP_BINDIR === '') {
-            $php = PHP_BINARY;
+        // PHP CLI 候选依次尝试（线上实测两类坑都不能靠单一常量解决）：
+        // - 宝塔 FPM 下 PHP_BINARY 是 php-fpm 二进制，`php-fpm artisan down` 打 usage 退出 64；
+        // - PHP_BINDIR 是编译期常量，不保证存在真实解释器（本地 Windows 构建编出 C:\php），
+        //   且宝塔 open_basedir 让站点目录外的 is_file() 直接抛 ErrorException——
+        //   所以不能预检文件，只能直接试跑：启动失败或 exit 64（usage 码）就换下一个候选。
+        $cli = PHP_OS_FAMILY === 'Windows' ? PHP_BINDIR.'\\php.exe' : PHP_BINDIR.'/php';
+        $candidates = array_values(array_unique([$cli, PHP_BINARY]));
+
+        $lastError = '';
+        foreach ($candidates as $php) {
+            $parts = [escapeshellarg($php), escapeshellarg($this->basePath.'/artisan'), $command];
+            foreach ($args as $k => $v) {
+                $name = '--'.ltrim((string) $k, '-'); // 调用方可能已带 '--'（历史 ['--retry'=>120]），归一防 ----xxx
+                if ($v === true) {
+                    $parts[] = $name; // VALUE_NONE 选项不能带值（--force=1 会被 Symfony 拒收）
+                } elseif ($v === false || $v === null) {
+                    continue;
+                } else {
+                    $parts[] = $name.'='.escapeshellarg((string) $v);
+                }
+            }
+            $cmd = implode(' ', $parts);
+
+            $descriptors = [1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
+            $process = @proc_open($cmd, $descriptors, $pipes, $this->basePath, null, ['bypass_shell' => true]);
+
+            if (! is_resource($process)) {
+                $lastError = $php.' 无法启动（proc_open 失败）';
+
+                continue;
+            }
+
+            $stdout = (string) stream_get_contents($pipes[1]);
+            $stderr = (string) stream_get_contents($pipes[2]);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+            $exit = proc_close($process);
+
+            // 64 = CLI usage 错误（php-fpm 收到未知参数时的退出码）；artisan 命令本身不会用 64
+            if ($exit === 64) {
+                $lastError = $php.' 不是 CLI 解释器（疑似 php-fpm，exit 64）';
+
+                continue;
+            }
+
+            if ($exit !== 0) {
+                throw new RuntimeException(sprintf(
+                    'artisan %s 失败（exit %d）：%s',
+                    $command,
+                    $exit,
+                    mb_substr(trim($stdout."\n".$stderr), 0, 800)
+                ));
+            }
+
+            return trim($stdout."\n".$stderr);
         }
 
-        $parts = [escapeshellarg($php), escapeshellarg($this->basePath.'/artisan'), $command];
-        foreach ($args as $k => $v) {
-            $parts[] = '--'.$k.'='.escapeshellarg((string) $v);
-        }
-        $cmd = implode(' ', $parts);
-
-        $descriptors = [1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
-        $process = @proc_open($cmd, $descriptors, $pipes, $this->basePath, null, ['bypass_shell' => true]);
-        if (! is_resource($process)) {
-            throw new RuntimeException("无法启动 artisan {$command}（proc_open 不可用？）");
-        }
-
-        $stdout = (string) stream_get_contents($pipes[1]);
-        $stderr = (string) stream_get_contents($pipes[2]);
-        fclose($pipes[1]);
-        fclose($pipes[2]);
-        $exit = proc_close($process);
-
-        if ($exit !== 0) {
-            throw new RuntimeException(sprintf(
-                'artisan %s 失败（exit %d）：%s',
-                $command,
-                $exit,
-                mb_substr(trim($stdout."\n".$stderr), 0, 800)
-            ));
-        }
-
-        return trim($stdout."\n".$stderr);
+        throw new RuntimeException("无法启动 artisan {$command}：".$lastError);
     }
 
     protected function zipLooksValid(string $path): bool

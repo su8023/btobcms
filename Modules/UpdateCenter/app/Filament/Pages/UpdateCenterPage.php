@@ -193,19 +193,33 @@ class UpdateCenterPage extends Page
         $this->updating = true;
 
         try {
-            // 以独立进程派发：proc_open 子进程在 FPM 杀掉本请求后继续运行
-            $php = PHP_OS_FAMILY === 'Windows' ? PHP_BINDIR.'\\php.exe' : PHP_BINDIR.'/php';
-            $descriptors = [1 => ['file', storage_path('app/update-apply.log'), 'a'], 2 => ['file', storage_path('app/update-apply.log'), 'a']];
-            $process = @proc_open(
-                escapeshellarg($php).' '.escapeshellarg(base_path('artisan')).' update:apply '.escapeshellarg($target),
-                $descriptors,
-                $pipes,
-                base_path(),
-                null,
-                ['bypass_shell' => true],
-            );
+            // 以独立进程派发：proc_open 子进程在 FPM 杀掉本请求后继续运行。
+            // PHP CLI 候选依次尝试：PHP_BINDIR 是编译期常量不保证有真实解释器，
+            // PHP_BINARY 在 FPM 下又是 php-fpm——谁起得来用谁。
+            $candidates = PHP_OS_FAMILY === 'Windows'
+                ? [PHP_BINDIR.'\\php.exe', PHP_BINARY]
+                : [PHP_BINDIR.'/php', PHP_BINARY];
+            $candidates = array_values(array_unique($candidates));
 
-            if (! is_resource($process)) {
+            $descriptors = [1 => ['file', storage_path('app/update-apply.log'), 'a'], 2 => ['file', storage_path('app/update-apply.log'), 'a']];
+            $process = null;
+
+            foreach ($candidates as $php) {
+                $process = @proc_open(
+                    escapeshellarg($php).' '.escapeshellarg(base_path('artisan')).' update:apply '.escapeshellarg($target),
+                    $descriptors,
+                    $pipes,
+                    base_path(),
+                    null,
+                    ['bypass_shell' => true],
+                );
+
+                if (is_resource($process)) {
+                    break;
+                }
+            }
+
+            if ($process === null || ! is_resource($process)) {
                 throw new RuntimeException('无法派发更新进程（proc_open 不可用？检查禁用函数）');
             }
             proc_close($process); // 只等派发动作本身（瞬间），不等更新跑完

@@ -39,9 +39,21 @@ class UpdateCenterTest extends TestCase
 
     public function test_page_renders_with_current_version_when_not_configured(): void
     {
+        // config 默认仓库已内置（全新安装零配置可更新）；显式清空才走「未配置」分支
+        config(['update-center.github_repo' => '']);
+
         $this->get('/admin/update-center')
             ->assertOk()
             ->assertSee(__('admin.update_center.not_configured'));
+    }
+
+    /** 全新安装零配置：默认仓库开箱即可更新 */
+    public function test_fresh_install_uses_default_repo_without_settings(): void
+    {
+        $client = GitHubReleases::fromSettings();
+
+        $this->assertNotNull($client);
+        $this->assertSame('su8023/BtoBcms', (new \ReflectionProperty($client, 'repo'))->getValue($client));
     }
 
     public function test_page_shows_latest_release_and_notes_when_configured(): void
