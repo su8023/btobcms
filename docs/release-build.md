@@ -322,6 +322,26 @@ A：旧版本 Livewire 临时上传默认限制 12 MB；v1.4.9 起已放开到 2
 - **修复**：`UpdateCenterServiceProvider` 启动时把 `livewire.temporary_file_upload.rules`
   放开到 `file|max:204800`（200 MB）。
 
+### v1.4.10–v1.4.11 — 宝塔环境更新器连环坑（真包演练揪出）
+
+- **故障一**：宝塔 FPM 下 `PHP_BINARY` 是 php-fpm 二进制，`php-fpm artisan down` 打 usage 退出 64；
+  `PHP_BINDIR` 又是编译期常量，不保证存在真实解释器。
+- **修复**：CLI 解析改为**候选依次尝试**（`PHP_BINDIR/php` → `PHP_BINARY`），启动失败或
+  exit 64 就换下一个候选；不做 `is_file` 预检（宝塔 open_basedir 下站点目录外 stat 直接抛异常）。
+- **故障二**：`artisan('down', ['--retry' => 120])` 被拼成 `----retry`——v1.4.5 起「进入维护模式」
+  这步在任何机器都不可能成功（此前每次更新都先死在下载，从未暴露）。
+- **修复**：参数归一（`ltrim '-'`）；bool 选项不再拼 `--force=1`（Symfony 拒收）。
+- **故障三**：`saveState` 原子写在 Windows 下 rename 覆盖偶发失败且被忽略，状态文件停留在旧内容。
+- **修复**：rename 失败回退直写；tmp 文件名加 uniqid。
+
+### v1.4.11 — 全新安装零配置更新
+
+- config 默认仓库 `su8023/BtoBcms`：重装后不开插件设置即可一键更新（插件设置可覆盖）。
+- 更新成功后自动清理残留：旧版本安装包、本地上传原件、过期备份（保留最近 2 份）。
+- 上传表单放行 `application/octet-stream`（部分打包工具的 zip 会被 finfo 判成它）。
+- **以上均已用 23 MB 真包在全新安装上完整演练验证**（下载跳过 → 维护 → 备份 → 换装 →
+  迁移 → 缓存 → 恢复访问 → 数据保全 → 前台 200）。
+
 ---
 
 ## 十、相关文件

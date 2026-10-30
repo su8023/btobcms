@@ -167,14 +167,16 @@ class SelfUpdater
             'pid' => getmypid(),
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-        // 原子写：先写临时文件再 rename，避免进程在写入瞬间被杀留下半截 JSON
-        $tmp = $path.'.tmp.'.getmypid();
-        if (@file_put_contents($tmp, $payload, LOCK_EX) !== false) {
-            @rename($tmp, $path);
-        } else {
-            @unlink($tmp);
-            @file_put_contents($path, $payload, LOCK_EX);
+        // 原子写：先写临时文件再 rename，避免进程在写入瞬间被杀留下半截 JSON。
+        // Windows 的 rename 覆盖已存在目标会间歇性失败（杀毒/索引器短暂占用），
+        // rename 失败必须回退直写——否则状态文件停留在旧内容，断点/完成状态全部失真。
+        $tmp = $path.'.tmp.'.getmypid().'-'.uniqid('', true);
+        if (@file_put_contents($tmp, $payload, LOCK_EX) !== false && @rename($tmp, $path)) {
+            return;
         }
+
+        @unlink($tmp);
+        @file_put_contents($path, $payload, LOCK_EX);
     }
 
     /** 放弃中断的更新（留档为 abandoned，不再显示继续/放弃按钮） */
@@ -627,7 +629,41 @@ class SelfUpdater
         if (is_dir($this->updateDir.'/extract')) {
             $this->rmrf($this->updateDir.'/extract');
         }
+        $this->pruneResidue($tag, $log);
         $log[] = '✓ 已退出维护模式，站点恢复访问';
+    }
+
+    /**
+     * 清理更新残留：旧版本安装包、本地上传原件、过旧备份。
+     * 每个安装包 23MB、每次覆盖备份可达上百 MB，不清理会无限累积占满磁盘。
+     * 备份保留最近 2 份（回滚依据），更早的删除。
+     */
+    protected function pruneResidue(string $tag, array &$log): void
+    {
+        $removed = 0;
+
+        foreach (glob($this->updateDir.'/*.zip') ?: [] as $zip) {
+            if (basename($zip) !== $tag.'.zip') {
+                @unlink($zip) && $removed++;
+            }
+        }
+
+        foreach (glob(dirname($this->updateDir).'/update-uploads/*') ?: [] as $upload) {
+            @unlink($upload) && $removed++;
+        }
+
+        $backupRoot = $this->basePath.'/'.self::BACKUP_DIR;
+        if (is_dir($backupRoot)) {
+            $dirs = glob($backupRoot.'/*', GLOB_ONLYDIR) ?: [];
+            usort($dirs, fn (string $a, string $b): int => filemtime($b) <=> filemtime($a));
+            foreach (array_slice($dirs, 2) as $old) {
+                $this->rmrf($old) && $removed++;
+            }
+        }
+
+        $log[] = $removed > 0
+            ? '✓ 已清理 '.$removed.' 项更新残留（旧安装包/上传原件/过期备份）'
+            : '✓ 无更新残留需要清理';
     }
 
     // ----------------------------------------------------------

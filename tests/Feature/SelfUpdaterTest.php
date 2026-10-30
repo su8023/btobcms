@@ -129,6 +129,47 @@ class SelfUpdaterTest extends TestCase
         $this->assertFalse($updater->isResumable());
     }
 
+    /** saveState 的原子写在 rename 覆盖失败（Windows 偶发）时必须回退直写 */
+    public function test_state_file_consecutive_writes_always_persist(): void
+    {
+        $updater = $this->makeUpdater();
+
+        for ($i = 0; $i < 5; $i++) {
+            $updater->saveState('v9.9.9', 'step'.$i, 'running', ['round-'.$i]);
+            $state = $updater->state();
+            $this->assertSame('running', $state['status']);
+            $this->assertSame('step'.$i, $state['step']);
+        }
+    }
+
+    /** 更新成功后自动清理：旧版本安装包、上传原件、过期备份（保留最近 2 份） */
+    public function test_finish_prunes_old_packages_uploads_and_backups(): void
+    {
+        copy($this->makePackageZip(), $this->fakeUpdateDir.'/v9.9.9.zip');
+        // 残留：更旧版本的包 + 上传原件 + 3 份旧备份
+        file_put_contents($this->fakeUpdateDir.'/v1.0.0.zip', 'old-package');
+        @mkdir(dirname($this->fakeUpdateDir).'/update-uploads', 0775, true);
+        file_put_contents(dirname($this->fakeUpdateDir).'/update-uploads/btobcms-v1.0.0.zip', 'uploaded');
+        $backupRoot = $this->fakeBase.'/storage/app/backups';
+        $ages = ['v1.0.0' => 3600, 'v1.0.1' => 2400, 'v1.0.2' => 1200]; // 依次变新，保证 mtime 可区分
+        foreach ($ages as $old => $age) {
+            @mkdir($backupRoot.'/'.$old, 0775, true);
+            file_put_contents($backupRoot.'/'.$old.'/f.txt', 'x');
+            touch($backupRoot.'/'.$old, time() - $age);
+        }
+
+        $updater = $this->makeUpdater();
+        $updater->run('v9.9.9');
+
+        $this->assertFileDoesNotExist($this->fakeUpdateDir.'/v1.0.0.zip');
+        $this->assertFileDoesNotExist(dirname($this->fakeUpdateDir).'/update-uploads/btobcms-v1.0.0.zip');
+        $this->assertFileDoesNotExist($backupRoot.'/v1.0.0');
+        $this->assertFileDoesNotExist($backupRoot.'/v1.0.1');
+        // 本次更新的 v9.9.9 备份 + 最新的旧备份 v1.0.2 = 恰好保留 2 份
+        $remaining = glob($backupRoot.'/*', GLOB_ONLYDIR);
+        $this->assertCount(2, $remaining, '备份必须只保留最近 2 份，实际：'.implode(',', $remaining));
+    }
+
     public function test_failure_interrupts_and_resume_completes(): void
     {
         $this->makePackageZip();

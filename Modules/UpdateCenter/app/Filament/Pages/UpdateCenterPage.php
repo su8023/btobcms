@@ -375,7 +375,7 @@ class UpdateCenterPage extends Page
                 ->color('gray')
                 ->icon(Heroicon::OutlinedArrowUpTray)
                 ->modalHeading('从本地上传安装包更新')
-                ->modalDescription('下载站点的 btobcms-{版本}.zip 安装包后在此上传即可更新——不需要 GitHub 可达，适合网络受限或私有仓库场景。')
+                ->modalDescription('下载站点的 btobcms-{版本}.zip 安装包后在此上传即可更新——不需要 GitHub 可达。若上传失败，检查宝塔 PHP 的 upload_max_filesize/post_max_size 与站点 nginx 的 client_max_body_size 是否 ≥ 50M。')
                 ->form([
                     \Filament\Forms\Components\TextInput::make('tag')
                         ->label('目标版本号')
@@ -386,7 +386,9 @@ class UpdateCenterPage extends Page
                         ->label('安装包（zip）')
                         ->disk('local')
                         ->directory('update-uploads')
-                        ->acceptedFileTypes(['application/zip', 'application/x-zip-compressed'])
+                        // 部分打包工具产出的 zip 被 finfo 判为 octet-stream，一并放行；
+                        // 内容完整性由 SelfUpdater 的 zip 结构校验兜底（仅管理员可达）
+                        ->acceptedFileTypes(['application/zip', 'application/x-zip-compressed', 'application/octet-stream'])
                         ->maxSize(204800)
                         ->required(),
                 ])
