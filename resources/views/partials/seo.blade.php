@@ -37,9 +37,11 @@
         @endif
     @endforeach
 @else
-    {{-- 兜底：未显式提供结构化数据的页面输出基础 WebPage 图，保证全站 JSON-LD 覆盖 --}}
+    {{-- 兜底：未显式提供结构化数据的页面输出基础 WebPage 图，保证全站 JSON-LD 覆盖。
+        注意：键 '@context' 不能直接写——Livewire 注册了 @context 指令，Blade 编译器会把
+        {!! !!} 内的该 token 编译成 PHP 代码、损坏结构化数据；用拼接躲开指令扫描。 --}}
     <script type="application/ld+json">{!! json_encode([
-        '@context' => 'https://schema.org',
+        '@'.'context' => 'https://schema.org',
         '@type' => 'WebPage',
         'name' => $title,
         'description' => $description,

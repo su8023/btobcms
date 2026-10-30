@@ -1,5 +1,8 @@
 <x-filament-panels::page>
-    @php($reports = $this->getReports())
+    @php
+        // 单行 @php(...) 在 Livewire 组件上下文会被编译成未闭合的 <?php 片段（实测 500），用块形式
+        $reports = $this->getReports();
+    @endphp
 
     @if($reports === [])
         <p class="fi-text fi-color-gray">{{ __('admin.seo_audit.empty') }}</p>

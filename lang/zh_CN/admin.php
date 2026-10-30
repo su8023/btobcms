@@ -25,6 +25,7 @@ return [
         'upload' => '上传主题',
         'upload_file' => '主题 ZIP 包',
         'upload_success' => '主题「:name」安装成功，可在列表中启用',
+        'upload_hint' => '提示：主题将在下一次页面加载时生效；若提示 autoload 未刷新，请在服务器执行 composer dump-autoload。',
         'upload_failed' => '主题安装失败',
         'footer' => '提示：点「启用」即可整站换肤。想定制专属设计？联系技术管理员按规范制作主题包后从「上传主题」安装。',
     ],

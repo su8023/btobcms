@@ -25,6 +25,7 @@ return [
         'upload' => 'Upload Theme',
         'upload_file' => 'Theme ZIP package',
         'upload_success' => 'Theme ":name" installed — activate it from the list',
+        'upload_hint' => 'The theme takes effect on the next page load. If autoload was not refreshed, run composer dump-autoload on the server.',
         'upload_failed' => 'Theme installation failed',
         'footer' => 'Tip: click \\"Enable\\" to reskin the whole site. For a custom design, ask your admin to prepare and upload a theme package.',
     ],

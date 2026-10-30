@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BtoBcms</title>
+<meta name="description" content="">
+<link rel="canonical" href="http://127.0.0.1:8120/this-page-does-not-exist-xyz">
+<meta property="og:title" content="BtoBcms">
+<meta property="og:description" content="">
+<meta property="og:type" content="website">
+<meta property="og:url" content="http://127.0.0.1:8120/this-page-does-not-exist-xyz">
+<meta property="og:image" content="http://127.0.0.1:8120/images/og-default.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:site_name" content="BtoBcms">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://127.0.0.1:8120/images/og-default.png">
+    
+    <script type="application/ld+json">{"\u003C?php $__contextArgs = [];\nif (context()-\u003Ehas($__contextArgs[0])) :\nif (isset($value)) { $__contextPrevious[] = $value; }\n$value = context()-\u003Eget($__contextArgs[0]); ?\u003E":"https://schema.org","@type":"WebPage","name":"BtoBcms","description":"","url":"http://127.0.0.1:8120/this-page-does-not-exist-xyz","inLanguage":"en","isPartOf":{"@id":"http://127.0.0.1:8120#website"}}</script>
+    <link rel="stylesheet" href="http://127.0.0.1:8120/css/site.css?v=1793389447">
+    
+        
+        <script defer src="http://127.0.0.1:8120/js/site.js"></script>
+    
+        
+            <style>
+    /* ── 案例卡片（列表页 + 详情页相关案例） ── */
+    .trust-case-card {
+        display: flex;
+        flex-direction: column;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+        text-decoration: none;
+        color: var(--ink);
+        transition: box-shadow .25s ease, transform .25s ease, border-color .25s ease;
+    }
+    .trust-case-card:hover {
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-4px);
+        border-color: var(--primary-100);
+        color: var(--ink);
+    }
+    .trust-case-card__media {
+        display: block;
+        aspect-ratio: 4 / 3;
+        background: linear-gradient(160deg, var(--primary-soft), #d5e5f7);
+        overflow: hidden;
+    }
+    .trust-case-card__media img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform .45s cubic-bezier(.2, .6, .3, 1);
+    }
+    .trust-case-card:hover .trust-case-card__media img { transform: scale(1.06); }
+    .trust-case-card__body {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        padding: 16px;
+        flex: 1;
+    }
+    .trust-case-card__customer {
+        font-size: var(--fs-sm);
+        font-weight: 650;
+        color: var(--primary);
+        letter-spacing: .02em;
+    }
+    .trust-case-card__meta {
+        font-size: var(--fs-xs);
+        color: var(--muted);
+    }
+    .trust-case-card__title {
+        font-size: var(--fs-base);
+        font-weight: 700;
+        margin: 2px 0 0;
+    }
+    .trust-case-card__more {
+        margin-top: auto;
+        padding-top: 8px;
+        font-size: var(--fs-sm);
+        color: var(--primary);
+        font-weight: 600;
+    }
+
+    /* ── 详情页 meta 徽章 ── */
+    .trust-case-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 18px;
+    }
+    .trust-case-meta__chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 3px 10px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--surface);
+        font-size: var(--fs-sm);
+        color: var(--muted);
+    }
+    .trust-case-meta__chip strong { color: var(--ink); font-weight: 650; }
+
+    /* ── 详情页图集 ── */
+    .trust-case-gallery {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-top: 24px;
+    }
+    .trust-case-gallery img {
+        width: 100%;
+        aspect-ratio: 4 / 3;
+        object-fit: cover;
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+    }
+    @media (max-width: 640px) {
+        .trust-case-gallery { grid-template-columns: 1fr; }
+    }
+
+    /* ── 全站信任条（footer_before 插槽） ── */
+    .trust-bar {
+        background: var(--surface);
+        border-block: 1px solid var(--border);
+        padding: 18px 0;
+    }
+    .trust-bar__inner {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px 18px;
+    }
+    .trust-bar__label {
+        font-size: var(--fs-sm);
+        font-weight: 700;
+        color: var(--muted);
+        letter-spacing: .04em;
+        text-transform: uppercase;
+    }
+    .trust-bar__badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+    .trust-bar__badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        border: 1px solid var(--border-strong);
+        border-radius: 999px;
+        background: var(--bg, #fff);
+        font-size: var(--fs-sm);
+        font-weight: 600;
+        color: var(--ink);
+    }
+    .trust-bar__badge::before { content: "✔"; color: var(--primary); font-size: .85em; }
+    .trust-bar__link {
+        margin-inline-start: auto;
+        font-size: var(--fs-sm);
+        font-weight: 650;
+        color: var(--primary);
+        text-decoration: none;
+        white-space: nowrap;
+    }
+    .trust-bar__link:hover { text-decoration: underline; text-underline-offset: 3px; }
+    @media (max-width: 640px) {
+        .trust-bar__link { margin-inline-start: 0; }
+    }
+</style>
+    </head>
+<body>
+<header class="site-header">
+    <div class="topbar">
+        <div class="container topbar-inner">
+            <div class="topbar-contact">
+                <span>✉ sales@example.com</span>
+                <span class="topbar-sep">·</span>
+                <span>☎ +86 755 0000 0000</span>
+            </div>
+            <div class="lang-switch">
+                                <span class="lang-current">EN</span>
+                                        <a class="lang-link" href="http://127.0.0.1:8120/es" hreflang="es"
+               title="Español">ES</a>
+                                        <a class="lang-link" href="http://127.0.0.1:8120/ar" hreflang="ar"
+               title="العربية">AR</a>
+                                        <a class="lang-link" href="http://127.0.0.1:8120/ru" hreflang="ru"
+               title="Русский">RU</a>
+                                        <a class="lang-link" href="http://127.0.0.1:8120/pt" hreflang="pt"
+               title="Português">PT</a>
+                                        <a class="lang-link" href="http://127.0.0.1:8120/fr" hreflang="fr"
+               title="Français">FR</a>
+                                        <a class="lang-link" href="http://127.0.0.1:8120/de" hreflang="de"
+               title="Deutsch">DE</a>
+                                        <a class="lang-link" href="http://127.0.0.1:8120/it" hreflang="it"
+               title="Italiano">IT</a>
+            </div>
+        </div>
+    </div>
+    <div class="navbar">
+        <div class="container navbar-inner">
+            <a href="http://127.0.0.1:8120" class="brand">
+                <span class="brand-mark">B2B</span>
+                <span class="brand-name">BtoBcms</span>
+            </a>
+            <nav class="nav" id="site-nav">
+                <a href="http://127.0.0.1:8120">Home</a>
+                <a href="http://127.0.0.1:8120/industries" >Industries</a>
+                <a href="http://127.0.0.1:8120/services" >Services</a>
+                <a href="http://127.0.0.1:8120/blog">Blog</a>
+                <a href="http://127.0.0.1:8120/about">About Us</a>
+                <a href="http://127.0.0.1:8120/contact">Contact</a>
+            </nav>
+            <a href="http://127.0.0.1:8120/inquiry-basket" class="basket-link" title="Inquiry Basket">
+                <span aria-hidden="true">🧺</span>
+                <span id="basket-count" class="basket-count" hidden>0</span>
+            </a>
+            <a href="http://127.0.0.1:8120/contact" class="btn btn-primary nav-cta">Get a Quote</a>
+            <button class="nav-toggle" aria-label="Menu" onclick="document.getElementById('site-nav').classList.toggle('open')">☰</button>
+        </div>
+    </div>
+</header>
+
+<main class="site-main">
+    
+        <section class="section section--tall">
+    <div class="container container--narrow notfound">
+        <p class="notfound__code" aria-hidden="true">404</p>
+        <h1>Page not found</h1>
+        <p>The page you are looking for may have been moved or no longer exists. Browse our industries or send us an inquiry — we reply within 24 hours.</p>
+        <div class="hero-actions" style="margin-top:24px">
+            <a href="http://127.0.0.1:8120" class="btn btn-primary btn-lg">Back to Home</a>
+            <a href="http://127.0.0.1:8120/industries" class="btn btn-ghost-dark btn-lg">Industries</a>
+            <a href="http://127.0.0.1:8120/contact" class="btn btn-ghost-dark btn-lg">Send Inquiry</a>
+        </div>
+    </div>
+</section>
+</main>
+
+<footer class="site-footer">
+    
+                    
+                    <div class="container footer-grid">
+        <div>
+            <div class="brand">
+                <span class="brand-mark">B2B</span>
+                <span class="brand-name">BtoBcms</span>
+            </div>
+            <p class="footer-about">Global B2B Sourcing Made Reliable — Shenzhen, Guangdong, China</p>
+        </div>
+        <div>
+            <h4>Quick Links</h4>
+            <ul class="footer-links">
+                <li><a href="http://127.0.0.1:8120/industries">Industries</a></li>
+                <li><a href="http://127.0.0.1:8120/services">Services</a></li>
+                <li><a href="http://127.0.0.1:8120/blog">Blog</a></li>
+                <li><a href="http://127.0.0.1:8120/about">About Us</a></li>
+                <li><a href="http://127.0.0.1:8120/contact">Contact</a></li>
+            </ul>
+        </div>
+        <div>
+            <h4>Contact Us</h4>
+            <ul class="footer-links">
+                <li>✉ sales@example.com</li>
+                <li>☎ +86 755 0000 0000</li>
+            </ul>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <div class="container footer-bottom-inner">
+            <span>© 2026 BtoBcms. All rights reserved.</span>
+            <span class="footer-legal">
+                <a href="http://127.0.0.1:8120/privacy">Privacy Policy</a>
+                <a href="http://127.0.0.1:8120/terms">Terms of Service</a>
+            </span>
+        </div>
+    </div>
+</footer>
+    
+    <div class="mobile-cta" aria-hidden="false">
+        <a href="http://127.0.0.1:8120/industries" class="mobile-cta__btn">Industries</a>
+        <a href="http://127.0.0.1:8120/contact" class="mobile-cta__btn mobile-cta__btn--primary">Get a Quote</a>
+    </div>
+</body>
+</html>

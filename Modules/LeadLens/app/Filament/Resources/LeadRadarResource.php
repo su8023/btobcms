@@ -7,7 +7,7 @@ use Filament\Actions\Action as HeaderAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Actions\Action;
+use Filament\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Grouping\Group;

@@ -48,6 +48,22 @@ class AdminSmokeTest extends TestCase
             '/admin/attributes',
             '/admin/attributes/create',
             '/admin/redirects',
+            // 模块页面（曾因 Filament v5 命名空间迁移遗漏 / @php() 编译坏而 500，列为常驻回归）
+            '/admin/lead-radars',
+            '/admin/link-terms',
+            '/admin/seo-audit-reports',
+            '/admin/ai-traffic',
+            '/admin/gsc-pulse',
+            '/admin/trans-coverage',
+            '/admin/image-forge',
+            '/admin/magnets',
+            '/admin/cases',
+            '/admin/certifications',
+            '/admin/site-settings',
+            '/admin/theme-center',
+            '/admin/plugin-center',
+            '/admin/update-center',
+            '/admin/ai-studio',
         ] as $url) {
             $this->get($url)->assertOk($url);
         }

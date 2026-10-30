@@ -169,6 +169,15 @@ class SiteSmokeTest extends TestCase
             ->assertSee('Gate Valve DN50');
     }
 
+    /** 回归：兜底 JSON-LD 的 @context 键不能被 Blade 的 @context 指令编译破坏 */
+    public function test_fallback_json_ld_keeps_context_key_intact(): void
+    {
+        $html = (string) $this->get('/products')->getContent();
+
+        $this->assertStringContainsString('"@context":"https://schema.org"', $html);
+        $this->assertStringNotContainsString('__contextArgs', $html);
+    }
+
     public function test_sitemap_index_and_sections(): void
     {
         $this->get('/sitemap.xml')
