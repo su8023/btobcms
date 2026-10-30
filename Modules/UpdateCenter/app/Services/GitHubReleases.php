@@ -28,19 +28,44 @@ class GitHubReleases
     }
 
     /**
+     * @param  bool  $refreshIfUpToDate  缓存显示「已是最新」时按 5 分钟节流强制回源，
+     *                                     消除「刚发版后台 30 分钟看不到新版本」的盲区
      * @return array<int, array{tag: string, name: string, date: ?string, notes: string, url: string, prerelease: bool}>
      *
      * @throws ConnectionException|\RuntimeException
      */
-    public function releases(int $perPage = 20): array
+    public function releases(int $perPage = 20, bool $refreshIfUpToDate = false): array
     {
+        $key = $this->cacheKey();
+
+        // cache()->add 原子占位：同一节流窗口内只回源一次，避免并发打爆匿名限流
+        $cached = $refreshIfUpToDate ? cache()->get($key) : null;
+
+        if (is_array($cached)
+            && ($cached[0]['tag'] ?? '') === (string) config('version.version')
+            && cache()->add($key.'.checked', true, now()->addMinutes(5))
+        ) {
+            cache()->forget($key);
+        }
+
         // 结果缓存 30 分钟：导航徽章每次后台加载都会读取，
         // 匿名限流 60 次/小时会很快耗尽并导致更新中心报错
         return cache()->remember(
-            'update-center.releases.'.md5($this->repo.'|'.$this->token),
+            $key,
             now()->addMinutes(30),
             fn () => $this->fetchReleases($perPage),
         );
+    }
+
+    /** 立即清掉 releases 缓存（「检查更新」按钮用） */
+    public function refresh(): void
+    {
+        cache()->forget($this->cacheKey());
+    }
+
+    private function cacheKey(): string
+    {
+        return 'update-center.releases.'.md5($this->repo.'|'.$this->token);
     }
 
     /**

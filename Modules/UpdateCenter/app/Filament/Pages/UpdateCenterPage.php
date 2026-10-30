@@ -103,11 +103,40 @@ class UpdateCenterPage extends Page
             $this->releases = (new GitHubReleases(
                 $this->repo,
                 (string) plugin_setting('update-center', 'github_token', ''),
-            ))->releases();
+            ))->releases(refreshIfUpToDate: true);
             $this->latestTag = $this->releases[0]['tag'] ?? null;
             $this->latestNotes = $this->releases[0]['notes'] ?? null;
         } catch (Throwable $e) {
             $this->githubError = $e->getMessage();
+        }
+    }
+
+    /** 「检查更新」：清缓存强制回源 GitHub，把最新版本状态刷到页面 */
+    public function checkForUpdates(): void
+    {
+        $client = GitHubReleases::fromSettings();
+        if ($client === null) {
+            return;
+        }
+
+        $client->refresh();
+
+        try {
+            $this->releases = $client->releases();
+            $this->latestTag = $this->releases[0]['tag'] ?? null;
+            $this->latestNotes = $this->releases[0]['notes'] ?? null;
+            $this->githubError = '';
+        } catch (Throwable $e) {
+            $this->githubError = $e->getMessage();
+            Notification::make()->title(__('admin.update_center.check_failed', ['reason' => $e->getMessage()]))->danger()->send();
+
+            return;
+        }
+
+        if ($this->latestTag !== null && $this->latestTag !== $this->currentVersion) {
+            Notification::make()->title(__('admin.update_center.found_update', ['tag' => $this->latestTag]))->success()->send();
+        } else {
+            Notification::make()->title(__('admin.update_center.up_to_date'))->info()->send();
         }
     }
 
@@ -321,6 +350,12 @@ class UpdateCenterPage extends Page
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('checkNow')
+                ->label(__('admin.update_center.check_now'))
+                ->color('gray')
+                ->icon(Heroicon::OutlinedMagnifyingGlassCircle)
+                ->action(fn () => $this->checkForUpdates()),
+
             Action::make('localPackage')
                 ->label('本地上传安装包')
                 ->color('gray')

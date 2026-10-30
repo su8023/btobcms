@@ -497,6 +497,9 @@ return [
         'log' => 'Update log',
         'log_empty' => 'No update has been run yet.',
         'view_on_github' => 'View on GitHub',
+        'check_now' => 'Check for updates',
+        'check_failed' => 'Check failed: :reason',
+        'found_update' => 'New release :tag found — click "Update to :tag" to install.',
     ],
     'ai_studio' => [
         'title' => 'AI Writing Studio',

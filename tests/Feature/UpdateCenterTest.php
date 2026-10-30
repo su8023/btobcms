@@ -18,6 +18,8 @@ class UpdateCenterTest extends TestCase
         parent::setUp();
         $this->seed();
         $this->actingAs(User::first());
+        // array 缓存在同一 PHPUnit 进程内跨测试残留，会污染 releases 缓存用例
+        cache()->flush();
     }
 
     protected function tearDown(): void
@@ -89,6 +91,49 @@ class UpdateCenterTest extends TestCase
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('限流');
         (new GitHubReleases('acme/btobcms'))->releases();
+    }
+
+    /** 发版后盲区修复：缓存显示「已是最新」时按节流回源，看到远端新版本 */
+    public function test_releases_refreshes_when_cached_latest_matches_current_version(): void
+    {
+        config(['version.version' => 'v1.1.0']);
+        $latest = 'v1.1.0';
+
+        Http::fake(function () use (&$latest) {
+            return Http::response([
+                ['tag_name' => $latest, 'name' => 'Rel', 'body' => '', 'html_url' => '', 'prerelease' => false],
+            ], 200);
+        });
+        (new GitHubReleases('acme/btobcms'))->releases(); // 预热缓存：latest == 当前版本
+
+        $latest = 'v1.2.0';
+
+        $this->assertSame('v1.2.0', (new GitHubReleases('acme/btobcms'))->releases(refreshIfUpToDate: true)[0]['tag']);
+    }
+
+    /** 节流窗口内不重复回源（保护匿名 60 次/小时限流） */
+    public function test_releases_refresh_is_throttled_within_window(): void
+    {
+        config(['version.version' => 'v1.1.0']);
+        $key = 'update-center.releases.'.md5('acme/btobcms|');
+        $latest = 'v1.1.0';
+
+        Http::fake(function () use (&$latest) {
+            return Http::response([
+                ['tag_name' => $latest, 'name' => 'Rel', 'body' => '', 'html_url' => '', 'prerelease' => false],
+            ], 200);
+        });
+        (new GitHubReleases('acme/btobcms'))->releases(refreshIfUpToDate: true); // 预热缓存
+        cache()->put($key.'.checked', true, now()->addMinutes(5)); // 节流窗口已被占用（本次已回源过）
+
+        // 缓存重新落回「已是最新」状态，远端已悄悄更新
+        cache()->put($key, [
+            ['tag' => 'v1.1.0', 'name' => 'Rel', 'date' => null, 'notes' => '', 'url' => '', 'prerelease' => false],
+        ], now()->addMinutes(30));
+        $latest = 'v1.2.0';
+
+        // 节流窗口内：不回源，仍返回缓存里的 v1.1.0
+        $this->assertSame('v1.1.0', (new GitHubReleases('acme/btobcms'))->releases(refreshIfUpToDate: true)[0]['tag']);
     }
 
     public function test_invalid_repo_format_returns_null_from_settings(): void

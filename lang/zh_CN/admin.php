@@ -497,6 +497,9 @@ return [
         'log' => '更新日志',
         'log_empty' => '尚未执行过更新。',
         'view_on_github' => '在 GitHub 查看',
+        'check_now' => '检查更新',
+        'check_failed' => '检查失败：:reason',
+        'found_update' => '发现新版本 :tag，点「更新到 :tag」开始安装。',
     ],
     'ai_studio' => [
         'title' => 'AI 写作室',
