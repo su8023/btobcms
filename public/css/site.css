@@ -432,6 +432,14 @@ p { margin: 0 0 1em; }
 .form-status { padding: 11px 15px; border-radius: 8px; font-size: var(--fs-sm); margin-top: 12px; }
 .form-status--success { background: #e9f6ee; color: #14572f; border: 1px solid #c2e3cd; }
 .form-status--error { background: #fdf0ee; color: #93322a; border: 1px solid #ecc7c1; }
+.form-errors {
+    margin: 12px 0 0; padding: 11px 15px 11px 32px; border-radius: 8px;
+    background: #fdf0ee; color: #93322a; border: 1px solid #ecc7c1;
+    font-size: var(--fs-sm); list-style: disc;
+}
+.form-errors:empty { display: none; }
+.form-errors li { margin: 2px 0; }
+.form-field.has-error input, .form-field.has-error textarea { border-color: #d9534f; }
 .inquiry-form button[type=submit]:disabled { opacity: .6; cursor: wait; }
 
 .search-bar { display: flex; gap: 8px; max-width: 540px; margin-bottom: 26px; }

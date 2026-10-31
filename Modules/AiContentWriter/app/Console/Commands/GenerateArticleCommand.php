@@ -6,6 +6,8 @@ use App\Models\Post;
 use App\Services\Ai\LlmManager;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
+use Modules\AiContentWriter\Services\ArticleStudio;
+use Modules\AiContentWriter\Support\JsonExtractor;
 use RuntimeException;
 
 class GenerateArticleCommand extends Command
@@ -19,6 +21,11 @@ class GenerateArticleCommand extends Command
 
     public function handle(LlmManager $llm): int
     {
+        // 自定义模型覆盖：写作室/翻译服务在各自构造器里会调用，这里必须显式调用一次，
+        // 否则后台配置的 custom_base_url / custom_model 对命令行完全不生效
+        //（命令注入的是 LlmManager，不经过 ArticleStudio）。
+        ArticleStudio::applyCustomProvider();
+
         $topic = (string) $this->argument('topic');
         // 设置优先级：命令行参数 → 插件中心数据库设置 → 默认值
         $lang = (string) ($this->option('lang') ?: plugin_setting('ai-content-writer', 'default_lang') ?: 'en');
@@ -92,7 +99,8 @@ PROMPT],
 
     protected function extractJson(string $raw): string
     {
-        return preg_match('/\{.*\}/s', $raw, $m) ? $m[0] : $raw;
+        // 按括号配对提取（贪婪正则会被 JSON 前后的闲聊文本带偏）
+        return JsonExtractor::extract($raw) ?? $raw;
     }
 
     protected function uniqueSlug(string $slug): string

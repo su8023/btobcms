@@ -19,13 +19,15 @@ class StudioController extends Controller
      */
     public function plan(Request $request, ArticleStudio $studio): JsonResponse
     {
+        $this->authorizeAdmin();
+
         $data = $request->validate([
             'topic' => ['required', 'string', 'max:300'],
             'prompt' => ['nullable', 'string', 'max:2000'],
             'lang' => ['nullable', 'in:en,es,ar,ru,pt,fr,de,it'],
         ]);
 
-        set_time_limit(180);
+        set_time_limit($this->llmTimeLimit());
 
         try {
             $plan = $studio->plan(
@@ -45,6 +47,8 @@ class StudioController extends Controller
      */
     public function write(Request $request, ArticleStudio $studio): JsonResponse
     {
+        $this->authorizeAdmin();
+
         $data = $request->validate([
             'plan' => ['required', 'array'],
             'plan.title' => ['required', 'string', 'max:300'],
@@ -56,7 +60,7 @@ class StudioController extends Controller
             'words' => ['nullable', 'integer', 'between:300,4000'],
         ]);
 
-        set_time_limit(300);
+        set_time_limit($this->llmTimeLimit());
 
         try {
             $post = $studio->write($data['plan'], $data['lang'] ?? 'en', $data['words'] ?? null);
@@ -71,5 +75,30 @@ class StudioController extends Controller
             // 编辑页（草稿态，可内链替换/一键发布）
             'edit_url' => "/admin/posts/{$post->id}/edit",
         ]);
+    }
+
+    /**
+     * 仅管理员可调用：这两个接口直接消耗运营方的 LLM 额度。
+     */
+    protected function authorizeAdmin(): void
+    {
+        abort_unless(user_is_admin(), 403);
+    }
+
+    /**
+     * 本次请求的执行时限。
+     *
+     * 必须覆盖 LLM 层的最坏情况：retry(N) 会发起 N+1 次尝试，
+     * 每次最多 timeout 秒，外加退避等待。
+     * 旧实现写死 180s，而最坏情况是 2×120+2=242s ——
+     * 供应商变慢时（恰恰最需要这个保护的时候）反而先被 PHP 掐断，
+     * 客户端拿到 500 而不是干净的 422。
+     */
+    protected function llmTimeLimit(): int
+    {
+        $timeout = (int) config('ai.timeout', 120);
+        $retries = (int) config('ai.retries', 2);
+
+        return ($timeout * ($retries + 1)) + (2 * $retries) + 30;
     }
 }

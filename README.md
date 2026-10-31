@@ -5,7 +5,7 @@
 ## 项目简介
 
 - **全品类产品目录**：无限级分类树 + 属性模板（AttrSet）+ JSON 属性字段，机械类挂"功率/电压"，纺织类挂"克重/成分"，互不干扰
-- **多语言 SEO**：首发 `en / es / ar / ru`（子目录 + hreflang 互链，`ar` 自动 RTL），框架支持任意扩展
+- **多语言 SEO**：内置 `en / es / ar / ru / pt / fr / de / it` 共 8 种语言（子目录 + hreflang 互链，`ar` 自动 RTL），框架支持任意扩展
 - **SEO 引擎**：三级可编辑 TDK（全局/分类/产品，模板 + 单条覆盖）、canonical、结构化数据、分片 sitemap、301 重定向管理
 - **询盘获客**：产品页 Get Quote、询盘明细（RFQ）多语言自动回复邮件、垃圾防护
 - **插件化架构**：基于 [nwidart/laravel-modules](https://nwidart.github.io/laravel-modules)，核心只做"目录 / 内容 / 询盘 / SEO / 多语言"五大件，其余能力全部以插件形式挂载
@@ -51,6 +51,31 @@ cp .env.example .env
 - 管理后台：<http://127.0.0.1:8000/admin>
   - 账号：`admin@btobcms.local` / 密码：`Admin@2026`
   - **该密码仅限本地开发，上线前必须修改**
+
+## 部署到服务器（发布包）
+
+```bash
+# 构建生产包（产物：dist/btobcms-v{版本}.zip，自带生产依赖，无需服务器装 composer）
+php scripts/build-release.php
+
+# 验收包完整性（18 项检查：artisan/vendor/模块/lang/目录骨架 + 排除清单 + vendor 自洽）
+php scripts/verify-release.php dist/btobcms-v1.4.18.zip
+```
+
+上传 `dist/btobcms-v1.4.18.zip` 到服务器解压后：
+
+```bash
+cp .env.example .env
+php artisan key:generate      # 必须：没有它会话无法加解密
+# 编辑 .env：APP_ENV=production / APP_DEBUG=false / APP_URL / DB_* / TRUSTED_PROXIES / 邮件 / 飞书 / AI Key
+php artisan migrate --force    # 含 users.role 迁移
+php artisan storage:link
+chmod -R 775 storage bootstrap/cache
+php artisan config:cache && php artisan route:cache && php artisan view:cache
+php artisan queue:work --daemon   # 询盘邮件 / SEO 巡检 / AI 任务都靠它
+```
+
+完整步骤、CDN 可信代理配置与常见坑见 **[docs/deployment.md](docs/deployment.md)**。
 
 ## 核心命令清单
 
@@ -113,7 +138,7 @@ cp .env.example .env
 │   ├── ai.php                     # LLM provider 与能力档位配置
 │   └── site.php                   # 站点信息、语言矩阵、SEO TDK 模板
 ├── database/migrations/           # 数据表迁移（sites/categories/products/inquiries/content 等）
-├── lang/{en,es,ar,ru}/            # 界面语言包
+├── lang/{en,es,ar,ru,pt,fr,de,it}/  # 界面语言包（zh_CN 供后台使用）
 ├── resources/views/               # Blade 前台模板（home/products/categories/blog/pages/sitemap）
 ├── routes/web.php                 # 多语言前台路由 + sitemap/robots 路由
 └── modules_statuses.json          # 插件启停状态
@@ -135,8 +160,8 @@ cp .env.example .env
 
 ## 多语言机制
 
-- 语言矩阵定义在 `config/site.php`：`locales = [en, es, ar, ru]`，`default_locale = en`
-- **默认语言 `en` 不带 URL 前缀**，其余语言带 `/es/`、`/ar/`、`/ru/` 前缀，SEO 权重集中在同一域名
+- 语言矩阵定义在 `config/site.php`：`locales = [en, es, ar, ru, pt, fr, de, it]`，`default_locale = en`
+- **默认语言 `en` 不带 URL 前缀**，其余语言带 `/es/`、`/ar/`、`/pt/`、`/fr/`、`/de/`、`/it/` 前缀，SEO 权重集中在同一域名
 - 路由按语言前缀注册两套（`routes/web.php`），路由名带语言命名空间（如 `es.home`），由 `localized_route()` 生成当前语言 URL、`locale_alternates()` 生成全语言互链
 - 每个页面输出 `hreflang` 互链 + `x-default`（指向 `en` 版本）与 canonical；`ar` 自动启用 RTL 布局
 - sitemap 采用 **index + 分片**结构（`/sitemap.xml` → `sitemap-pages/categories/products/posts.xml`），每个 `<url>` 条目携带全语言的 hreflang `xhtml:link` 互链
@@ -144,11 +169,12 @@ cp .env.example .env
 
 ## 生产部署要点
 
+0. **后台角色**：`admin` 全量权限（含插件中心/主题中心/更新中心/站点设置/AI 写作室/属性 code），`editor` 仅内容运营（产品/分类/文章/询盘）。安装向导与种子账号为 `admin`；新增账号默认 `editor`，提权用 `php artisan user:role <email> admin`
 1. **数据库切 MySQL**：修改 `.env` 中 `DB_CONNECTION=mysql` 及 `DB_HOST` / `DB_PORT` / `DB_DATABASE` / `DB_USERNAME` / `DB_PASSWORD`
 2. **队列**：保持 `QUEUE_CONNECTION=database`，常驻 `php artisan horizon`（或 `php artisan queue:work --daemon`）处理 AI 调用、邮件等异步任务
 3. **调度器**：配置 cron `* * * * * cd /path/to/BtoBcms && php artisan schedule:run`
-4. **CDN 与 HTTPS**：域名接入 Cloudflare（CDN/WAF），源站强制 HTTPS，并更新 `APP_URL`
-5. **安全**：立即修改默认管理员密码 `Admin@2026`；确认 `.env` 不在 web 可访问目录；配置 SPF/DKIM/DMARC 后用 SES/Postmark 等发信
+4. **CDN 与 HTTPS**：域名接入 Cloudflare（CDN/WAF），源站强制 HTTPS，并更新 `APP_URL`；若走 Cloudflare，在 `.env` 设 `TRUSTED_PROXIES` 为 Cloudflare 官方 IP 段（留空则不信任任何代理，询盘 IP 与限流用真实连接 IP）
+5. **安全**：立即修改默认管理员密码 `Admin@2026`；确认 `.env` 不在 web 可访问目录；确认 `storage/app/installed.lock` 已生成（安装向导据此关闭，防止被匿名重装）；配置 SPF/DKIM/DMARC 后用 SES/Postmark 等发信
 6. 上线前执行 `php artisan config:cache && php artisan route:cache && php artisan view:cache` 提升性能
 
 ## 测试

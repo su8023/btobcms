@@ -13,6 +13,7 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -100,7 +101,22 @@ class LinkTermResource extends Resource
                     ->label('全量回织')
                     ->icon(Heroicon::OutlinedSparkles)
                     ->action(function (Action $action): void {
-                        [$posts, $links] = app(Weaver::class)->reweaveAll();
+                        [$posts, $links, $partial] = app(Weaver::class)->reweaveAll();
+
+                        // 回织有单次时间预算：跑满即收尾，剩余文章下次再点一次即可（幂等，不会重复织）
+                        if ($partial) {
+                            $action
+                                ->success()
+                                ->successNotification(
+                                    Notification::make()
+                                        ->warning()
+                                        ->title("回织部分完成：{$posts} 篇文章新增 {$links} 条内链")
+                                        ->body('已达单次回织的时间上限，剩余文章请稍后再点一次「全量回织」继续。'),
+                                );
+
+                            return;
+                        }
+
                         $action
                             ->success()
                             ->successNotificationTitle(

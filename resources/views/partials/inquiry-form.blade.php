@@ -46,6 +46,23 @@
 
     <p class="form-reassure">{{ __('site.form.reassure') }}</p>
 
+    {{-- 无 JS 降级：服务端校验失败时把错误逐条列出 --}}
+    @if ($errors->any())
+        <ul class="form-errors">
+            @foreach ($errors->all() as $message)
+                <li>{{ $message }}</li>
+            @endforeach
+        </ul>
+    @endif
+
+    {{-- 无 JS 提交成功后的服务端 flash 提示 --}}
+    @if (session('inquiry_success'))
+        <p class="form-status form-status--success">{{ __('site.form.success') }}</p>
+    @endif
+
+    {{-- AJAX 路径：字段级错误由 site.js 填充到这个容器 --}}
+    <ul class="form-errors" data-form-errors hidden></ul>
+
     <p class="form-status form-status--success" hidden>{{ __('site.form.success') }}</p>
     <p class="form-status form-status--error" hidden>{{ __('site.form.error') }}</p>
 </form>

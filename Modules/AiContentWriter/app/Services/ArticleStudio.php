@@ -4,7 +4,9 @@ namespace Modules\AiContentWriter\Services;
 
 use App\Services\Ai\LlmManager;
 use App\Models\Post;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Modules\AiContentWriter\Support\JsonExtractor;
 use RuntimeException;
 
 /**
@@ -199,32 +201,40 @@ PROMPT],
 
         $slug = $this->uniqueSlug($generated['slug'] ?: Str::slug($title));
 
-        $post = Post::create([
-            'type' => 'post',
-            'slug' => $slug,
-            'status' => Post::STATUS_DRAFT,
-            'is_ai_generated' => true,
-            'title' => [$lang => $title],
-            'excerpt' => [$lang => $generated['excerpt']],
-            'content' => [$lang => $generated['html']],
-        ]);
-
-        // 方案阶段的 SEO 关键词直接落库（写完即有，发布时 AutoSeo 只需补标题/描述）
-        $keywords = implode(', ', $plan['keywords'] ?? []);
-        if ($keywords !== '') {
-            \App\Models\SeoMeta::create([
-                'metable_type' => Post::class,
-                'metable_id' => $post->id,
-                'keywords' => [$lang => $keywords],
+        // 文章与 SEO 元数据必须一起提交：
+        // 之前分两次写，第二次失败就会留下"草稿存在但没有 SEO 关键词"的半成品。
+        $post = DB::transaction(function () use ($plan, $lang, $title, $generated, $slug): Post {
+            $post = Post::create([
+                'type' => 'post',
+                'slug' => $slug,
+                'status' => Post::STATUS_DRAFT,
+                'is_ai_generated' => true,
+                'title' => [$lang => $title],
+                'excerpt' => [$lang => $generated['excerpt']],
+                'content' => [$lang => $generated['html']],
             ]);
-        }
+
+            // 方案阶段的 SEO 关键词直接落库（写完即有，发布时 AutoSeo 只需补标题/描述）
+            $keywords = implode(', ', $plan['keywords'] ?? []);
+
+            if ($keywords !== '') {
+                \App\Models\SeoMeta::create([
+                    'metable_type' => Post::class,
+                    'metable_id' => $post->id,
+                    'keywords' => [$lang => $keywords],
+                ]);
+            }
+
+            return $post;
+        });
 
         return $post;
     }
 
     protected function extractJson(string $raw): string
     {
-        return preg_match('/\{.*\}/s', $raw, $m) ? $m[0] : $raw;
+        // 按括号配对提取（贪婪正则会被 JSON 前后的闲聊文本带偏）
+        return JsonExtractor::extract($raw) ?? $raw;
     }
 
     protected function uniqueSlug(string $slug): string

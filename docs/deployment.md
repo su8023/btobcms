@@ -200,7 +200,7 @@ crontab（root 或 www-data）：
 - [ ] 提交一条测试询盘：入库 + 飞书收到卡片 + 两个邮箱收到邮件
 - [ ] /robots.txt 的 Sitemap 行指向生产域名
 - [ ] /sitemap.xml 打开正常（空库时无 products/blog 分片属预期）
-- [ ] `php seo_external_audit.php https://你的域名` 重跑外部审计应为 100/100
+- [ ] 后台「SEO 巡检报告 → 立即巡检」跑一遍，报告无新增问题（该插件已内置站点抓取与规则体检）
 - [ ] Google Search Console 添加资源并提交 sitemap.xml
 - [ ] 换掉占位内容：首页 hero 认证徽章（ISO/CE/SGS 为占位）、og-default.png 品牌图（如需定制）、联系信息
 - [ ] 备份策略（见下）
@@ -225,6 +225,39 @@ crontab（root 或 www-data）：
 | 图片 404 | 没执行 `storage:link` |
 | 时区 | .env 加 `APP_TIMEZONE=Asia/Shanghai`（询盘时间戳/巡检调度按此时区） |
 | 插件上传失败 | `storage/app` 权限；或 zip 内多套了一层目录 |
+| 询盘里 IP 全是 Cloudflare 节点 IP | .env 加 `TRUSTED_PROXIES=<Cloudflare 官方 IP 段>`，再 `config:clear && config:cache`（见下节） |
+| 后台某个面板打开 403 | 该面板只对管理员开放 → `php artisan user:role <邮箱> admin` |
+| 装完仍能打开 /install | `storage/app/installed.lock` 丢了（容器没挂卷）→ 见下节 |
+| AI 功能报"AI 接口地址不可用" | 自建内网模型被 SSRF 防护拦下 → .env 加 `AI_ALLOW_PRIVATE_HOSTS=true` |
+| 飞书推送失败 | 自建中继域名被拦 → 插件中心打开"允许自定义 Webhook 主机" |
+
+## 十五之二、CDN / 反向代理（Cloudflare）
+
+站点在 Cloudflare 或负载均衡之后时，**必须**在 `.env` 里声明可信代理，
+否则询盘记录的 IP 是 CDN 节点 IP（而不是买家真实 IP），且基于 IP 的限流会失准：
+
+```ini
+# Cloudflare 官方 IP 段（https://www.cloudflare.com/ips-v4 与 ips-v6）
+TRUSTED_PROXIES=173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22
+```
+
+```bash
+php artisan config:clear && php artisan config:cache
+```
+
+要点：
+- **留空 = 不信任任何代理**（默认，最安全）。此时 X-Forwarded-For 不被采信，客户端无法伪造 IP 绕过限流。
+- **不要填 `*`**：那等于信任任何来源的 X-Forwarded-For，限流与 IP 统计都会失真。
+- 生效路径是 `config/trustedproxy.php`，改完必须 `config:clear && config:cache` 才会重新烘焙。
+
+## 十五之三、安装锁（防匿名重装）
+
+`storage/app/installed.lock` 是安装向导的锁文件。**它所在的 `storage/` 必须持久化**
+（Docker 部署要挂卷，容器重建后锁文件不能丢）。
+
+锁丢失时仍有一道防线：根目录 `.env` 里存在且配置了非空 `APP_KEY` 时，`/install` 同样返回 404。
+两道防线都在才安全 —— 两者都失效时，匿名访客可以重跑安装向导改写 `.env` 并建出自己的管理员账号。
+
 
 ## 后续优化路线（可选）
 

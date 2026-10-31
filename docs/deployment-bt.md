@@ -207,13 +207,16 @@ curl -s https://你的域名/robots.txt | grep Sitemap   # 指向生产域名
 4. 后台「插件中心」启用并配置各插件（飞书 Webhook / SMTP 收件箱 / LLM Key / WhatsApp）
 5. 「全站设置」填站点名、联系方式、社交链接（sameAs）
 
-最后在服务器上跑一次外部审计（可选）：
+最后在服务器上跑一次巡检（可选）：
 
 ```bash
-curl -O https://你的域名/... # 或本地执行：
-php seo_external_audit.php https://你的域名    # 应 100/100
-php seo_strict_audit.php https://你的域名      # 应 ≥99/100
+# 后台「SEO 巡检报告 → 立即巡检」按钮（插件已内置：抓 sitemap + 逐页体检 + 出报告）
+# 命令行等价物：
+php artisan seo:audit --base-url=https://你的域名 --limit=100
 ```
+
+> 一次性外部审计脚本（`seo_external_audit.php` / `seo_strict_audit.php`）已随仓库清理提交移除，
+> 请改用上面的插件巡检功能。
 
 再到 [Google Search Console](https://search.google.com/search-console) 添加资源、提交 `https://你的域名/sitemap.xml`。
 

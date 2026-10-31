@@ -100,8 +100,9 @@ foreach (\Nwidart\Modules\Facades\Module::allEnabled() as $siteRoutesModule) {
 
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap.index');
 
+// 分片名可带序号后缀（products-2.xml），见 SitemapController::shardsOf()
 Route::get('/sitemap-{section}.xml', [SitemapController::class, 'section'])
-    ->whereIn('section', ['pages', 'industries', 'categories', 'products', 'posts', 'cases'])
+    ->where('section', 'pages|industries|categories|products|posts|cases(-[0-9]+)?')
     ->name('sitemap.section');
 
 Route::get('/robots.txt', [SitemapController::class, 'robots'])->name('robots');

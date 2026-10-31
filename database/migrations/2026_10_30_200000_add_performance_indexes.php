@@ -27,9 +27,17 @@ return new class extends Migration
         });
 
         // 线索雷达导航徽章：where tier='hot' count，每次后台加载执行
-        Schema::table('inquiry_enrichments', function (Blueprint $table) {
-            $table->index('tier');
-        });
+        // inquiry_enrichments 属于 LeadLens 模块：插件可被停用或删除，
+        // 核心迁移绝不能假设它存在，否则全新库迁移会整体中断
+        // （nwidart 只注册「已启用」模块的迁移目录）。
+        // 该索引改由 LeadLens 自己的迁移随表创建，这里只做兜底补齐。
+        // 注意：hasIndex 的字符串参数是【索引名】，列名要传数组。
+        if (Schema::hasTable('inquiry_enrichments')
+            && ! Schema::hasIndex('inquiry_enrichments', ['tier'])) {
+            Schema::table('inquiry_enrichments', function (Blueprint $table) {
+                $table->index('tier');
+            });
+        }
     }
 
     public function down(): void
@@ -40,6 +48,10 @@ return new class extends Migration
             $t->dropIndex(['status', 'published_at']);
         });
         Schema::table('categories', fn (Blueprint $t) => $t->dropIndex(['slug']));
-        Schema::table('inquiry_enrichments', fn (Blueprint $t) => $t->dropIndex(['tier']));
+
+        if (Schema::hasTable('inquiry_enrichments')
+            && Schema::hasIndex('inquiry_enrichments', ['tier'])) {
+            Schema::table('inquiry_enrichments', fn (Blueprint $t) => $t->dropIndex(['tier']));
+        }
     }
 };

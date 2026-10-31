@@ -18,6 +18,10 @@ return new class extends Migration
             $table->string('company_site', 191)->nullable();        // 邮箱域名推测的企业官网
             $table->json('details')->nullable();                    // 各评分项明细
             $table->timestamps();
+
+            // 线索雷达导航徽章：where tier='hot' count，每次后台加载执行
+            // 索引随模块表自持：核心迁移不得依赖模块表（插件可被停用/删除）
+            $table->index('tier');
         });
     }
 

@@ -16,7 +16,13 @@ class ProductController extends Controller
         $products = Product::published()
             ->with(['category', 'images'])
             ->when($q !== '', function ($query) use ($q) {
-                $query->whereRaw('lower(name) like ?', ['%'.mb_strtolower($q).'%']);
+                // name 是多语言 JSON 列：直接在整列上 LIKE 会跨语言命中
+                // （搜 "de" 命中任何含 "de" 的语言名），且结果渲染成当前语言后看起来不匹配。
+                // 改为只在当前语言的键内做前缀无关的包含匹配。
+                $query->whereRaw(
+                    'json_extract(name, ?) like ?',
+                    ['$."'.app()->getLocale().'"', '%'.mb_strtolower($q).'%']
+                );
             })
             ->orderByDesc('id')
             ->paginate(12)

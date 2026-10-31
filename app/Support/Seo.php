@@ -87,8 +87,10 @@ class Seo
         $site = (string) site_setting('site.name', config('site.name'));
 
         // 优先级：后台设置的每语言文案 → 当前语言的语言包模板 → 配置模板（英文兜底）
-        $settingTitle = site_setting("seo.{$key}.title.{$locale}");
-        $settingDescription = site_setting("seo.{$key}.description.{$locale}");
+        // 后台把字段清空时存的是空串（不是 null），所以必须显式判空，
+        // 否则 ?? 不会回退，首页会直接输出 <title></title>。
+        $settingTitle = self::blankToNull(site_setting("seo.{$key}.title.{$locale}"));
+        $settingDescription = self::blankToNull(site_setting("seo.{$key}.description.{$locale}"));
 
         $langTitle = Lang::has("seo.{$key}.title", $locale)
             ? strtr((string) __("seo.{$key}.title"), ['{site}' => $site])
@@ -101,6 +103,23 @@ class Seo
         $description = $settingDescription ?? $langDescription ?? strtr((string) ($cfg['description'] ?? ''), ['{site}' => $site]);
 
         return self::bag($title, $description, $key, [], 'website');
+    }
+
+    /**
+     * 空串视为「未设置」。
+     *
+     * 后台表单清空字段后存的是 ''，而 ?? 只跳过 null：
+     * 直接用 ?? 链会让空串赢下优先级，首页输出空的 <title>。
+     */
+    private static function blankToNull(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
     }
 
     /**

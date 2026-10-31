@@ -31,6 +31,13 @@ class Product extends Model
         return $this->belongsTo(Category::class);
     }
 
+    protected static function booted(): void
+    {
+        // 产品上下架 / 换分类都会改变分类子树的产品数
+        static::saved(fn () => Category::flushCountCache());
+        static::deleted(fn () => Category::flushCountCache());
+    }
+
     public function images()
     {
         return $this->morphMany(Attachment::class, 'attachable')->orderBy('sort_order');

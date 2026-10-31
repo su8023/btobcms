@@ -101,7 +101,18 @@ class EditPost extends EditRecord
                 function (array $m) use (&$replaced, &$skipped): string {
                     $keyword = trim($m[1]);
                     $products = Product::published()
-                        ->whereRaw('lower(name) like ?', ['%'.mb_strtolower($keyword).'%'])
+                        // name 是多语言 JSON 列：整列 LIKE 会跨语言误命中，
+                        // 这里只在当前语言与英文两个键内匹配（后台编辑语言不定）
+                        ->where(function ($query) use ($keyword) {
+                            $needle = '%'.mb_strtolower($keyword).'%';
+
+                            foreach (array_unique([app()->getLocale(), 'en']) as $locale) {
+                                $query->orWhereRaw(
+                                    'json_extract(name, ?) like ?',
+                                    ['$."'.$locale.'"', $needle]
+                                );
+                            }
+                        })
                         ->get();
 
                     if ($products->count() !== 1) {

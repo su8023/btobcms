@@ -9,10 +9,11 @@ use App\Models\InquiryItem;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\Response;
 
 class InquiryController extends Controller
 {
-    public function store(Request $request): JsonResponse
+    public function store(Request $request): JsonResponse|Response
     {
         // landing_url 兜底归一化：旧版前端把首访落地页存成相对 pathname（历史访客的
         // localStorage），直接校验绝对 URL 会 422 拒掉整条询盘（转化漏斗实伤）。
@@ -34,9 +35,15 @@ class InquiryController extends Controller
             'landing_url' => ['nullable', 'string', 'max:500', 'url:http,https'],
             'referrer' => ['nullable', 'string', 'max:500'],
             'utm' => ['nullable', 'array'],
+            // utm 各值限长：否则匿名请求可写入超大 JSON，撑爆 inquiries 表
+            'utm.*' => ['nullable', 'string', 'max:255'],
             // honeypot：正常用户不会填写
             'website' => ['nullable', 'string', 'max:191'],
         ]);
+
+        // 无 JS 降级：浏览器直接提交表单（Accept: text/html）时，
+        // 回跳来源页并带 flash 提示，而不是把 JSON 甩给访客看
+        $wantsJson = $request->expectsJson();
 
         $isSpam = filled($data['website'] ?? null);
 
@@ -72,6 +79,11 @@ class InquiryController extends Controller
 
         if (! $isSpam) {
             InquiryCreated::dispatch($inquiry);
+        }
+
+        if (! $wantsJson) {
+            // 无 JS 降级路径：回来源页并提示成功
+            return back()->with('inquiry_success', true);
         }
 
         return response()->json([

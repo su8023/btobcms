@@ -4,6 +4,8 @@ namespace Modules\AiContentWriter\Services;
 
 use App\Models\Post;
 use App\Services\Ai\LlmManager;
+use Illuminate\Support\Facades\DB;
+use Modules\AiContentWriter\Support\JsonExtractor;
 use RuntimeException;
 
 /**
@@ -61,24 +63,33 @@ class PostTranslator
                 }
             }
 
-            if ($meta === null) {
-                // 文章从没填过 SEO：创建空元数据行，让翻译结果有落点
-                $meta = $post->seoMeta()->create();
-            }
-
-            $metaTranslations = [
-                'title' => [$locale => (string) ($data['seo_title'] ?? '')],
-                'description' => [$locale => (string) ($data['seo_description'] ?? '')],
-                'keywords' => [$locale => (string) ($data['seo_keywords'] ?? '')],
-            ];
-            foreach ($metaTranslations as $field => $values) {
-                if (filled($values[$locale])) {
-                    $meta->setTranslation($field, $locale, $values[$locale]);
+            // 元数据与正文一起提交：
+            // 之前 meta->save() 与 post->save() 是两次独立写入，
+            // 中间失败就会留下"元数据已翻译、正文还是旧语言"的半翻译状态。
+            // 闭包返回 $meta：新建的元数据行要带回外层，下一轮语言才能复用同一行。
+            $meta = DB::transaction(function () use ($data, $locale, $post, $meta) {
+                if ($meta === null) {
+                    // 文章从没填过 SEO：创建空元数据行，让翻译结果有落点
+                    $meta = $post->seoMeta()->create();
                 }
-            }
-            $meta->save();
 
-            $post->save();
+                $metaTranslations = [
+                    'title' => [$locale => (string) ($data['seo_title'] ?? '')],
+                    'description' => [$locale => (string) ($data['seo_description'] ?? '')],
+                    'keywords' => [$locale => (string) ($data['seo_keywords'] ?? '')],
+                ];
+                foreach ($metaTranslations as $field => $values) {
+                    if (filled($values[$locale])) {
+                        $meta->setTranslation($field, $locale, $values[$locale]);
+                    }
+                }
+                $meta->save();
+
+                $post->save();
+
+                return $meta;
+            });
+
             $translated[] = $locale;
         }
 
@@ -139,6 +150,7 @@ PROMPT],
 
     protected function extractJson(string $raw): string
     {
-        return preg_match('/\{.*\}/s', $raw, $m) ? $m[0] : $raw;
+        // 按括号配对提取（贪婪正则会被 JSON 前后的闲聊文本带偏）
+        return JsonExtractor::extract($raw) ?? $raw;
     }
 }

@@ -20,6 +20,14 @@ use UnitEnum;
  */
 class UpdateCenterPage extends Page
 {
+    /**
+     * 仅管理员可访问：更新中心会下载并覆盖应用文件，等价于远程代码执行。
+     */
+    public static function canAccess(): bool
+    {
+        return user_is_admin();
+    }
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowPath;
 
     protected static ?int $navigationSort = 34;

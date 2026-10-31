@@ -23,6 +23,10 @@ class GeoBoostServiceProvider extends ModuleServiceProvider
         $this->mergeConfigFrom(__DIR__.'/../../config/config.php', 'geo-boost');
         $this->loadViewsFrom(__DIR__.'/../../resources/views', 'geoboost');
 
+        // 模块 lang/ 目录必须显式注册：config/modules.php 的 auto-discover.translations=false，
+        // nwidart 不会去扫模块翻译目录，__('geoboost::faq.title') 会原样返回键名给用户看
+        $this->loadTranslationsFrom(__DIR__.'/../../lang', 'geoboost');
+
         if (! config('geo-boost.enabled')) {
             return;
         }

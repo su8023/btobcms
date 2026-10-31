@@ -7,17 +7,33 @@ use App\Models\Category;
 use App\Models\Post;
 use App\Models\Product;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
 
 class SitemapController extends Controller
 {
     /**
-     * sitemap 索引：拆分为 5 个分片，产品量大时可独立分页。
+     * 单个 sitemap 文件的 URL 上限。
+     *
+     * 搜索引擎协议规定单个 sitemap 文件最多 5 万条 <url>；
+     * 留出余量，超过就自动分片（products-1.xml / products-2.xml …）。
+     */
+    private const SHARD_SIZE = 45000;
+
+    /**
+     * sitemap 索引：拆分为分片，产品量大时独立分页。
      */
     public function index(): Response
     {
         $sections = [];
+
         foreach (['pages', 'industries', 'categories', 'products', 'posts', 'cases'] as $section) {
-            $sections[] = route('sitemap.section', ['section' => $section]);
+            if (! $this->sectionAvailable($section)) {
+                continue;
+            }
+
+            foreach ($this->shardsOf($section) as $shard) {
+                $sections[] = route('sitemap.section', ['section' => $shard]);
+            }
         }
 
         return response()
@@ -27,23 +43,36 @@ class SitemapController extends Controller
 
     public function section(string $section): Response
     {
-        $urls = match ($section) {
+        // 形如 products / products-2：数字后缀是分片号
+        $base = $section;
+        $shard = 0;
+
+        if (preg_match('/^(.+)-(\d+)$/', $section, $m) === 1) {
+            $base = $m[1];
+            $shard = max(0, ((int) $m[2]) - 1);
+        }
+
+        if (! $this->sectionAvailable($base)) {
+            abort(404);
+        }
+
+        $urls = match ($base) {
             'pages' => $this->pageUrls(),
             'industries' => $this->industryUrls(),
             'categories' => $this->modelUrls(
-                Category::query()->where('status', true)->get(),
+                $this->shardQuery(Category::query()->where('status', true)->orderBy('id'), $shard),
                 'categories.show',
             ),
             'products' => $this->modelUrls(
-                Product::published()->orderBy('id')->get(),
+                $this->shardQuery(Product::published()->orderBy('id'), $shard),
                 'products.show',
             ),
             'posts' => $this->modelUrls(
-                Post::published()->orderBy('id')->get(),
+                $this->shardQuery(Post::published()->orderBy('id'), $shard),
                 'blog.show',
             ),
             'cases' => $this->modelUrls(
-                \Modules\TrustBuilder\Models\TrustCase::query()->published()->orderBy('id')->get(),
+                $this->shardQuery(\Modules\TrustBuilder\Models\TrustCase::query()->published()->orderBy('id'), $shard),
                 'cases.show',
             ),
             default => abort(404),
@@ -52,6 +81,90 @@ class SitemapController extends Controller
         return response()
             ->view('sitemap.urlset', ['urls' => $urls])
             ->header('Content-Type', 'application/xml; charset=UTF-8');
+    }
+
+    /**
+     * 该分片是否存在（模块停用/被删除时不应再对外暴露）。
+     */
+    private function sectionAvailable(string $section): bool
+    {
+        if ($section === 'cases') {
+            // TrustBuilder 是可选插件：模块目录被删除后类不存在，
+            // 此时既不能查询也不能生成链接，否则 /sitemap-cases.xml 直接 500。
+            return class_exists(\Modules\TrustBuilder\Models\TrustCase::class)
+                && $this->trustBuilderEnabled();
+        }
+
+        return in_array($section, ['pages', 'industries', 'categories', 'products', 'posts'], true);
+    }
+
+    /**
+     * TrustBuilder 模块是否处于启用状态（模块被删除时 isEnabled 会抛异常）。
+     */
+    private function trustBuilderEnabled(): bool
+    {
+        try {
+            return (bool) \Nwidart\Modules\Facades\Module::isEnabled('TrustBuilder');
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    /**
+     * 某分区需要几个分片（至少 1 个）。
+     *
+     * @return list<string>
+     */
+    private function shardsOf(string $section): array
+    {
+        // 分片数只随内容量变化，缓存 10 分钟：
+        // 否则每次请求 sitemap.xml 都要对 products/posts 做一次 COUNT（可观的扫描开销）
+        $counts = Cache::remember('sitemap-shard-counts', 600, function (): array {
+            $out = [];
+
+            foreach (['categories', 'products', 'posts', 'cases'] as $key) {
+                $out[$key] = match ($key) {
+                    'categories' => Category::query()->where('status', true)->count(),
+                    'products' => Product::published()->count(),
+                    'posts' => Post::published()->count(),
+                    'cases' => class_exists(\Modules\TrustBuilder\Models\TrustCase::class)
+                        ? \Modules\TrustBuilder\Models\TrustCase::query()->published()->count()
+                        : 0,
+                };
+            }
+
+            return $out;
+        });
+
+        $total = (int) ($counts[$section] ?? 1);
+
+        $count = max(1, (int) ceil($total / self::SHARD_SIZE));
+
+        $shards = [];
+
+        for ($i = 1; $i <= $count; $i++) {
+            $shards[] = $count === 1 ? $section : "{$section}-{$i}";
+        }
+
+        return $shards;
+    }
+
+    /**
+     * 取某个分片的数据。
+     *
+     * 用 cursor() 而不是 get()：一次性物化上万个 Eloquent 模型
+     * （含 JSON cast 的正文/属性）会把内存吃到几十 MB，
+     * 而 sitemap 只需要 slug 与 updated_at。
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Support\LazyCollection<int, \Illuminate\Database\Eloquent\Model>
+     */
+    private function shardQuery($query, int $shard): \Illuminate\Support\LazyCollection
+    {
+        return $query
+            ->skip($shard * self::SHARD_SIZE)
+            ->take(self::SHARD_SIZE)
+            ->cursor();
     }
 
     public function robots(): Response
@@ -110,9 +223,14 @@ class SitemapController extends Controller
             '- [Blog]('.localized_route('blog.index').'): sourcing guides',
             '- [Industries]('.localized_route('industries.index').'): industry-specific sourcing solutions',
             '- [Services]('.localized_route('services.index').'): OEM/ODM, quality control, logistics, sourcing',
-            '- [Case studies]('.localized_route('cases.index').'): customer success stories and delivery records',
-            '',
         ];
+
+        // 案例页来自可选插件 TrustBuilder：插件停用时该路由不存在，
+        // 直接调 localized_route 会抛 RouteNotFoundException 让整个 llms.txt 500。
+        if ($this->sectionAvailable('cases')) {
+            $lines[] = '- [Case studies]('.localized_route('cases.index').'): customer success stories and delivery records';
+        }
+
 
         // 行业清单：纯线索站的核心实体导航（AI 引擎按行业引用落地页）
         $lines[] = '## Industries we serve';

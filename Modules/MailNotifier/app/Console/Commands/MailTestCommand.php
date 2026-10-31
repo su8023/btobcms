@@ -20,7 +20,16 @@ class MailTestCommand extends Command
             $this->warn('提示：MAIL_NOTIFIER_ENABLED=false，插件当前处于禁用状态（测试邮件仍会发送）。');
         }
 
-        $to = $this->option('email') ?: config('mail-notifier.admin_emails.0');
+        // admin_emails 在配置里是逗号分隔的【字符串】（见 config.php 注释），
+        // 用 config('mail-notifier.admin_emails.0') 取值只会得到 null ——
+        // Arr::get 在字符串上取键 '0' 拿不到值，于是即使 .env 里配了
+        // INQUIRY_ADMIN_EMAILS 也会报"未指定收件邮箱"。这里按同样口径解析。
+        $adminEmails = array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) config('mail-notifier.admin_emails', ''))
+        )));
+
+        $to = $this->option('email') ?: ($adminEmails[0] ?? null);
 
         if (blank($to)) {
             $this->error('未指定收件邮箱，且 .env 未配置 INQUIRY_ADMIN_EMAILS。');

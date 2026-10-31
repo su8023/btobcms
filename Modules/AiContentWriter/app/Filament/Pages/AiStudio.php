@@ -22,6 +22,14 @@ use UnitEnum;
  */
 class AiStudio extends Page
 {
+    /**
+     * 仅管理员可访问：本页每次点击都会消耗运营方的 LLM 额度。
+     */
+    public static function canAccess(): bool
+    {
+        return user_is_admin();
+    }
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedPencilSquare;
 
     protected static ?int $navigationSort = 40;
@@ -62,11 +70,17 @@ class AiStudio extends Page
     /** @var list<array{h2: string, points: string}> */
     public array $planOutline = [];
 
-    /** @var list<string> */
-    public array $planKeywords = [];
+    /**
+     * 关键词：逗号/换行分隔的纯文本。
+     *
+     * 必须是 string —— 视图里是普通文本框（wire:model="planKeywords"），
+     * 之前声明成 array 会让 Livewire 赋值字符串时抛 TypeError：
+     * APP_DEBUG=true 直接 500，生产环境静默 419 并丢弃这次编辑。
+     */
+    public string $planKeywords = '';
 
-    /** @var list<string> */
-    public array $planFaq = [];
+    /** FAQ 题目：换行分隔的纯文本（同样必须是 string，见 planKeywords 注释） */
+    public string $planFaq = '';
 
     public bool $planning = false;
 
@@ -104,8 +118,12 @@ class AiStudio extends Page
                 'h2' => $s['h2'],
                 'points' => implode('；', $s['points']),
             ])->all();
-            $this->planKeywords = $plan['keywords'];
-            $this->planFaq = collect($plan['faq'])->pluck('q')->all();
+            $this->planKeywords = implode(', ', array_map('strval', (array) ($plan['keywords'] ?? [])));
+            $this->planFaq = implode("\n", collect((array) ($plan['faq'] ?? []))
+                ->pluck('q')
+                ->filter()
+                ->map(fn ($q) => (string) $q)
+                ->all());
 
             Notification::make()->title(__('admin.ai_studio.plan_ready'))->success()->send();
         } catch (Throwable $e) {
@@ -135,8 +153,8 @@ class AiStudio extends Page
                     'h2' => $s['h2'],
                     'points' => array_filter(array_map('trim', preg_split('/[；;]/u', (string) $s['points']) ?: [])),
                 ])->all(),
-                'keywords' => $this->planKeywords,
-                'faq' => collect($this->planFaq)->map(fn ($q) => ['q' => $q])->all(),
+                'keywords' => $this->splitLines($this->planKeywords, ','),
+                'faq' => collect($this->splitLines($this->planFaq))->map(fn ($q) => ['q' => $q])->all(),
             ], $this->lang, $this->words);
 
             $this->createdPostId = $post->id;
@@ -156,10 +174,38 @@ class AiStudio extends Page
         $this->planTitle = null;
         $this->planAngle = null;
         $this->planOutline = [];
-        $this->planKeywords = [];
-        $this->planFaq = [];
+        $this->planKeywords = '';
+        $this->planFaq = '';
         $this->createdPostId = null;
         $this->createdSlug = null;
+    }
+
+    /**
+     * 把多行/逗号分隔的文本切成干净的去重列表。
+     *
+     * @param  string|null  $extraSeparator 额外的分隔符（如关键词用逗号）
+     * @return list<string>
+     */
+    protected function splitLines(?string $value, string $extraSeparator = ''): array
+    {
+        if ($value === null || trim($value) === '') {
+            return [];
+        }
+
+        $pattern = $extraSeparator !== ''
+            ? '/[\r\n'.preg_quote($extraSeparator, '/').']+/u'
+            : '/[\r\n]+/u';
+
+        $parts = preg_split($pattern, $value) ?: [];
+
+        $parts = array_map(
+            fn ($part) => trim((string) $part),
+            $parts
+        );
+
+        $parts = array_filter($parts, fn ($part) => $part !== '');
+
+        return array_values(array_unique($parts));
     }
 
     protected function getHeaderActions(): array

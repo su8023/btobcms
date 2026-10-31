@@ -163,24 +163,73 @@
             body: JSON.stringify(payload)
         })
             .then(function (res) {
-                if (!res.ok) throw new Error('HTTP ' + res.status);
-                return res.json();
+                // 解析响应体：422 时里面是 { message, errors: { 字段: [消息] } }
+                return res.json().catch(function () { return {}; }).then(function (body) {
+                    if (!res.ok) {
+                        var err = new Error('HTTP ' + res.status);
+                        err.payload = body;
+                        throw err;
+                    }
+                    return body;
+                });
             })
             .then(function () {
                 form.reset();
+                clearFormErrors(form);
                 if (successEl) successEl.hidden = false;
                 // 询盘篮提交成功后清空
                 if (form.hasAttribute('data-basket-form')) {
                     setBasket([]);
                 }
             })
-            .catch(function () {
+            .catch(function (e) {
+                // 把服务端返回的字段级错误逐条显示出来（此前被整段丢弃，
+                // 访客只看到"提交失败"，不知道哪个字段没填）
+                renderFormErrors(form, e && e.payload);
                 if (errorEl) errorEl.hidden = false;
             })
             .finally(function () {
                 if (button) { button.disabled = false; button.textContent = button.dataset.label || ''; }
             });
     });
+
+    /* ---------- 询盘表单：字段级错误渲染 ---------- */
+    function renderFormErrors(form, payload) {
+        var errors = payload && payload.errors;
+        if (!errors) return;
+
+        var list = form.querySelector('[data-form-errors]');
+        if (!list) return;
+
+        list.innerHTML = '';
+
+        Object.keys(errors).forEach(function (field) {
+            var messages = errors[field];
+            if (!Array.isArray(messages)) messages = [messages];
+
+            messages.forEach(function (message) {
+                var li = document.createElement('li');
+                li.textContent = message;
+                list.appendChild(li);
+            });
+
+            // 给对应输入框的容器加错误态
+            var input = form.querySelector('[name="' + field + '"]');
+            var wrap = input && input.closest('.form-field');
+            if (wrap) wrap.classList.add('has-error');
+        });
+
+        list.hidden = false;
+    }
+
+    function clearFormErrors(form) {
+        var list = form.querySelector('[data-form-errors]');
+        if (list) { list.innerHTML = ''; list.hidden = true; }
+
+        form.querySelectorAll('.form-field.has-error').forEach(function (el) {
+            el.classList.remove('has-error');
+        });
+    }
 
     /* ---------- 初始化 ---------- */
     function initPageFx() {

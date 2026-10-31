@@ -31,8 +31,19 @@ class PluginUploader
     /** composer dump-autoload 超时（秒） */
     protected const AUTOLOAD_TIMEOUT = 120;
 
-    /** composer.phar 回退路径（composer 命令不在 PATH 时使用） */
-    protected const COMPOSER_PHAR = 'E:/dev-tools/composer.phar';
+    /**
+     * composer.phar 回退路径（composer 命令不在 PATH 时使用）。
+     *
+     * 原先写死成开发机的 'E:/dev-tools/composer.phar'，在生产主机上必然不存在；
+     * 现在改为环境变量 COMPOSER_PHAR，可留空（留空则只提示手工执行）。
+     */
+    protected function composerPhar(): ?string
+    {
+        // 从 config 读：config:cache 之后 env() 恒为 null，那就没有回退路径了
+        $path = trim((string) config('app.composer_phar', ''));
+
+        return $path !== '' && is_file($path) ? $path : null;
+    }
 
     /* ----------------------------------------------------------
      | 上传安装
@@ -563,10 +574,12 @@ class PluginUploader
             return 'composer dump-autoload 完成（PSR-4 映射已刷新）';
         }
 
-        if (is_file(self::COMPOSER_PHAR)) {
+        $phar = $this->composerPhar();
+
+        if ($phar !== null) {
             $fallback = Process::path(base_path())
                 ->timeout(self::AUTOLOAD_TIMEOUT)
-                ->run([PHP_BINARY, self::COMPOSER_PHAR, 'dump-autoload']);
+                ->run([PHP_BINARY, $phar, 'dump-autoload']);
 
             if ($fallback->successful()) {
                 return 'composer dump-autoload 完成（通过 composer.phar 回退执行）';

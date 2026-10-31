@@ -1,8 +1,14 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Modules\AiContentWriter\Http\Controllers\AiContentWriterController;
 
-Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
-    Route::apiResource('aicontentwriters', AiContentWriterController::class)->names('aicontentwriter');
-});
+/*
+|--------------------------------------------------------------------------
+| AI 内容写作 API 路由
+|--------------------------------------------------------------------------
+|
+| 原先这里挂着 nwidart 脚手架生成的 apiResource(aicontentwriters)，
+| 指向一个动作全为空的控制器：请求返回 200 但什么都不做（静默写入失败），
+| 且没有任何前端或插件调用它。已整组移除。
+|
+*/

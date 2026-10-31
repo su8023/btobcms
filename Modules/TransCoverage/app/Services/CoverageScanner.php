@@ -15,13 +15,17 @@ use Illuminate\Support\Facades\Cache;
  *   - 缺失 SEO 语言数（经 metable 多态关联查 SeoMeta；模型无该关联时为 null，前端渲染 '—'）
  *   - 缺失语言数（补翻目标数量，用于排序与 AI 补翻选项标注）
  *
- * 整表结果缓存 10 分钟；缓存 key 携带 Post/Product 两模型 max(updated_at)，
+ * 整表结果缓存 10 分钟；缓存 key 携带 Post/Product 两模型的内容指纹
+ * （count + max(id) + updated_at 摘要 + 最近改动行的正文摘要），
  * 任何内容变化（增删改）都会生成新 key，自动失效重算，无需手动清缓存。
  */
 class CoverageScanner
 {
-    /** 缓存 key 前缀；完整 key = 前缀 + md5(两模型 max(updated_at) 指纹) */
+    /** 缓存 key 前缀；完整 key = 前缀 + md5(两模型内容指纹) */
     protected const CACHE_PREFIX = 'trans-coverage:scan:';
+
+    /** 参与正文摘要的"最近改动行"条数：够用又不至于把整站正文搬一遍 */
+    protected const FINGERPRINT_SAMPLE = 50;
 
     /**
      * 覆盖率扫描结果（带缓存）。
@@ -34,13 +38,14 @@ class CoverageScanner
     }
 
     /**
-     * 当前缓存 key：内容变化后 max(updated_at) 随之变化，key 即更换；
+     * 当前缓存 key：内容变化后指纹随之变化，key 即更换；
      * 携带语言清单——站点改 site.locales 后矩阵列集变化，旧缓存不能复用。
      */
     public function cacheKey(): string
     {
         return self::CACHE_PREFIX.md5(
-            Post::query()->max('updated_at').'|'.Product::query()->max('updated_at')
+            $this->fingerprint(Post::class, ['title', 'content']).'|'
+            .$this->fingerprint(Product::class, ['name', 'summary'])
             .'|'.implode(',', site_locales())
         );
     }
@@ -67,6 +72,57 @@ class CoverageScanner
     /* ----------------------------------------------------------
      | 内部构建
      * --------------------------------------------------------- */
+
+    /**
+     * 内容指纹：任意一条记录的增/删/改都会让指纹变化，缓存随之失效。
+     *
+     * 只用 max(updated_at) 是不够的：编辑一条非最新记录时全局最大值可能纹丝不动
+     * （改动没有抬高该行的 updated_at，或与最新值落在同一秒），缓存会继续命中最长 10 分钟。
+     * 这里组合四个维度：
+     *   count                                  —— 增/删必然变
+     *   max(id)                                —— 新增必然变
+     *   全量 updated_at 摘要                    —— 任意一行的 updated_at 变了就变
+     *   最近改动行的正文摘要（固定条数）          —— 正文变了就变（哪怕 updated_at 没动）
+     *
+     * @param  class-string<Model>  $model
+     * @param  list<string>  $contentColumns  参与摘要的正文列（Post: title/content；Product: name/summary）
+     */
+    protected function fingerprint(string $model, array $contentColumns): string
+    {
+        $agg = $model::query()
+            ->selectRaw('count(*) as row_count, max(id) as max_id, max(updated_at) as max_updated')
+            ->first();
+
+        // 增量摘要：流式扫描，内存恒定（内容表可能上千行）
+        $ctx = hash_init('md5');
+        foreach ($model::query()->orderBy('id')->select(['id', 'updated_at'])->cursor() as $row) {
+            hash_update($ctx, $row->id.':'.$row->updated_at."\n");
+        }
+
+        // 最近改动行的正文摘要：任何一次保存都会把该行顶到最前面，正文一变摘要就变；
+        // 只取固定条数，避免每次算 key 都把整站正文搬一遍
+        $recentCtx = hash_init('md5');
+        $recent = $model::query()
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->limit(self::FINGERPRINT_SAMPLE)
+            ->select(array_merge(['id', 'updated_at'], $contentColumns))
+            ->cursor();
+        foreach ($recent as $row) {
+            hash_update($recentCtx, json_encode(
+                $row->getAttributes(),
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
+            )."\n");
+        }
+
+        return implode(':', [
+            (int) ($agg->row_count ?? 0),
+            (int) ($agg->max_id ?? 0),
+            (string) ($agg->max_updated ?? ''),
+            hash_final($ctx),
+            hash_final($recentCtx),
+        ]);
+    }
 
     /**
      * 全量构建（无缓存路径）：扫描全部状态与类型的 Post / Product。

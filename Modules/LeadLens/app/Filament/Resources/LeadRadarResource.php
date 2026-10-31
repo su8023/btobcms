@@ -69,6 +69,8 @@ class LeadRadarResource extends Resource
 
                         Inquiry::query()
                             ->doesntHave('enrichment')
+                            // with('items') 不能删：评分器直接用已加载的集合数商品数，
+                            // 删掉就退化成每条询盘一条 COUNT 查询
                             ->with('items')
                             ->chunkById(200, function ($chunk) use ($scorer, &$count): void {
                                 foreach ($chunk as $inquiry) {

@@ -56,6 +56,27 @@ class WebpConverter
                 return null;
             }
 
+            // 解压炸弹防护：先只读文件头拿尺寸（不解码像素），
+            // 再决定要不要真的解码。
+            // 直接 imagecreatefromstring 的话，一张几十 KB 的图能撑出上亿像素，
+            // 把 worker 的内存打满并直接 fatal（@ 拦不住 OOM）。
+            $size = @getimagesizefromstring($originalBytes);
+
+            if ($size === false) {
+                Log::warning("ImageForge：无法识别图片尺寸，跳过转换 [{$disk}] {$path}");
+
+                return null;
+            }
+
+            [$width, $height] = $size;
+            $maxPixels = (int) config('image-forge.max_pixels', 40000000); // 默认 4000 万像素
+
+            if ($width <= 0 || $height <= 0 || ($width * $height) > $maxPixels) {
+                Log::warning("ImageForge：图片尺寸超出上限（{$width}x{$height}），跳过转换 [{$disk}] {$path}");
+
+                return null;
+            }
+
             $image = @imagecreatefromstring($originalBytes);
 
             if ($image === false) {

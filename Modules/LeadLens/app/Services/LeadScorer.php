@@ -64,8 +64,11 @@ class LeadScorer
             }
         }
 
-        // 询盘商品数
-        $productCount = $inquiry->items()->count();
+        // 询盘商品数：后台批量补评已 with('items') 预加载，优先用已加载的集合数长度，
+        // 避免每条询盘再发一次 COUNT（1000 条询盘就是 2000 条查询）
+        $productCount = $inquiry->relationLoaded('items')
+            ? $inquiry->items->count()
+            : $inquiry->items()->count();
         if ($productCount > 0) {
             $points = min($productCount * 10, 30);
             $score += $points;

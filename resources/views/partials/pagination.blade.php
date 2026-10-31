@@ -1,9 +1,9 @@
 @if ($paginator->hasPages())
-    <nav class="pagination" aria-label="Pagination">
+    <nav class="pagination" aria-label="{{ __('pagination.previous') ? __('pagination.previous') : 'Pagination' }}">
         @if ($paginator->onFirstPage())
-            <span class="pagination-item is-disabled">&lsaquo;</span>
+            <span class="pagination-item is-disabled" aria-hidden="true">&lsaquo;</span>
         @else
-            <a class="pagination-item" href="{{ $paginator->previousPageUrl() }}" rel="prev">&lsaquo;</a>
+            <a class="pagination-item" href="{{ $paginator->previousPageUrl() }}" rel="prev" aria-label="{{ __('pagination.previous') }}">&lsaquo;</a>
         @endif
 
         @foreach ($elements as $element)
@@ -22,9 +22,9 @@
         @endforeach
 
         @if ($paginator->hasMorePages())
-            <a class="pagination-item" href="{{ $paginator->nextPageUrl() }}" rel="next">&rsaquo;</a>
+            <a class="pagination-item" href="{{ $paginator->nextPageUrl() }}" rel="next" aria-label="{{ __('pagination.next') }}">&rsaquo;</a>
         @else
-            <span class="pagination-item is-disabled">&rsaquo;</span>
+            <span class="pagination-item is-disabled" aria-hidden="true">&rsaquo;</span>
         @endif
     </nav>
 @endif
