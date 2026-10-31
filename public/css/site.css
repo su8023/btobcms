@@ -147,11 +147,9 @@ p { margin: 0 0 1em; }
 .navbar-inner { display: flex; align-items: center; gap: 24px; padding-block: 11px; min-height: var(--header-h); }
 
 .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); font-weight: 700; font-size: var(--fs-md); letter-spacing: -.012em; }
-.brand-mark {
-    background: var(--dark-1); color: #fff;
-    padding: 5px 9px; border-radius: 7px; font-size: var(--fs-xs);
-    letter-spacing: .08em; font-weight: 700;
-}
+.brand-mark { /* 旧文字标记保留类名兼容，已由 partials.brand-logo 取代 */ }
+.brand-mark-svg { width: 28px; height: 28px; flex: none; display: block; }
+.brand-mark-img { width: 30px; height: 30px; flex: none; display: block; object-fit: contain; }
 .brand-name { white-space: nowrap; }
 
 .nav { display: flex; gap: 2px; margin-inline-start: auto; }
@@ -523,7 +521,6 @@ p { margin: 0 0 1em; }
 .site-footer { background: var(--dark-3); color: var(--dark-muted); margin-top: clamp(40px, 6vw, 64px); }
 .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: clamp(26px, 4vw, 44px); padding-block: clamp(38px, 5vw, 56px); }
 .site-footer .brand { color: #fff; }
-.site-footer .brand-mark { background: rgba(255, 255, 255, .1); }
 .site-footer h4 { color: #fff; font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .09em; font-weight: 650; }
 .footer-links a { color: var(--dark-muted); }
 .footer-links a:hover { color: #fff; }

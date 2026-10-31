@@ -7,6 +7,9 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
+    <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
+    <link rel="apple-touch-icon" href="{{ asset('favicon.svg') }}">
     @include('partials.seo', ['seo' => $seo ?? null, 'jsonLd' => $jsonLd ?? null, 'noindex' => $noindex ?? false])
     <link rel="stylesheet" href="{{ asset('css/site.css') }}?v={{ filemtime(public_path('css/site.css')) }}">
     {{-- 激活主题的样式（在核心之后加载，可覆盖任意变量与组件样式） --}}
@@ -53,7 +56,7 @@
     <div class="navbar">
         <div class="container navbar-inner">
             <a href="{{ localized_route('home') }}" class="brand">
-                <span class="brand-mark">B2B</span>
+                @include('partials.brand-logo')
                 <span class="brand-name">{{ $siteName }}</span>
             </a>
             <nav class="nav" id="site-nav">
@@ -94,7 +97,7 @@
     <div class="container footer-grid">
         <div>
             <div class="brand">
-                <span class="brand-mark">B2B</span>
+                @include('partials.brand-logo')
                 <span class="brand-name">{{ $siteName }}</span>
             </div>
             <p class="footer-about">{{ __('site.brand_slogan') }} — {{ $siteAddress }}</p>

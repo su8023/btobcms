@@ -81,8 +81,17 @@ class HomeController extends Controller
             '@id' => $url.'/#organization',
             'name' => site_setting('site.name', config('site.name')),
             'url' => $url,
-            // Google 富媒体要求 logo 为可解析图片，光栅 ≥112px 优先
-            'logo' => $url.'/images/logo.png',
+            // Google 富媒体要求 logo 为可解析图片，光栅 ≥112px 优先。
+            // 运营放了自定义 logo（public/images/logo.*）时 schema 一并跟随，否则用内置标记。
+            'logo' => $url.'/'.(function () {
+                foreach (['svg', 'png', 'jpg', 'jpeg', 'webp'] as $ext) {
+                    if (is_file(public_path("images/logo.{$ext}"))) {
+                        return "images/logo.{$ext}";
+                    }
+                }
+
+                return 'images/logo-default.png';
+            })(),
             'description' => __('site.home.hero_sub'),
             // E-E-A-T：社交资料实体关联（后台 site.social_links 每行一个 URL）
             ...($this->socialLinks() ? ['sameAs' => $this->socialLinks()] : []),
