@@ -14,6 +14,13 @@ class InquiryController extends Controller
 {
     public function store(Request $request): JsonResponse
     {
+        // landing_url 兜底归一化：旧版前端把首访落地页存成相对 pathname（历史访客的
+        // localStorage），直接校验绝对 URL 会 422 拒掉整条询盘（转化漏斗实伤）。
+        // 相对路径补上当前 scheme+host 后再进校验；绝对 URL 原样通过。
+        if (is_string($request->input('landing_url')) && str_starts_with($request->input('landing_url'), '/')) {
+            $request->merge(['landing_url' => rtrim($request->getSchemeAndHttpHost(), '/').$request->input('landing_url')]);
+        }
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:128'],
             'email' => ['required', 'email', 'max:191'],

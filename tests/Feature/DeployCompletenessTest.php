@@ -42,4 +42,18 @@ class DeployCompletenessTest extends TestCase
         $this->assertStringContainsString("storage:link", $code);
         $this->assertStringContainsString("migrate", $code);
     }
+
+    /** 回归：业务监听器全部 ShouldQueue 且宝塔无常驻 worker——计划任务必须含每分钟队列清空，
+     *  否则询盘邮件/飞书通知/AutoSeo TDK 永远躺库静默丢失（实测 3 个任务卡死） */
+    public function test_schedule_drains_database_queue_every_minute(): void
+    {
+        $events = collect(app(\Illuminate\Console\Scheduling\Schedule::class)->events());
+
+        $queueWorker = $events->first(
+            fn ($e) => str_contains($e->command ?? '', 'queue:work') && str_contains($e->command ?? '', 'stop-when-empty'),
+        );
+
+        $this->assertNotNull($queueWorker, '计划任务缺少 queue:work --stop-when-empty（队列无消费者）');
+        $this->assertStringContainsString('max-time=', $queueWorker->command);
+    }
 }

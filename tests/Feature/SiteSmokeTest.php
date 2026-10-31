@@ -272,6 +272,22 @@ class SiteSmokeTest extends TestCase
         $this->assertCount(1, $inquiry->items);
     }
 
+    /** 回归（P0）：旧版前端把首访落地页存成相对 pathname，后端必须归一化而非 422 拒掉整条询盘 */
+    public function test_inquiry_accepts_relative_landing_url_and_normalizes(): void
+    {
+        $this->postJson('/api/inquiries', [
+            'name' => 'First Visit Buyer',
+            'email' => 'firstvisit@example.com',
+            'message' => 'Relative landing path from legacy localStorage.',
+            'landing_url' => '/product/gate-valve-dn50',
+            'source' => 'product',
+        ])->assertCreated();
+
+        $inquiry = \App\Models\Inquiry::where('email', 'firstvisit@example.com')->first();
+        $this->assertStringStartsWith(url('/'), (string) $inquiry->landing_url);
+        $this->assertStringEndsWith('/product/gate-valve-dn50', (string) $inquiry->landing_url);
+    }
+
     public function test_inquiry_honeypot_marks_spam(): void
     {
         $this->postJson('/api/inquiries', [

@@ -15,7 +15,7 @@
         }
         if (!localStorage.getItem('btob_landing')) {
             localStorage.setItem('btob_landing', JSON.stringify({
-                landing: window.location.pathname,
+                landing: window.location.href,
                 referrer: document.referrer || null
             }));
         }
@@ -142,7 +142,11 @@
             if (utmStored) payload.utm = utmStored;
             var landing = JSON.parse(localStorage.getItem('btob_landing') || 'null');
             if (landing) {
-                payload.landing_url = landing.landing;
+                // 旧版本存的是相对 pathname（历史访客的 localStorage），提交前归一为绝对 URL
+                var l = landing.landing || '';
+                payload.landing_url = /^[a-z][a-z0-9+.-]*:\/\//i.test(l)
+                    ? l
+                    : (function () { try { return new URL(l, location.origin).href; } catch (e) { return ''; } })();
                 payload.referrer = landing.referrer;
             }
         } catch (err) { /* ignore */ }
