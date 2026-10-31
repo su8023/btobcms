@@ -26,7 +26,7 @@
 .fz-bullets li::before {
     content: "✓"; position: absolute; inset-inline-start: 0; top: 1px;
     width: 20px; height: 20px; border-radius: 7px; background: rgba(255, 255, 255, .14);
-    display: grid; place-items: center; font-size: .72rem; font-weight: 800; color: #ffd479;
+    display: grid; place-items: center; font-size: .72rem; font-weight: 800; color: #f0925b;
 }
 
 /* 表单卡片：首屏即可提交询盘 */

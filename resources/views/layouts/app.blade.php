@@ -38,9 +38,14 @@
     <div class="topbar">
         <div class="container topbar-inner">
             <div class="topbar-contact">
-                <span>✉ {{ $siteEmail }}</span>
-                <span class="topbar-sep">·</span>
-                <span>☎ {{ $sitePhone }}</span>
+                <span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
+                    {{ $siteEmail }}
+                </span>
+                <span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    {{ $sitePhone }}
+                </span>
             </div>
             @include('partials.language-switcher')
         </div>
@@ -59,8 +64,8 @@
                 <a href="{{ localized_route('about') }}">{{ __('site.nav.about') }}</a>
                 <a href="{{ localized_route('contact') }}">{{ __('site.nav.contact') }}</a>
             </nav>
-            <a href="{{ localized_route('basket') }}" class="basket-link" title="{{ __('site.basket.title') }}">
-                <span aria-hidden="true">🧺</span>
+            <a href="{{ localized_route('basket') }}" class="basket-link" title="{{ __('site.basket.title') }}" aria-label="{{ __('site.basket.title') }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h16l-1.31 11.11a2 2 0 0 1-1.99 1.79H7.3a2 2 0 0 1-1.99-1.79L4 9z"/><path d="M8 9V6a4 4 0 0 1 8 0v3"/></svg>
                 <span id="basket-count" class="basket-count" hidden>0</span>
             </a>
             <a href="{{ localized_route('contact') }}" class="btn btn-primary nav-cta">{{ __('site.cta.quote') }}</a>
@@ -107,8 +112,14 @@
         <div>
             <h4>{{ __('site.footer.contact') }}</h4>
             <ul class="footer-links">
-                <li>✉ {{ $siteEmail }}</li>
-                <li>☎ {{ $sitePhone }}</li>
+                <li>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
+                    {{ $siteEmail }}
+                </li>
+                <li>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    {{ $sitePhone }}
+                </li>
             </ul>
         </div>
     </div>

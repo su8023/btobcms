@@ -19,6 +19,13 @@
     --surface: #121b2d;
     --border: #22304a;
     --border-strong: #344568;
+    /* 深色区（hero/页头/CTA/页脚）并入本主题的深蓝色阶 */
+    --dark-1: #0d1526;
+    --dark-2: #101b30;
+    --dark-3: #0a101c;
+    --dark-line: rgba(255, 255, 255, .09);
+    --dark-text: #e6edf7;
+    --dark-muted: #8fa1ba;
 }
 
 /* 深色下的导航栏 */

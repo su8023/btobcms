@@ -3,9 +3,9 @@
     "slug": "default",
     "version": "1.0.0",
     "author": "BtoBcms",
-    "description": "内置默认主题（深蓝专业 B2B 设计，即核心视图与 site.css 本体）",
+    "description": "内置默认主题「Workshop」：石墨 × 钢蓝 × 工业橙，暖纸灰底、细边框——欧美工业品制造商风格",
     "category": "general",
     "builtin": true,
-    "color": "#0d4a8f",
-    "color_dark": "#062a52"
+    "color": "#1d5c8f",
+    "color_dark": "#151a21"
 }

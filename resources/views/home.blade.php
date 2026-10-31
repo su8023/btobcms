@@ -4,7 +4,7 @@
     <div class="container">
         <div class="hero-grid">
             <div class="hero-copy">
-                <span class="hero-eyebrow">✳ {{ __('site.brand_slogan') }}</span>
+                <span class="hero-eyebrow">{{ __('site.brand_slogan') }}</span>
                 <h1>{!! __('site.home.hero_title_html') !!}</h1>
                 <p>{{ __('site.home.hero_sub') }}</p>
 
