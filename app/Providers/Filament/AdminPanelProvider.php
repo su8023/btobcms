@@ -30,6 +30,8 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->brandName(fn () => site_setting('site.name', config('site.name', 'BtoBcms')))
             ->login()
+            // 管理员资料/改密码页：此前未注册（/admin/profile 404），后台没有改密码入口
+            ->profile()
             ->userMenuItems([
                 'locale' => MenuItem::make()
                     ->label(fn (): string => app()->getLocale() === 'zh_CN' ? 'English' : '中文')

@@ -31,6 +31,14 @@ class AdminSmokeTest extends TestCase
             ->assertOk();
     }
 
+    /** 回归：资料/改密码页必须可用（此前未注册，后台没有改密码入口） */
+    public function test_admin_profile_page_renders(): void
+    {
+        $this->actingAs($this->admin)
+            ->get('/admin/profile')
+            ->assertOk();
+    }
+
     public function test_all_resource_index_pages_render(): void
     {
         $this->actingAs($this->admin);
