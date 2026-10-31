@@ -57,6 +57,10 @@ class InstallController extends Controller
             'admin_email' => ['required', 'email', 'max:191'],
             'admin_password' => ['required', 'string', 'min:8', 'max:64'],
             'seed_demo' => ['nullable', 'boolean'],
+            // 可选：站点在 CDN/反代后面时的可信代理段（Cloudflare 等）。
+            // 允许 IPv4/IPv6/CIDR/逗号分隔列表/`*`（空格允许，写入前归一化剥除）；
+            // 其余字符一律拒绝，防止把任意内容带进 .env（该值稍后会被 config:cache 烘进缓存）。
+            'trusted_proxies' => ['nullable', 'string', 'max:500', 'regex:/^[0-9A-Fa-f:.\/, \t*]+$/'],
         ]);
 
         $db = [
@@ -133,11 +137,14 @@ class InstallController extends Controller
             }
         }
 
-        // 注：不在请求内做 config/route/view 缓存（会重载当前进程配置）。
-        // 完成页引导 SSH 执行 php artisan optimize。
+        // 收尾自动生成性能缓存（config/event/view/route），装完零命令：
+        // 必须走子进程——config:cache 若在当前请求进程内执行，会把驻留配置
+        // （安装前 .env 的旧值）烘进缓存；子进程重新 boot 才能读到刚落盘的新 .env。
+        // 失败不阻断安装（缓存是可选优化，站点无缓存也能跑），状态写进锁文件供完成页展示。
+        $optimize = $this->runPostInstallOptimize();
 
         // 6. 标记安装完成（锁已存在，这里只更新状态字段）
-        $this->writeLock('done');
+        $this->writeLock('done', ['optimize' => $optimize]);
 
         return redirect()->to('/install/done');
     }
@@ -148,7 +155,14 @@ class InstallController extends Controller
             abort(404);
         }
 
-        return view('install.wizard', ['step' => 'done']);
+        $lock = [];
+
+        try {
+            $lock = (array) json_decode((string) File::get(storage_path(self::LOCK)), true, 512, JSON_THROW_ON_ERROR);
+        } catch (Throwable) {
+        }
+
+        return view('install.wizard', ['step' => 'done', 'optimize' => $lock['optimize'] ?? null]);
     }
 
     /**
@@ -210,14 +224,15 @@ class InstallController extends Controller
 
     /**
      * 写安装锁（安装开始即落锁，失败路径由 removeLock() 回滚）。
+     * $extra：附加状态（如缓存生成结果），供完成页展示。
      */
-    private function writeLock(string $status): bool
+    private function writeLock(string $status, array $extra = []): bool
     {
-        $ok = File::put(storage_path(self::LOCK), json_encode([
+        $ok = File::put(storage_path(self::LOCK), json_encode(array_merge([
             'status' => $status,
             'installed_at' => $status === 'done' ? now()->toIso8601String() : null,
             'app_url' => config('app.url'),
-        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        ], $extra), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
         return $ok !== false;
     }
@@ -375,6 +390,18 @@ class InstallController extends Controller
             'CACHE_STORE' => 'CACHE_STORE=database',
         ];
 
+        // 可信代理（CDN/反代场景，可选）：只写非空值。
+        // 逗号分隔列表去空格归一化——Laravel TrustProxies 按逗号 explode 后逐段 trim，
+        // 但裸写进 .env 的值不带空格更干净，也避免触发 envValue 的引号化。
+        $proxies = implode(',', array_filter(array_map(
+            'trim',
+            explode(',', trim((string) ($data['trusted_proxies'] ?? '')))
+        ), static fn (string $segment): bool => $segment !== ''));
+
+        if ($proxies !== '') {
+            $replacements['TRUSTED_PROXIES'] = 'TRUSTED_PROXIES='.$this->envValue($proxies);
+        }
+
         $lines = [];
         foreach (preg_split('/\r\n|\r|\n/', $template) as $line) {
             if (preg_match('/^([A-Z0-9_]+)=(.*)$/', $line, $m) && isset($replacements[$m[1]])) {
@@ -429,6 +456,7 @@ class InstallController extends Controller
     /**
      * dotenv 值安全序列化：纯安全字符裸写，其余双引号包裹并转义。
      * 覆盖密码含 # 空格 $ 引号 反斜杠等宝塔随机密码常见字符。
+     * 逗号属于安全字符（TRUSTED_PROXIES 的 CIDR 列表可裸写）。
      */
     private function envValue(?string $value): string
     {
@@ -436,11 +464,110 @@ class InstallController extends Controller
         if ($value === '') {
             return '';
         }
-        if (preg_match('/^[A-Za-z0-9._\-\/:+]+$/', $value)) {
+        if (preg_match('/^[A-Za-z0-9._\-\/:+,]+$/', $value)) {
             return $value;
         }
 
         return '"'.str_replace(['\\', '"', '$'], ['\\\\', '\\"', '\$'], $value).'"';
+    }
+
+    /**
+     * 安装收尾：子进程生成性能缓存。返回写进锁文件的状态串。
+     *
+     * 为什么必须子进程：config:cache 会把「启动时加载的配置」烘进
+     * bootstrap/cache/config.php。安装请求进程加载的是旧 .env（安装前的空/模板值），
+     * 在进程内执行 Artisan::call('config:cache') 会把旧值永久固化，站点反而坏掉；
+     * 子进程重新 boot 应用，读到的才是刚落盘的新 .env（与 SelfUpdater 同一套机制）。
+     *
+     * 失败不阻断安装：缓存只是可选优化（无缓存站点照常运行，仅少一些加载提速）。
+     */
+    private function runPostInstallOptimize(): string
+    {
+        // 测试环境不真跑子进程（避免污染仓库级缓存文件， Installer 行为由其他断言覆盖）
+        if (app()->runningUnitTests()) {
+            return 'skipped';
+        }
+
+        foreach (['config:cache', 'event:cache', 'view:cache'] as $command) {
+            try {
+                $this->artisanSubprocess($command);
+            } catch (Throwable $e) {
+                return 'failed: '.$command.' - '.$e->getMessage();
+            }
+        }
+
+        // route:cache 存在闭包路由时会失败（Laravel 不支持缓存闭包路由），可接受
+        try {
+            $this->artisanSubprocess('route:cache');
+        } catch (Throwable) {
+        }
+
+        return 'ok';
+    }
+
+    /**
+     * 以独立 PHP 子进程执行 artisan 命令，返回输出；失败抛异常。
+     *
+     * 实现与 Modules/UpdateCenter/SelfUpdater::artisan() 保持同构：
+     * PHP_BINDIR 优先（宝塔 FPM 下 PHP_BINARY 可能是 php-fpm，收到 artisan 参数
+     * 会以 usage 码 64 退出），失败换下一个候选；Windows 加 bypass_shell。
+     */
+    private function artisanSubprocess(string $command): string
+    {
+        $cli = PHP_OS_FAMILY === 'Windows' ? PHP_BINDIR.'\\php.exe' : PHP_BINDIR.'/php';
+        $candidates = array_values(array_unique([$cli, PHP_BINARY]));
+
+        // 净化继承环境：剥掉所有 Laravel 相关键。
+        // 若主机在安装前就有一份带空 APP_KEY 的 .env 残片，dotenv 部分适配器会把
+        // 旧值 putenv 进本进程；子进程一旦继承这些键（immutable 模式优先读继承值），
+        // config:cache 就会把安装前的旧配置烘进缓存。子进程必须只依赖新落盘的 .env。
+        $env = [];
+        foreach (getenv() as $key => $value) {
+            if (! preg_match('/^(APP_|DB_|SESSION_|CACHE_|QUEUE_|MAIL_|TRUSTED_|REDIS_|FILESYSTEM_|AWS_|LARAVEL_)/', $key)) {
+                $env[$key] = $value;
+            }
+        }
+
+        $lastError = '';
+
+        foreach ($candidates as $php) {
+            $cmd = escapeshellarg($php).' '.escapeshellarg(base_path('artisan')).' '.$command;
+
+            $descriptors = [1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
+            $process = @proc_open($cmd, $descriptors, $pipes, base_path(), $env, ['bypass_shell' => true]);
+
+            if (! is_resource($process)) {
+                $lastError = $php.' 无法启动（proc_open 失败）';
+
+                continue;
+            }
+
+            $stdout = (string) stream_get_contents($pipes[1]);
+            $stderr = (string) stream_get_contents($pipes[2]);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+            $exit = proc_close($process);
+
+            // 64 = CLI usage 错误（php-fpm 收到未知参数的退出码）；artisan 不会用 64
+            if ($exit === 64) {
+                $lastError = $php.' 不是 CLI 解释器（疑似 php-fpm，exit 64）';
+
+                continue;
+            }
+
+            if ($exit !== 0) {
+                throw new RuntimeException(sprintf(
+                    '%s 失败（exit %d）：%s',
+                    $command,
+                    $exit,
+                    mb_substr(trim($stdout."\n".$stderr), 0, 400)
+                ));
+            }
+
+            return trim($stdout."\n".$stderr);
+        }
+
+        throw new RuntimeException('无法启动 artisan '.$command.'：'.$lastError);
     }
 
     /**

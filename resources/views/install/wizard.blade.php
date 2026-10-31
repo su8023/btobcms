@@ -150,6 +150,13 @@
                     <label class="checkline"><input type="checkbox" name="seed_demo" value="1"> 导入演示分类/产品数据（正式站建议不勾）</label>
                 </fieldset>
 
+                <fieldset>
+                    <legend>反向代理 / CDN（可选）</legend>
+                    <label>可信代理 IP 段</label>
+                    <input type="text" name="trusted_proxies" value="" placeholder="例：173.245.48.0/20,103.21.244.0/22（Cloudflare）或 *">
+                    <p class="hint">站点套了 Cloudflare / nginx 反代时必填，否则询盘记录与访客语言检测拿到的是代理 IP。填 CDN 官方 IP 段（逗号分隔，见 cloudflare.com/ips-v4）；直连部署留空最安全（可防伪造 X-Forwarded-For 绕过限流）。</p>
+                </fieldset>
+
                 <button class="btn" type="submit" id="install-btn">开始安装（约 1 分钟）</button>
                 <p class="hint">安装会写入 .env、创建数据表与管理员账号，并自动加锁防重复安装。</p>
 
@@ -187,9 +194,13 @@
             <li>全站设置：站点名、联系方式、社交链接（Organization sameAs）</li>
             <li>别忘了：宝塔「进程守护管理器」跑队列 worker + 计划任务每分钟 schedule:run（通知与每日巡检靠它们）</li>
             <li>申请 SSL 证书并开启强制 HTTPS</li>
-            <li>性能优化（可选，SSH 执行）：<code>cd 站点目录 && /www/server/php/84/bin/php artisan optimize</code></li>
+            @if ($optimize === 'ok')
+                <li>✔ 性能缓存已在安装时自动生成（config / event / view / route），无需任何命令行操作</li>
+            @else
+                <li>性能优化（可选，SSH 执行）：<code>cd 站点目录 && php artisan optimize</code></li>
+            @endif
         </ul>
-        <div class="notice">安装锁已写入 <code>storage/app/installed.lock</code>，<code>/install</code> 入口自动关闭。如需重装，删除该锁文件并清空数据库。</div>
+        <div class="notice">安装锁已写入 <code>storage/app/installed.lock</code>，<code>/install</code> 入口自动关闭。如需重装，删除该锁文件并清空数据库。日后修改 .env 后，SSH 执行 <code>php artisan config:cache</code> 刷新配置缓存。</div>
         <a class="btn" href="{{ url('/') }}" style="text-decoration:none">访问网站首页 →</a>
     </div>
 @endif

@@ -80,6 +80,8 @@ class InstallWizardTest extends TestCase
             'admin_name' => 'Boss',
             'admin_email' => 'boss@example.com',
             'admin_password' => 'Secret@12345',
+            // 带空格的 CDN 代理段：必须被归一化成逗号裸写（TrustProxies 按逗号 explode）
+            'trusted_proxies' => ' 173.245.48.0/20, 103.21.244.0/22 ',
         ]);
 
         $response->assertRedirect('/install/done');
@@ -92,21 +94,55 @@ class InstallWizardTest extends TestCase
         $this->assertStringContainsString('APP_KEY=base64:', $env);
         $this->assertStringContainsString('DB_CONNECTION=sqlite', $env);
         $this->assertStringContainsString('APP_NAME="Test Factory Supply"', $env);
+        $this->assertStringContainsString('TRUSTED_PROXIES=173.245.48.0/20,103.21.244.0/22', $env);
         $this->assertSame(1, preg_match_all('/^APP_KEY=/m', $env), 'APP_KEY 不得出现重复键');
         $this->assertSame(1, preg_match_all('/^APP_NAME=/m', $env), 'APP_NAME 不得出现重复键');
         $this->assertSame(1, preg_match_all('/^DB_DATABASE=/m', $env), 'DB_DATABASE 不得出现重复键');
+        $this->assertSame(1, preg_match_all('/^TRUSTED_PROXIES=/m', $env), 'TRUSTED_PROXIES 不得出现重复键');
         $this->assertStringNotContainsString("APP_KEY=\n", $env, 'APP_KEY 不得为空值');
 
         // 安装锁 + 管理员账号（写入独立 install_run 连接，断言同连接）
         $this->assertFileExists($this->lockPath);
-        $this->assertTrue(
-            \DB::connection('install_run')->table('users')->where('email', 'boss@example.com')->exists()
-        );
+        $lock = json_decode((string) File::get($this->lockPath), true);
+        $this->assertSame('done', $lock['status'] ?? null);
+        $this->assertArrayHasKey('optimize', $lock, '锁文件必须记录缓存生成状态');
+        $this->assertSame('admin', \DB::connection('install_run')->table('users')->where('email', 'boss@example.com')->value('role'), '安装向导创建的账号必须是 admin');
 
         // 已安装后所有入口关闭
         $this->get('/install')->assertNotFound();
         $this->post('/install', [])->assertNotFound();
         $this->get('/install/done')->assertOk(); // done 页保留作完成回看
+    }
+
+    public function test_omitted_trusted_proxies_writes_no_live_line(): void
+    {
+        $this->post('/install', [
+            'db_connection' => 'sqlite',
+            'db_database' => 'storage/app/install-test.sqlite',
+            'app_name' => 'X',
+            'admin_name' => 'Y',
+            'admin_email' => 'y2@example.com',
+            'admin_password' => 'Secret@12345',
+        ])->assertRedirect('/install/done');
+
+        // 未填写时不写活动行：.env.example 里的注释示例行（# TRUSTED_PROXIES=*）保留即可
+        $env = File::get(base_path('.env'));
+        $this->assertSame(0, preg_match_all('/^TRUSTED_PROXIES=/m', $env), '未填写时不得写入 TRUSTED_PROXIES 活动行');
+    }
+
+    public function test_rejects_invalid_trusted_proxies(): void
+    {
+        $this->from('/install')->post('/install', [
+            'db_connection' => 'sqlite',
+            'db_database' => 'storage/app/install-test.sqlite',
+            'app_name' => 'X',
+            'admin_name' => 'Y',
+            'admin_email' => 'y3@example.com',
+            'admin_password' => 'Secret@12345',
+            'trusted_proxies' => 'evil $(rm -rf) value',
+        ])->assertSessionHasErrors('trusted_proxies');
+
+        $this->assertFileDoesNotExist($this->lockPath);
     }
 
     public function test_rejects_non_empty_database(): void

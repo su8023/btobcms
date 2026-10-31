@@ -114,23 +114,25 @@ composer install --no-dev --optimize-autoloader
 2. **第 1 步 · 环境检测**：自动检查 PHP 版本/扩展/目录权限/禁用函数，全部 ✔ 通过才能继续（未通过项会给出宝塔操作提示，处理后刷新）
 3. **第 2 步 · 配置安装**：填数据库（宝塔「网站 → 数据库」可查）+ 站点名 + 管理员邮箱密码，点「开始安装」
    - 仅允许装到空库（有 users 表的旧库会被拒绝）；中断后可重提交断点续装
-4. **第 3 步 · 完成**：自动生成 .env（production/密钥/时区/APP_URL）、建全部数据表、创建管理员、写安装锁
+   - 套了 Cloudflare / nginx 反代时，在「反向代理 / CDN」填代理 IP 段（逗号分隔，见 cloudflare.com/ips-v4）；直连部署留空最安全
+4. **第 3 步 · 完成**：自动生成 .env（production/密钥/时区/APP_URL）、建全部数据表、创建管理员（admin 角色）、生成性能缓存（config/event/view/route，子进程执行）、写安装锁
 
-装完后 `/install` 自动 404（锁文件 `storage/app/installed.lock`，删它+清库可重装）。
+装完后 `/install` 自动 404（锁文件 `storage/app/installed.lock`，删它+清库可重装）。**全程无需 SSH 执行任何 artisan 命令。**
 
 > SMTP 不在向导里配置（避免复杂化）：装完后在后台「插件中心 → MailNotifier」配置管理员收件邮箱，SMTP 参数写 .env 的 MAIL_* 段（示例见下）或使用插件的兜底发信。
 
-## 7. 初始化（一键安装已覆盖大半）
+## 7. 初始化（一键安装已基本覆盖）
 
-向导已自动完成：建表、管理员、storage 链接。剩下补两条：
+向导已自动完成：建表、管理员、storage 链接、性能缓存。正常情况下无需任何命令，仅当出现以下情况才需要处理：
 
 ```bash
 cd /www/wwwroot/你的域名
 PHP=/www/server/php/84/bin/php
 
+# 仅当完成页显示"缓存生成未完成"（如主机禁用了 proc_open）时才需要：
 $PHP artisan optimize             # 性能缓存（config+route+view）
 
-# 权限（上传插件 zip / 图片需要）
+# 仅当后台上传插件 zip / 图片报权限错误时才需要：
 chown -R www:www /www/wwwroot/你的域名
 chmod -R 775 storage bootstrap/cache
 ```
