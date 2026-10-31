@@ -195,6 +195,11 @@ cd /www/wwwroot/你的域名 && /www/server/php/84/bin/php artisan schedule:run 
 
 **网站 → 设置 → SSL → Let's Encrypt**：勾选域名 → 申请 → 开启「强制 HTTPS」。
 
+开启 HTTPS 后**登录后台仪表盘**：会出现「站点地址待同步」提示，点一下「一键同步」按钮，APP_URL 自动改为 https 并刷新配置缓存（前台顶部对管理员也有同样的提醒条）。全程无需 SSH；后台修改立即生效，浏览器强刷一次即可。
+
+> 一键同步失败时（受限主机禁用了子进程）：SSH 执行
+> `cd /www/wwwroot/你的域名 && /www/server/php/84/bin/php artisan config:cache` 完成收尾。
+
 然后按顺序验证：
 
 ```bash
@@ -259,8 +264,8 @@ location ~ /\.(env|git) { deny all; }
 | composer 报 putenv/proc_open | 第 2 步没放开禁用函数 |
 | 图片 404 | `storage:link` 没跑或没权限 |
 | 询盘无通知 | 进程守护管理器看 queue 进程状态；或插件没启用 |
-| sitemap 里是 localhost | .env 的 APP_URL 没改 |
-| 页面样式全丢 | 运行目录没选 /public 或伪静态没配 |
+| sitemap 里是 localhost | .env 的 APP_URL 没改：后台仪表盘「一键同步站点地址」（v1.4.19 起），或手改后 `php artisan config:cache` |
+| 页面样式全丢 | 开了强制 HTTPS 但 APP_URL 还是 http：后台/前台顶部「一键同步站点地址」；其余情况先查运行目录 /public 与伪静态 |
 | 上传插件 zip 失败 | `chmod -R 775 storage`；zip 里不能多包一层目录 |
 | 后台登录按钮无反应/登录后弹回 | Livewire 脚本未加载：v1.0.6 起安装时自动发布静态资源。老站点修复：`php artisan vendor:publish --tag=livewire:assets --force` |
 | 队列 worker 报 `Call to undefined function pcntl_signal()` | pcntl 函数仍在禁用列表——见第 2 步全部删除；或 pcntl 扩展未装——见第 1 步 |

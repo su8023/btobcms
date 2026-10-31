@@ -193,14 +193,14 @@
             <li>插件中心：启用并配置 飞书通知 / 邮件通知 / AI 巡检 / WhatsApp</li>
             <li>全站设置：站点名、联系方式、社交链接（Organization sameAs）</li>
             <li>别忘了：宝塔「进程守护管理器」跑队列 worker + 计划任务每分钟 schedule:run（通知与每日巡检靠它们）</li>
-            <li>申请 SSL 证书并开启强制 HTTPS</li>
+            <li>申请 SSL 证书并开启强制 HTTPS —— 开启后登录后台，仪表盘会提示「站点地址待同步」，点一下即可同步 APP_URL 并刷新缓存，无需 SSH</li>
             @if ($optimize === 'ok')
                 <li>✔ 性能缓存已在安装时自动生成（config / event / view / route），无需任何命令行操作</li>
             @else
                 <li>性能优化（可选，SSH 执行）：<code>cd 站点目录 && php artisan optimize</code></li>
             @endif
         </ul>
-        <div class="notice">安装锁已写入 <code>storage/app/installed.lock</code>，<code>/install</code> 入口自动关闭。如需重装，删除该锁文件并清空数据库。日后修改 .env 后，SSH 执行 <code>php artisan config:cache</code> 刷新配置缓存。</div>
+        <div class="notice">安装锁已写入 <code>storage/app/installed.lock</code>，<code>/install</code> 入口自动关闭。如需重装，删除该锁文件并清空数据库。日后开启 HTTPS 或更换域名：后台仪表盘点「一键同步站点地址」即可，无需命令行。</div>
         <a class="btn" href="{{ url('/') }}" style="text-decoration:none">访问网站首页 →</a>
     </div>
 @endif

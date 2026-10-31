@@ -219,7 +219,7 @@ crontab（root 或 www-data）：
 
 | 症状 | 原因/解法 |
 |---|---|
-| sitemap/canonical 里是 localhost | .env 的 APP_URL 没设生产域名 → 改后 `config:clear && config:cache` |
+| sitemap/canonical 里是 localhost | .env 的 APP_URL 没设生产域名 → 后台仪表盘「一键同步站点地址」（v1.4.19 起），或改后 `config:clear && config:cache` |
 | 询盘提交成功但没邮件/飞书 | 队列 worker 没跑 → `systemctl status btobcms-queue`；或插件未在后台启用 |
 | 500 白屏 | APP_DEBUG=false 时看 `storage/logs/laravel.log`；常见是 .env 配错后没 config:clear |
 | 图片 404 | 没执行 `storage:link` |

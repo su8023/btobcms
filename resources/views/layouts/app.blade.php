@@ -37,6 +37,9 @@
     @endforeach
 </head>
 <body>
+{{-- 管理员专属：APP_URL 与实际访问不一致的提醒与一键同步（HTTPS 切换免 SSH 改 .env）；
+    混合内容拦截后台 JS 时，这里的纯 HTML 表单是唯一可用的修复入口 --}}
+@includeWhen(user_is_admin(), 'partials.admin-app-url-notice')
 <header class="site-header">
     <div class="topbar">
         <div class="container topbar-inner">

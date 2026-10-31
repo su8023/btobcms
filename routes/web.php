@@ -183,6 +183,19 @@ Route::middleware(['web', 'auth'])
     })
     ->name('admin.inquiries.export');
 
+/*
+|--------------------------------------------------------------------------
+| APP_URL 一键同步
+|--------------------------------------------------------------------------
+| 宝塔开启强制 HTTPS 后，管理员点击表单按钮即可把 .env 的 APP_URL
+| 跟随当前访问地址并刷新配置缓存（免 SSH 手改）。纯 HTML 表单：
+| 混合内容拦截后台 JS 时它是唯一可用的修复入口。
+*/
+
+Route::middleware(['web', 'auth'])
+    ->post('/admin/app-url/sync', \App\Http\Controllers\Admin\AppUrlSyncController::class)
+    ->name('admin.app-url.sync');
+
 // 未登录访问受保护路由时，auth 中间件寻找名为 login 的路由——指向后台登录页
 Route::get('/login', fn () => redirect('/admin/login'))->name('login');
 

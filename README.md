@@ -59,10 +59,10 @@ cp .env.example .env
 php scripts/build-release.php
 
 # 验收包完整性（18 项检查：artisan/vendor/模块/lang/目录骨架 + 排除清单 + vendor 自洽）
-php scripts/verify-release.php dist/btobcms-v1.4.18.zip
+php scripts/verify-release.php dist/btobcms-v1.4.19.zip
 ```
 
-上传 `dist/btobcms-v1.4.18.zip` 到服务器解压后：
+上传 `dist/btobcms-v1.4.19.zip` 到服务器解压后：
 
 ```bash
 cp .env.example .env
