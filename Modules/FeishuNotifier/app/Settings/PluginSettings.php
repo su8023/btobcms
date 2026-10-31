@@ -25,6 +25,10 @@ class PluginSettings
                 'placeholder' => 'https://open.feishu.cn/open-apis/bot/v2/hook/xxxx', 'section' => 'integration'],
             ['key' => 'secret', 'label' => 'Sign secret (optional)', 'type' => 'password', 'section' => 'integration'],
 
+            // 自建中继时放开域名限制（默认关闭：只允许官方 feishu.cn / larksuite.com）
+            ['key' => 'allow_custom_webhook', 'label' => 'Allow custom webhook host (self-hosted relay)',
+                'type' => 'boolean', 'section' => 'integration'],
+
             // ---- 卡片跳转链接 ----
             ['key' => 'admin_url', 'label' => 'Card button URL (opens admin panel)', 'type' => 'text',
                 'placeholder' => 'https://your-site.com/admin', 'section' => 'display'],

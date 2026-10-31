@@ -28,6 +28,9 @@ class AttributeForm
                         ->label(__('admin.common.code'))
                         ->required()
                         ->maxLength(64)
+                        // 白名单：code 会作为 JSON 路径拼进查询，必须限制为安全标识符
+                        ->regex('/^[a-z0-9_]+$/')
+                        ->dehydrateStateUsing(fn (?string $state): ?string => is_string($state) ? strtolower(trim($state)) : $state)
                         ->helperText(__('admin.attributes.code_helper')),
 
                     Select::make('type')

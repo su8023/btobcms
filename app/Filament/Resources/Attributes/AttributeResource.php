@@ -17,6 +17,15 @@ use Filament\Tables\Table;
 
 class AttributeResource extends Resource
 {
+    /**
+     * 仅管理员可访问：属性 code 会作为 JSON 路径参与查询拼接，
+     * 是最敏感的字段之一（普通编辑账号无需改动它）。
+     */
+    public static function canAccess(): bool
+    {
+        return user_is_admin();
+    }
+
     protected static ?string $model = Attribute::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedSquares2x2;

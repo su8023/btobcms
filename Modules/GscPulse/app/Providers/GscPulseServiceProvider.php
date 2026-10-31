@@ -24,12 +24,14 @@ class GscPulseServiceProvider extends ModuleServiceProvider
         $this->mergeConfigFrom(__DIR__.'/../../config/config.php', 'gsc-pulse');
         $this->loadViewsFrom(__DIR__.'/../../resources/views', 'gscpulse');
 
-        if (! config('gsc-pulse.enabled')) {
-            return;
-        }
-
         // OAuth 回调：连接页「连接 Google」完成授权后 Google 跳回这里（code 换 token）。
         // 挂 web+auth，与管理后台同登录态；路径与 Filament 页面路由无冲突。
+        //
+        // WHY 不受 enabled 开关约束：后台页面是核心按「模块启用」发现的（App\Support\PluginPages），
+        // 与本插件自己的开关无关。若开关关掉就不注册路由，页面仍在导航里，
+        // 打开时 route('gsc-pulse.callback') 会抛 RouteNotFoundException → 后台 500。
+        // 路由本身是安全的（web+auth + 回调里校验 OAuth state），故无条件注册，
+        // 由页面与回调自己处理「未启用」状态。
         Route::middleware(['web', 'auth'])
             ->get('/admin/gsc-pulse/callback', GscOAuthCallbackController::class)
             ->name('gsc-pulse.callback');
@@ -43,6 +45,10 @@ class GscPulseServiceProvider extends ModuleServiceProvider
     {
         $schedule->call(function (): void {
             try {
+                if (! config('gsc-pulse.enabled')) {
+                    return; // 插件开关关闭：静默跳过
+                }
+
                 if (! GscCredential::isConnected()) {
                     return; // 未连接：静默跳过，不算错误
                 }
@@ -59,7 +65,9 @@ class GscPulseServiceProvider extends ModuleServiceProvider
         $schedule->call(function (): void {
             try {
                 $pruned = \Modules\GscPulse\Models\GscDaily::query()
-                    ->where('date', '<', now()->subDays(90))
+                    // date 存的是 'Y-m-d H:i:s' 文本，比较端补齐时间边界，
+                    // 保留满 90 天（边界当天的行不被误删），且不随运行时刻漂移
+                    ->where('date', '<', now()->subDays(90)->toDateString().' 00:00:00')
                     ->delete();
 
                 if ($pruned > 0) {

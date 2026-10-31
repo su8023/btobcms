@@ -1,8 +1,14 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Modules\AiSeoAuditor\Http\Controllers\AiSeoAuditorController;
 
-Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
-    Route::apiResource('aiseoauditors', AiSeoAuditorController::class)->names('aiseoauditor');
-});
+/*
+|--------------------------------------------------------------------------
+| AI SEO 巡检 API 路由
+|--------------------------------------------------------------------------
+|
+| 原先这里挂着 nwidart 脚手架生成的 apiResource(aiseoauditors)，
+| 指向一个动作全为空的控制器：请求返回 200 但什么都不做（静默写入失败），
+| 且没有任何前端或插件调用它。已整组移除。
+|
+*/

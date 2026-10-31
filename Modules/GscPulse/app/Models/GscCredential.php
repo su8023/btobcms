@@ -28,7 +28,44 @@ class GscCredential extends Model
      */
     public static function defaultSiteUrl(): string
     {
-        return (string) plugin_setting('gsc-pulse', 'site_url', rtrim(config('app.url'), '/').'/');
+        return self::normalizeSiteUrl(
+            (string) plugin_setting('gsc-pulse', 'site_url', rtrim(config('app.url'), '/').'/')
+        );
+    }
+
+    /**
+     * 站点属性归一化：补全尾斜杠（GSC 约定形如 https://www.example.com/）。
+     */
+    public static function normalizeSiteUrl(string $siteUrl): string
+    {
+        return rtrim(trim($siteUrl), '/').'/';
+    }
+
+    /**
+     * 站点属性格式校验：必须是完整的 http/https 绝对地址。
+     *
+     * WHY：空值会被 OAuthClient 存成 '/'，进而拼出 /webmasters/v3/sites//searchAnalytics/query
+     * 这种无效请求路径；相对路径或缺协议的地址同样会被 GSC 拒绝。
+     */
+    public static function isValidSiteUrl(string $siteUrl): bool
+    {
+        $siteUrl = trim($siteUrl);
+
+        if ($siteUrl === '') {
+            return false;
+        }
+
+        $parts = parse_url($siteUrl);
+
+        if ($parts === false || ! isset($parts['scheme'], $parts['host'])) {
+            return false;
+        }
+
+        if (! in_array(strtolower($parts['scheme']), ['http', 'https'], true) || $parts['host'] === '') {
+            return false;
+        }
+
+        return filter_var($siteUrl, FILTER_VALIDATE_URL) !== false;
     }
 
     /**

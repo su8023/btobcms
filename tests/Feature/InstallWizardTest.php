@@ -28,6 +28,18 @@ class InstallWizardTest extends TestCase
 
         File::delete($this->lockPath);
         File::delete($this->testDb);
+
+        // 模拟"全新安装"：安装向导的"已安装"判定有两条 ——
+        //   ① storage/app/installed.lock 存在
+        //   ② .env 里已配置非空 APP_KEY
+        // 第②条是防匿名重装的关键（storage/ 未持久化时锁文件会丢，
+        // 只靠锁文件的话向导会重新开放、被匿名改写 .env 并建出攻击者的管理员）。
+        // 因此测试必须把 .env 里的 APP_KEY 清空，否则站点会被判为"已安装"、向导直接 404。
+        // 放在 parent::setUp() 之后：应用已用真实密钥启动完毕，
+        // 清空文件里的这一行不影响本次请求的加解密。
+        $env = (string) file_get_contents(base_path('.env'));
+        $env = preg_replace('/^APP_KEY=.*$/m', 'APP_KEY=', $env) ?? $env;
+        File::put(base_path('.env'), $env);
     }
 
     protected function tearDown(): void

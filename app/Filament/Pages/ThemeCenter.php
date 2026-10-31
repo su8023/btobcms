@@ -18,6 +18,14 @@ use UnitEnum;
  */
 class ThemeCenter extends Page
 {
+    /**
+     * 仅管理员可访问：主题安装会向 public/ 写入文件，属于任意文件写。
+     */
+    public static function canAccess(): bool
+    {
+        return user_is_admin();
+    }
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedPaintBrush;
 
     protected static ?int $navigationSort = 41;

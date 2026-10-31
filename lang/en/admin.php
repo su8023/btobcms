@@ -163,6 +163,8 @@ return [
         'run' => 'Run Audit',
         'run_confirm' => 'The crawler fetches every page in the sitemap — duration depends on page count. Run now?',
         'run_done' => 'Audit finished',
+        'run_queued' => 'Audit queued',
+        'run_queued_hint' => 'The audit runs in the background. The report will appear below and a notification will be sent when it finishes.',
         'empty' => 'No audit reports yet. Click "Run Audit" to crawl the site and generate the first report.',
         'checked_count' => ':count pages checked',
         'no_issues' => 'No issues found',

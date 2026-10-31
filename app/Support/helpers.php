@@ -46,6 +46,22 @@ if (! function_exists('plugin_setting')) {
     }
 }
 
+if (! function_exists('user_is_admin')) {
+    /**
+     * 当前登录用户是否管理员。
+     *
+     * 后台高危面板（插件中心 / 主题中心 / 更新中心 / 站点设置 / 属性 code 等）
+     * 统一用这个判定收口：插件 ZIP 上传等价 RCE，主题安装是任意文件写，
+     * 站点设置里的自定义 CSS 是存储型 XSS，插件设置里的 LLM base_url 可外泄密钥。
+     */
+    function user_is_admin(): bool
+    {
+        $user = auth()->user();
+
+        return $user instanceof \App\Models\User && $user->isAdmin();
+    }
+}
+
 if (! function_exists('site_locales')) {
     function site_locales(): array
     {

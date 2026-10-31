@@ -27,13 +27,30 @@ class CategoryController extends Controller
 
         $facets = $this->facets($category);
 
+        // 归一化筛选参数：?f=abc（标量）或 ?f[code][]=x（数组值）都不能让请求 500
+        $filters = $request->query('f');
+
+        if (! is_array($filters)) {
+            $filters = [];
+        }
+
         $products = Product::published()
             ->whereIn('category_id', $categoryIds)
-            ->when($request->query('f'), function ($query, array $filters) use ($facets) {
+            ->when($filters !== [], function ($query) use ($filters, $facets) {
                 foreach ($facets as $facet) {
-                    if ($value = $filters[$facet->code] ?? null) {
-                        $query->whereRaw("json_extract(attrs, '$.{$facet->code}') = ?", [$value]);
+                    $value = $filters[$facet->code] ?? null;
+
+                    // 只接受标量筛选值：数组/对象会让 PDO 绑定直接抛异常
+                    if (! is_scalar($value) || (string) $value === '') {
+                        continue;
                     }
+
+                    // JSON 路径必须绑定传参，绝不能把 code 拼进 SQL 字符串
+                    // （code 是后台可编辑字段，拼进去等于给了注入入口）
+                    $query->whereRaw(
+                        'json_extract(attrs, ?) = ?',
+                        ['$.'.$facet->code, (string) $value]
+                    );
                 }
             })
             ->with('category')
@@ -57,7 +74,7 @@ class CategoryController extends Controller
             'subcategories' => $subcategories,
             'products' => $products,
             'facets' => $facets,
-            'activeFilters' => (array) $request->query('f', []),
+            'activeFilters' => $filters,
             'seo' => Seo::for($category, 'categories.show', $routeParams),
             'jsonLd' => [
                 '@context' => 'https://schema.org',

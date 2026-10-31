@@ -148,8 +148,7 @@ class ThemeManager
             $entry = (string) $zip->getNameIndex($i);
             $normalized = str_replace('\\', '/', $entry);
 
-            if (str_contains($normalized, '../') || str_starts_with($normalized, '/')
-                || preg_match('/^[A-Za-z]:/', $normalized) || str_contains($entry, "\0")) {
+            if (self::isUnsafeEntry($normalized)) {
                 $zip->close();
 
                 return ['ok' => false, 'error' => "ZIP 包含不安全的路径条目：{$entry}", 'steps' => $steps];
@@ -214,13 +213,34 @@ class ThemeManager
                 continue;
             }
 
+            // 剥离公共根目录后必须再校验一次：
+            // 前置校验针对原始条目名，而 $relative 是剥离前缀后的结果，
+            // 两者可能不同（恶意包可把穿越段放在前缀之后）。
+            if (self::isUnsafeEntry($relative)) {
+                $zip->close();
+                self::cleanupDir($target);
+
+                return ['ok' => false, 'error' => "ZIP 条目路径非法：{$entry}", 'steps' => $steps];
+            }
+
             $dest = $target.'/'.$relative;
 
             // 先建父目录再校验：目录不存在时 realpath 返回 false 会被误判越界
-            @mkdir(dirname($dest), 0755, true);
+            // （已存在时不要调 mkdir —— PHP 对已存在目录仍会发 "File exists" 警告）
+            $destDir = dirname($dest);
 
-            if (! str_starts_with(realpath(dirname($dest)) ?: '', $realTarget)) {
+            if (! is_dir($destDir)) {
+                @mkdir($destDir, 0755, true);
+            }
+
+            // 边界校验必须带分隔符：
+            // 只比较前缀的话，themes/foobar 会通过 themes/foo 的检查（越界到兄弟目录）
+            $realDir = realpath($destDir);
+
+            if ($realDir === false
+                || ($realDir !== $realTarget && ! str_starts_with($realDir, $realTarget.DIRECTORY_SEPARATOR))) {
                 $zip->close();
+                self::cleanupDir($target);
 
                 return ['ok' => false, 'error' => "解压条目越界：{$entry}", 'steps' => $steps];
             }
@@ -308,5 +328,58 @@ class ThemeManager
 
         File::ensureDirectoryExists(public_path('themes/'.$slug));
         File::copyDirectory($source, public_path('themes/'.$slug));
+    }
+
+    /**
+     * ZIP 条目名是否不安全。
+     *
+     * 判定要点：
+     *   - 路径段恰好等于 '..'（不只是 '../'）——  '..'、'foo/..' 同样能向上跳；
+     *   - 段内含 ':'（Windows 盘符，含内嵌形式 mid/C:/x）；
+     *   - UNC 路径（//server/share）与绝对路径（/etc/passwd）；
+     *   - NUL 与控制字符。
+     */
+    protected static function isUnsafeEntry(string $normalized): bool
+    {
+        if ($normalized === '') {
+            return false;
+        }
+
+        if (preg_match('/[\x00-\x1F]/', $normalized) === 1) {
+            return true;
+        }
+
+        if (str_starts_with($normalized, '/') || str_starts_with($normalized, '//')) {
+            return true;
+        }
+
+        if (preg_match('#^[A-Za-z]:#', $normalized) === 1) {
+            return true;
+        }
+
+        foreach (explode('/', $normalized) as $segment) {
+            if ($segment === '..') {
+                return true;
+            }
+
+            if ($segment !== '' && str_contains($segment, ':')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * 安装失败时清掉已建目录，避免留下半成品主题。
+     */
+    protected static function cleanupDir(string $dir): void
+    {
+        try {
+            if (is_dir($dir)) {
+                File::deleteDirectory($dir);
+            }
+        } catch (Throwable) {
+        }
     }
 }

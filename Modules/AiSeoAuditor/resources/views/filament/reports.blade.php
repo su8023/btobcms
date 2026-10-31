@@ -67,7 +67,20 @@
                                         $issueTypeLabel = $issueTypeLabels[$issue['type']] ?? $issue['type'];
                                     @endphp
                                         <td class="py-1 text-xs">{{ $issueTypeLabel }}</td>
-                                        <td class="py-1"><a class="fi-link" href="{{ $issue['url'] }}" target="_blank" rel="noopener">{{ \Illuminate\Support\Str::limit($issue['url'], 60) }}</a></td>
+                                        <td class="py-1">
+                                            @php
+                                                // 只有 http/https 才做成链接：
+                                                // sitemap 里的 <loc> 是外部可控数据，
+                                                // javascript:alert(1) 被渲染成 href 就是后台域内的 XSS。
+                                                $issueUrl = (string) ($issue['url'] ?? '');
+                                                $issueUrlSafe = \Modules\AiSeoAuditor\Support\SafeUrl::isHttpUrl($issueUrl);
+                                            @endphp
+                                            @if ($issueUrlSafe)
+                                                <a class="fi-link" href="{{ $issueUrl }}" target="_blank" rel="noopener nofollow">{{ \Illuminate\Support\Str::limit($issueUrl, 60) }}</a>
+                                            @else
+                                                <span class="fi-link text-gray-500">{{ \Illuminate\Support\Str::limit($issueUrl, 60) }}</span>
+                                            @endif
+                                        </td>
                                         <td class="py-1 text-gray-500">{{ $issue['detail'] ?? '—' }}</td>
                                     </tr>
                                 @endforeach

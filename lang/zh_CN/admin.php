@@ -163,6 +163,8 @@ return [
         'run' => '立即巡检',
         'run_confirm' => '巡检会逐页抓取 sitemap 中的全部页面，耗时与页面数相关。现在开始？',
         'run_done' => '巡检完成',
+        'run_queued' => '巡检已排队',
+        'run_queued_hint' => '巡检在后台执行，完成后会在下方生成报告并推送通知。',
         'empty' => '暂无巡检报告。点击「立即巡检」抓取站点生成第一份报告。',
         'checked_count' => '已检查 :count 个页面',
         'no_issues' => '未发现问题',

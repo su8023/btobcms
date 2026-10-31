@@ -22,7 +22,7 @@ class DatabaseSeeder extends Seeder
         if (! app()->environment('production')) {
             User::firstOrCreate(
                 ['email' => 'admin@btobcms.local'],
-                ['name' => 'Admin', 'password' => 'Admin@2026'],
+                ['name' => 'Admin', 'password' => 'Admin@2026', 'role' => User::ROLE_ADMIN],
             );
         }
 

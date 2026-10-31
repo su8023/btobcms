@@ -2,6 +2,7 @@
 
 namespace Modules\GscPulse\Services;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Modules\GscPulse\Models\GscCredential;
 use Modules\GscPulse\Models\GscDaily;
@@ -157,13 +158,15 @@ class GscReport
     /**
      * 看板主窗口查询底座：固定站点属性 + days_back 天窗口。
      */
-    protected function baseQuery(?string $siteUrl = null)
+    protected function baseQuery(?string $siteUrl = null): Builder
     {
         $siteUrl ??= GscCredential::defaultSiteUrl();
 
-        return GscDaily::query()
-            ->where('site_url', $siteUrl)
-            ->whereBetween('date', [now()->subDays((int) config('gsc-pulse.days_back', 28))->toDateString(), now()->subDay()->toDateString()]);
+        return $this->applyDateRange(
+            GscDaily::query()->where('site_url', $siteUrl),
+            now()->subDays((int) config('gsc-pulse.days_back', 28))->toDateString(),
+            now()->subDay()->toDateString(),
+        );
     }
 
     /**
@@ -175,13 +178,31 @@ class GscReport
     {
         $siteUrl ??= GscCredential::defaultSiteUrl();
 
-        return GscDaily::query()
-            ->where('site_url', $siteUrl)
-            ->whereBetween('date', [$fromDate, $toDate])
+        return $this->applyDateRange(
+            GscDaily::query()->where('site_url', $siteUrl),
+            $fromDate,
+            $toDate,
+        )
             ->groupBy('page')
             ->selectRaw('page, SUM(clicks) as clicks')
             ->pluck('clicks', 'page')
             ->all();
+    }
+
+    /**
+     * 日期窗口过滤：统一用「当天 00:00:00 ~ 当天 23:59:59」闭区间。
+     *
+     * WHY：gsc_daily.date 由 Eloquent 的 date cast 写入，存的是 'Y-m-d H:i:s' 文本。
+     * 直接 whereBetween('date', ['2026-10-03', '2026-10-30']) 在 SQLite 上按文本比较，
+     * 末日行的 '2026-10-30 00:00:00' > '2026-10-30' 会被排除——窗口最后一天恒丢，
+     * 「昨天」永远进不了任何榜单。MySQL 上 DATE 列会截断时间部分，故比较两端都补齐
+     * 时间边界（DATE 列按 00:00:00 参与比较），SQLite / MySQL 命中的是同一批行。
+     */
+    protected function applyDateRange(Builder $query, string $fromDate, string $toDate): Builder
+    {
+        return $query
+            ->where('date', '>=', $fromDate.' 00:00:00')
+            ->where('date', '<=', $toDate.' 23:59:59');
     }
 
     /**

@@ -288,6 +288,14 @@ class GscPulseTest extends TestCase
         Http::fake([
             'https://oauth2.googleapis.com/token' => Http::response([
                 'access_token' => 'at-x', 'refresh_token' => 'rt-x', 'expires_in' => 3600,
+                // 回调会校验实际授予的 scope：没有 Search Console 只读权限就不落库
+                'scope' => 'https://www.googleapis.com/auth/webmasters.readonly',
+            ]),
+            // 回调还会确认被授权账号确实能访问这个站点属性，否则"连上了却没数据"
+            'https://searchconsole.googleapis.com/webmasters/v3/sites' => Http::response([
+                'siteEntry' => [
+                    ['siteUrl' => 'https://www.aples.xyz/', 'permissionLevel' => 'FULL'],
+                ],
             ]),
         ]);
 
@@ -305,7 +313,8 @@ class GscPulseTest extends TestCase
         $this->assertNotNull($credential->token_expires_at);
 
         // code 换 token 携带了插件设置里的 client_id
-        Http::assertSent(fn ($req) => $req['code'] === 'good' && $req['client_id'] === 'cid-1');
+        // （回调现在还会多发一次站点属性列表请求，断言要能安全处理没有 body 的请求）
+        Http::assertSent(fn ($req) => ($req['code'] ?? null) === 'good' && ($req['client_id'] ?? null) === 'cid-1');
     }
 
     public function test_oauth_callback_rejects_bad_state_and_denied_error(): void
@@ -374,7 +383,9 @@ class GscPulseTest extends TestCase
         $values = Setting::get('plugin.GscPulse');
 
         $this->assertSame('cid-9', $values['client_id']);
-        $this->assertSame('csecret-9', $values['client_secret']);
+        // client_secret 加密存储：库里不再是明文，取用时解密还原
+        $this->assertNotSame('csecret-9', $values['client_secret']);
+        $this->assertSame('csecret-9', \Modules\GscPulse\Support\OAuthClient::clientSecret());
         $this->assertSame('https://www.aples.xyz/', $values['site_url']);
 
         // 断开：删除凭据行（OAuth 应用设置保留）

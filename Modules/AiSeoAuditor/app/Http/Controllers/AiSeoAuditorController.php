@@ -3,8 +3,15 @@
 namespace Modules\AiSeoAuditor\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 
+/**
+ * AI SEO 巡检模块的首页占位控制器。
+ *
+ * 原来这里还带着 nwidart 脚手架生成的 create/show/edit/store/update/destroy：
+ *   - create/show/edit 渲染的视图根本不存在 → 访问即 500；
+ *   - store/update/destroy 是空方法体 → 返回 200 但什么都没做（静默写入失败）。
+ * 这些动作已全部移除，只保留可用的 index。
+ */
 class AiSeoAuditorController extends Controller
 {
     /**
@@ -14,43 +21,4 @@ class AiSeoAuditorController extends Controller
     {
         return view('aiseoauditor::index');
     }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        return view('aiseoauditor::create');
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request) {}
-
-    /**
-     * Show the specified resource.
-     */
-    public function show($id)
-    {
-        return view('aiseoauditor::show');
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit($id)
-    {
-        return view('aiseoauditor::edit');
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, $id) {}
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy($id) {}
 }

@@ -123,4 +123,34 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | 运行期需要的 .env 值
+    |--------------------------------------------------------------------------
+    |
+    | 这几项在 HTTP 请求期被读取（Provider / 中间件），必须走 config：
+    | 一旦执行 php artisan config:cache，Laravel 不再加载 .env，
+    | 此时 env() 恒为 null，直接用 env() 会让这些设置全部失效。
+    |
+    */
+
+    // 可信反向代理（CDN / 负载均衡）的 IP 段，逗号分隔；留空 = 不信任任何代理。
+    // 实际生效位置是 config/trustedproxy.php（由 TrustProxies 中间件读取）。
+    'trusted_proxies' => env('TRUSTED_PROXIES', ''),
+
+    // composer.phar 的绝对路径（composer 命令不在 PATH 时插件安装用它回退）
+    'composer_phar' => env('COMPOSER_PHAR', ''),
+
+    /*
+    | 安装向导的兜底配置：仅在「全新部署（无 .env / 无安装锁 / 未缓存配置）」时使用。
+    | 值为 null 表示 .env 里没有显式配置该项 → 此时才启用兜底值。
+    | 放这里而不是在 Provider 里直接 env()，是为了 config:cache 后依然有效。
+    */
+    'install_fallbacks' => [
+        'session.driver' => env('SESSION_DRIVER'),
+        'cache.default' => env('CACHE_STORE'),
+        'queue.default' => env('QUEUE_CONNECTION'),
+        'database.default' => env('DB_CONNECTION'),
+    ],
+
 ];

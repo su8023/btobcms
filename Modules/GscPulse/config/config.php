@@ -11,6 +11,12 @@ return [
     // 分页安全阀：最多循环 max_pages 页（2500 × 20 = 5 万行/天），防止异常响应死循环
     'max_pages' => 20,
 
+    // ---- 批量写入与并发控制 ----
+    // 批量 upsert 的批大小：一批一条 SQL + 一个事务（5 万行按行写会变成 10 万条语句）
+    'upsert_batch_size' => 500,
+    // 拉取互斥锁的持有秒数：手动「立即拉取」与每日 06:10 定时任务共用同一把缓存锁
+    'lock_ttl' => 900,
+
     // ---- 衰退预警 ----
     // 近 7 天较前 7 天点击降幅百分比阈值（%），达到即上榜
     'diminishing_threshold' => (int) env('GSC_PULSE_DIMINISHING_THRESHOLD', 30),
@@ -30,6 +36,8 @@ return [
     ],
 
     // ---- OAuth ----
+    // 申请的只读范围；回调处据此校验「实际授予的范围」是否包含它
+    'scope' => 'https://www.googleapis.com/auth/webmasters.readonly',
     // access_token 过期前的提前刷新缓冲（秒）
     'token_refresh_buffer' => 60,
 

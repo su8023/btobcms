@@ -22,10 +22,15 @@ return Application::configure(basePath: dirname(__DIR__))
         // 站点设置（联系方式等）按请求合并进 config——后台改完全站立即生效
         $middleware->web(append: \App\Http\Middleware\ApplySiteSettings::class);
 
-        // 生产部署在 Cloudflare/负载均衡之后：信任代理头（X-Forwarded-For），
-        // 询盘记录的才是买家真实 IP 而非 CDN 节点 IP。
-        // 注意：at:'*' 意味着客户端可伪造 XFF——若站点不经代理直接暴露，请改回默认。
-        $middleware->trustProxies(at: '*');
+        // 可信反向代理（CDN / 负载均衡）不在这里配置：
+        // withMiddleware 回调执行时 config 尚未加载（config() 会抛
+        // "Target class [config] does not exist"），而 env() 在 config:cache
+        // 之后又恒为 null。正确做法是走 Laravel 内置的 config/trustedproxy.php，
+        // 由 TrustProxies 中间件自行读取 —— 既能 config:cache，语义也最标准。
+        //
+        // 安全提醒：TRUSTED_PROXIES=* 意味着任何客户端都能伪造 X-Forwarded-For，
+        // 那样询盘 IP 会失真、基于 IP 的限流也会被直接绕过。
+        // 默认留空 = 不信任任何代理（用真实连接 IP）。
 
         // 更新中心进入维护模式时，后台面板与 Livewire 端点必须保持可达：
         // 否则更新进程一旦被中断，管理员将无法点击「继续更新 / 恢复访问」，

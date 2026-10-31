@@ -8,7 +8,7 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
-use Illuminate\Support\Facades\Artisan;
+use Modules\AiSeoAuditor\Jobs\RunSeoAudit;
 use UnitEnum;
 
 /**
@@ -70,18 +70,21 @@ class SeoAuditReports extends Page
                 ->requiresConfirmation()
                 ->modalDescription(__('admin.seo_audit.run_confirm'))
                 ->action(function (): void {
-                    Artisan::call('seo:audit', [
-                        '--base-url' => rtrim((string) config('app.url'), '/'),
-                    ]);
+                    // 巡检是长耗时任务（最坏 ~17 分钟），必须排队执行：
+                    // 在 HTTP 请求里同步跑会被网关掐断，管理员只会看到 504。
+                    $limit = max(1, (int) plugin_setting('ai-seo-auditor', 'limit', 100));
+                    $timeout = max(1, (int) plugin_setting('ai-seo-auditor', 'audit_timeout', 10));
 
-                    $output = trim(Artisan::output());
-                    $tail = implode("\n", array_slice(explode("\n", $output), -4));
+                    RunSeoAudit::dispatch(
+                        rtrim((string) config('app.url'), '/'),
+                        $limit,
+                        $timeout
+                    );
 
                     Notification::make()
-                        ->title(__('admin.seo_audit.run_done'))
-                        ->body($tail !== '' ? $tail : null)
+                        ->title(__('admin.seo_audit.run_queued') ?: '巡检已排队')
+                        ->body(__('admin.seo_audit.run_queued_hint') ?: '巡检在后台运行，完成后会在下方生成报告并推送通知。')
                         ->success()
-                        ->persistent()
                         ->send();
                 }),
         ];

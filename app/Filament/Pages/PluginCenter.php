@@ -18,6 +18,14 @@ use UnitEnum;
  */
 class PluginCenter extends Page
 {
+    /**
+     * 仅管理员可访问：插件 ZIP 上传/安装/删除等价于远程代码执行，必须收口到管理员。
+     */
+    public static function canAccess(): bool
+    {
+        return user_is_admin();
+    }
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedPuzzlePiece;
 
     protected static ?int $navigationSort = 40;

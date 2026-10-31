@@ -26,6 +26,15 @@ use UnitEnum;
  */
 class SiteSettings extends Page
 {
+    /**
+     * 仅管理员可访问：站点设置含自定义 CSS（注入到每个前台页面的 <style>），
+     * 属存储型 XSS 入口；联系方式等运营配置也应由管理员掌管。
+     */
+    public static function canAccess(): bool
+    {
+        return user_is_admin();
+    }
+
     /** @var array<string, mixed> | null */
     public ?array $data = [];
 

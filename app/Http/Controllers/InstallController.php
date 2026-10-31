@@ -9,14 +9,21 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use RuntimeException;
 use Throwable;
 
 /**
  * Web 安装向导（宝塔/任意主机一键安装）：
  *   GET  /install        环境自检（PHP 版本/扩展/目录权限）
- *   POST /install        提交数据库+管理员配置 → 写 .env → 迁移 → 建管理员 → 加安装锁
+ *   POST /install        提交数据库+管理员配置 → 迁移 → 建管理员 → 写 .env → 加安装锁
  *   GET  /install/done   完成页
- * storage/app/installed.lock 存在即视为已安装，所有入口 404（防重装/防接管）。
+ *
+ * 防接管（三重，任一命中即视为已安装、入口 404）：
+ *   1. storage/app/installed.lock 存在；
+ *   2. 根目录 .env 存在且已配置非空 APP_KEY（真实部署必然有；
+ *      即使 storage/ 未持久化导致锁文件丢失，此守卫依然关闭向导）；
+ *   3. 安装过程中先落锁再改写 .env，中途失败会移除锁允许重试，
+ *      因此不存在「.env 已被改写但向导仍开放」的中间态。
  */
 class InstallController extends Controller
 {
@@ -69,31 +76,44 @@ class InstallController extends Controller
             return back()->withInput()->withErrors(['db_database' => $error]);
         }
 
-        // 2. 写 .env（以 .env.example 为模板；无模板时用内置最小模板）
-        $this->writeEnvironment($data, $db);
+        // 2. 先落锁：此刻起向导对匿名/并发请求关闭。
+        //    锁在失败路径会被移除（允许重试），因此不会出现
+        //    「.env 已被改写、锁却没写上」这种可被反复利用的中间态。
+        if (! $this->writeLock('in_progress')) {
+            return back()->withInput()->withErrors(['db_database' => '无法写入安装锁（storage/app 不可写），请修正目录权限后重试']);
+        }
 
         // 3. 建独立运行时连接执行安装（不覆盖默认连接，避免影响当前会话/队列）
         $conn = $this->makeRuntimeConnection($db);
 
-        // 4. 迁移 + （可选）演示数据 + 管理员
         try {
+            // 4. 迁移 + （可选）演示数据 + 管理员
+            //    全部走 install_run 运行时连接，不依赖 .env —— 这是「.env 最后落盘」的前提
             Artisan::call('migrate', ['--force' => true, '--database' => $conn]);
+
+            if (! empty($data['seed_demo'])) {
+                Artisan::call('db:seed', ['--force' => true, '--database' => $conn, '--class' => 'DemoContentSeeder']);
+            }
+
+            User::on($conn)->firstOrCreate(
+                ['email' => $data['admin_email']],
+                [
+                    'name' => $data['admin_name'],
+                    'password' => $data['admin_password'],
+                    'email_verified_at' => now(),
+                    'role' => 'admin',
+                ],
+            );
+
+            // 5. 上面全部成功，才把新配置落进 .env（原子替换，中断不会截断原文件）
+            $this->writeEnvironment($data, $db);
         } catch (Throwable $e) {
-            return back()->withInput()->withErrors(['db_database' => '数据表迁移失败：'.$e->getMessage()]);
+            // 失败：移除锁，允许运维重试（.env 尚未被改写，站点状态未被污染）
+            $this->removeLock();
+
+            return back()->withInput()->withErrors(['db_database' => '安装失败：'.$e->getMessage()]);
         }
 
-        if (! empty($data['seed_demo'])) {
-            Artisan::call('db:seed', ['--force' => true, '--database' => $conn, '--class' => 'DemoContentSeeder']);
-        }
-
-        User::on($conn)->firstOrCreate(
-            ['email' => $data['admin_email']],
-            [
-                'name' => $data['admin_name'],
-                'password' => $data['admin_password'],
-                'email_verified_at' => now(),
-            ],
-        );
         try {
             DB::purge('install_run');
         } catch (Throwable) {
@@ -116,10 +136,8 @@ class InstallController extends Controller
         // 注：不在请求内做 config/route/view 缓存（会重载当前进程配置）。
         // 完成页引导 SSH 执行 php artisan optimize。
 
-        File::put(storage_path(self::LOCK), json_encode([
-            'installed_at' => now()->toIso8601String(),
-            'app_url' => config('app.url'),
-        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        // 6. 标记安装完成（锁已存在，这里只更新状态字段）
+        $this->writeLock('done');
 
         return redirect()->to('/install/done');
     }
@@ -149,9 +167,70 @@ class InstallController extends Controller
         }
     }
 
+    /**
+     * 是否已安装：三重守卫，任一命中即关闭安装向导。
+     *
+     * 除锁文件外，还看根目录 .env 是否已配置非空 APP_KEY ——
+     * 真实部署必然有 .env；即使 storage/ 未持久化导致锁文件丢失，
+     * 这一条依然能挡住匿名重装（否则会被劫持 .env 并建出攻击者的管理员）。
+     */
     private function installed(): bool
     {
-        return File::exists(storage_path(self::LOCK));
+        if (File::exists(storage_path(self::LOCK))) {
+            return true;
+        }
+
+        return $this->environmentConfigured();
+    }
+
+    /**
+     * .env 是否已配置好可运行的运行环境（有非空 APP_KEY 即视为已配置）。
+     */
+    private function environmentConfigured(): bool
+    {
+        $envFile = base_path('.env');
+
+        if (! File::exists($envFile)) {
+            return false;
+        }
+
+        $contents = (string) @file_get_contents($envFile);
+
+        // 注意：这里只能用 [ \t] 而不是 \s —— \s 会连换行一起吃掉，
+        // 于是 "APP_KEY=\nAPP_DEBUG=true" 会匹配到下一行的内容，
+        // 把空 APP_KEY 误判成"已配置"、把安装向导错关掉。
+        if (preg_match('/^[ \t]*APP_KEY[ \t]*=[ \t]*(\S.*)$/m', $contents, $m) !== 1) {
+            return false;
+        }
+
+        $value = trim($m[1], " \t\"'");
+
+        return $value !== '' && $value !== 'base64:';
+    }
+
+    /**
+     * 写安装锁（安装开始即落锁，失败路径由 removeLock() 回滚）。
+     */
+    private function writeLock(string $status): bool
+    {
+        $ok = File::put(storage_path(self::LOCK), json_encode([
+            'status' => $status,
+            'installed_at' => $status === 'done' ? now()->toIso8601String() : null,
+            'app_url' => config('app.url'),
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+        return $ok !== false;
+    }
+
+    /**
+     * 移除安装锁：仅供失败回滚，允许运维重新走安装流程。
+     */
+    private function removeLock(): void
+    {
+        try {
+            File::delete(storage_path(self::LOCK));
+        } catch (Throwable) {
+        }
     }
 
     /**
@@ -326,7 +405,25 @@ class InstallController extends Controller
             array_splice($lines, (int) $idx + 1, 0, ['APP_TIMEZONE=Asia/Shanghai']);
         }
 
-        File::put(base_path('.env'), implode("\n", $lines)."\n");
+        // 原子落盘：先写临时文件再 rename，避免进程中断把原 .env 截断成半截
+        // （半截 .env 会让站点既起不来、也让安装向导处于「已配置」的错误状态）
+        $target = base_path('.env');
+        $tmp = $target.'.installing';
+
+        if (File::put($tmp, implode("\n", $lines)."\n") === false) {
+            throw new RuntimeException('无法写入 .env 临时文件：'.$tmp);
+        }
+
+        // Windows 上 rename 不能覆盖已存在文件，先移除旧文件再改名
+        if (File::exists($target)) {
+            File::delete($target);
+        }
+
+        if (! File::move($tmp, $target)) {
+            @File::delete($tmp);
+
+            throw new RuntimeException('无法写入 .env：'.$target);
+        }
     }
 
     /**

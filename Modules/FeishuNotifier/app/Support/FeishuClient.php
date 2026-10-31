@@ -61,6 +61,16 @@ class FeishuClient
             $payload['sign'] = base64_encode(hash_hmac('sha256', '', $timestamp."\n".$secret, true));
         }
 
+        // Webhook 目标必须是官方飞书/Lark 域名且走 https：
+        // 否则签名与询盘 PII（姓名/邮箱/电话/留言）会被明文发到任意地址。
+        if (! self::isAllowedWebhook($webhook)) {
+            $error = 'Webhook 地址不合法：必须是以 https:// 开头、且主机属于 feishu.cn / larksuite.com 的官方地址';
+
+            Log::warning('[feishu-notifier] 推送失败', ['reason' => $error]);
+
+            return ['status' => 'failed', 'error' => $error];
+        }
+
         try {
             $response = Http::timeout(8)->post($webhook, $payload);
             $json = (array) $response->json();
@@ -78,5 +88,42 @@ class FeishuClient
         }
 
         return ['status' => 'sent', 'error' => null];
+    }
+
+    /**
+     * 校验 Webhook 地址：只允许官方飞书/Lark 域名的 https 地址。
+     *
+     * 群机器人 Webhook 里带签名密钥与询盘 PII，
+     * 允许任意主机等于把密钥和客户资料送上门。
+     * 若使用自建中继，可用 feishu-notifier.allow_custom_webhook 显式放开。
+     */
+    protected static function isAllowedWebhook(string $webhook): bool
+    {
+        $webhook = trim($webhook);
+
+        if ($webhook === '' || ! str_starts_with(strtolower($webhook), 'https://')) {
+            return false;
+        }
+
+        if ((bool) plugin_setting('feishu-notifier', 'allow_custom_webhook', false)) {
+            return true;
+        }
+
+        $host = parse_url($webhook, PHP_URL_HOST);
+
+        if (! is_string($host) || $host === '') {
+            return false;
+        }
+
+        $host = strtolower($host);
+
+        // 官方域名：feishu.cn / larksuite.com 及其子域
+        foreach (['feishu.cn', 'larksuite.com'] as $domain) {
+            if ($host === $domain || str_ends_with($host, '.'.$domain)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

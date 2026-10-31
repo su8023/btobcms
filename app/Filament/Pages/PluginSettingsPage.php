@@ -31,6 +31,15 @@ use UnitEnum;
  */
 class PluginSettingsPage extends Page
 {
+    /**
+     * 仅管理员可访问：插件设置可写 Webhook 地址与 LLM base_url，
+     * 等于把密钥与外发请求的落点交给普通编辑账号。
+     */
+    public static function canAccess(): bool
+    {
+        return user_is_admin();
+    }
+
     /** 当前插件模块名（路由参数 {plugin}，如 FeishuNotifier） */
     public ?string $plugin = null;
 

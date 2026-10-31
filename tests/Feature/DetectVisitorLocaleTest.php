@@ -19,6 +19,12 @@ class DetectVisitorLocaleTest extends TestCase
         parent::setUp();
         $this->seed();
 
+        // 本中间件面向 CDN 前置的部署场景（XFF / CF-IPCountry），
+        // 生产默认不信任任何代理；测试里模拟的正是"流量经过可信 CDN"，
+        // 因此在此声明信任代理，让 $request->ip() 采信测试注入的 XFF。
+        // 仅影响本测试类，不改变全局测试环境与其他用例的语义。
+        config(['trustedproxy.proxies' => '*']);
+
         // 任何未被 fake 的外部请求直接报错，确保检测路径不产生意外外呼
         Http::preventStrayRequests();
     }

@@ -64,9 +64,10 @@
                 </div>
                 <div>
                     <label class="mb-1 block text-sm font-medium">Client Secret</label>
-                    <input type="text" wire:model="clientSecret"
+                    <input type="password" wire:model="clientSecret" autocomplete="off"
                         class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
-                        placeholder="GOCSPX-...">
+                        placeholder="{{ \Modules\GscPulse\Support\OAuthClient::isConfigured() ? '已保存（留空则不修改）' : 'GOCSPX-...' }}">
+                    <p class="mt-1 text-xs text-gray-500">密钥加密存储，保存后不再回显；留空即沿用已保存的值。</p>
                 </div>
                 <div>
                     <label class="mb-1 block text-sm font-medium">GSC 站点属性（site_url）</label>
