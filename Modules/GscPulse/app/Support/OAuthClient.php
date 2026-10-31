@@ -88,6 +88,40 @@ class OAuthClient
     }
 
     /**
+     * 记录一次授权尝试的结果（成功/失败 + 原因 + 时间），在连接页常驻显示。
+     *
+     * WHY 持久化：回调的失败原因此前只走一次性 flash 提示，管理员没看到或刷新掉就永久丢失，
+     * 而共享主机用户看不了 laravel.log——排障只能瞎猜。落库后任何一次尝试都可追溯。
+     */
+    public static function recordAttempt(bool $ok, string $message): void
+    {
+        $values = self::values();
+        $values['last_attempt'] = [
+            'at' => now()->format('Y-m-d H:i'),
+            'ok' => $ok,
+            'message' => mb_substr(trim($message), 0, 300),
+        ];
+
+        Setting::put(self::SETTING_KEY, $values);
+    }
+
+    /**
+     * 最近一次授权尝试记录；从未尝试过返回 null。
+     *
+     * @return array{at: string, ok: bool, message: string}|null
+     */
+    public static function lastAttempt(): ?array
+    {
+        $attempt = self::values()['last_attempt'] ?? null;
+
+        if (! is_array($attempt) || ! isset($attempt['at'], $attempt['ok'], $attempt['message'])) {
+            return null;
+        }
+
+        return $attempt;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private static function values(): array

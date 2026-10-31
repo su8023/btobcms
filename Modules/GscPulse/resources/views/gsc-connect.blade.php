@@ -15,6 +15,22 @@
             </div>
         @endif
 
+        {{-- 上次授权尝试的持久化记录：flash 没看到也不丢，排查「连完回来没反应」全靠它 --}}
+        @php($lastAttempt = $this->lastAttempt)
+        @if ($lastAttempt && ! ($this->isConnected && $lastAttempt['ok']))
+            <div class="mb-4 rounded-lg border p-4 text-sm {{ $lastAttempt['ok']
+                ? 'border-info-200 bg-info-50 text-info-700 dark:border-info-800 dark:bg-info-900/30 dark:text-info-300'
+                : 'border-warning-200 bg-warning-50 text-warning-700 dark:border-warning-800 dark:bg-warning-900/30 dark:text-warning-300' }}">
+                <b>上次授权尝试（{{ $lastAttempt['at'] }}）：</b>{{ $lastAttempt['message'] }}
+                @unless ($lastAttempt['ok'])
+                    <div class="mt-1 text-xs opacity-80">
+                        若刚点完「连接 Google」回到本页却只有这条旧记录，说明本次回调没有到达网站——
+                        请到 Google Cloud Console 核对「已获授权的重定向 URI」与本页上方显示的地址是否一字不差（多空格、http/https、域名不同都算不一致）。
+                    </div>
+                @endunless
+            </div>
+        @endif
+
         <x-filament::section>
             <x-slot name="heading">连接状态</x-slot>
             <div class="flex flex-wrap items-center justify-between gap-3">
@@ -73,8 +89,11 @@
                     <label class="mb-1 block text-sm font-medium">GSC 站点属性（site_url）</label>
                     <input type="text" wire:model="siteUrl"
                         class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
-                        placeholder="https://www.aples.xyz/">
-                    <p class="mt-1 text-xs text-gray-500">须与 Search Console 中的资源完全一致（建议带尾斜杠）；改动后重新授权。</p>
+                        placeholder="https://www.example.com/ 或 sc-domain:example.com">
+                    <p class="mt-1 text-xs text-gray-500">
+                        须与 Search Console 中的资源完全一致：「网址前缀」资源形如 <span class="font-mono">https://www.example.com/</span>（带尾斜杠），
+                        「域名」资源形如 <span class="font-mono">sc-domain:example.com</span>；改动后需重新授权。
+                    </p>
                 </div>
                 <button type="button" wire:click="save"
                     class="rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white hover:bg-primary-600">

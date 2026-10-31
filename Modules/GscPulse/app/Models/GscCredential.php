@@ -34,18 +34,35 @@ class GscCredential extends Model
     }
 
     /**
-     * 站点属性归一化：补全尾斜杠（GSC 约定形如 https://www.example.com/）。
+     * 站点属性归一化：URL 前缀资源补全尾斜杠（GSC 约定形如 https://www.example.com/）；
+     * 域名资源（sc-domain:example.com）按 GSC 原生格式保持原样、不带斜杠。
      */
     public static function normalizeSiteUrl(string $siteUrl): string
     {
-        return rtrim(trim($siteUrl), '/').'/';
+        $siteUrl = trim($siteUrl);
+
+        if (self::isDomainProperty($siteUrl)) {
+            return $siteUrl;
+        }
+
+        return rtrim($siteUrl, '/').'/';
     }
 
     /**
-     * 站点属性格式校验：必须是完整的 http/https 绝对地址。
+     * 是否为 GSC「域名」资源（DNS 验证整域，形如 sc-domain:example.com）。
+     */
+    public static function isDomainProperty(string $siteUrl): bool
+    {
+        return (bool) preg_match('/^sc-domain:[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$/i', trim($siteUrl));
+    }
+
+    /**
+     * 站点属性格式校验：必须是完整的 http/https 绝对地址，或合法的域名资源（sc-domain:）。
      *
      * WHY：空值会被 OAuthClient 存成 '/'，进而拼出 /webmasters/v3/sites//searchAnalytics/query
      * 这种无效请求路径；相对路径或缺协议的地址同样会被 GSC 拒绝。
+     * 域名资源是 Search Console 建站时的默认推荐形态，必须放行，否则用户照着
+     * Google 自己的引导建的资源反而连不上。
      */
     public static function isValidSiteUrl(string $siteUrl): bool
     {
@@ -53,6 +70,10 @@ class GscCredential extends Model
 
         if ($siteUrl === '') {
             return false;
+        }
+
+        if (self::isDomainProperty($siteUrl)) {
+            return true;
         }
 
         $parts = parse_url($siteUrl);

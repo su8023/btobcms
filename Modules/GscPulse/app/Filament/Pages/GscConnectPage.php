@@ -105,6 +105,12 @@ class GscConnectPage extends Page
         return OAuthClient::isConfigured();
     }
 
+    /** 最近一次授权尝试的持久化记录（成功/失败 + 原因），连接页常驻展示 */
+    public function getLastAttemptProperty(): ?array
+    {
+        return OAuthClient::lastAttempt();
+    }
+
     /** Google OAuth 授权跳转地址（readonly scope + 离线刷新 + 每次强弹同意以拿到 refresh_token） */
     public function getAuthUrlProperty(): string
     {
@@ -164,7 +170,7 @@ class GscConnectPage extends Page
         if (! GscCredential::isValidSiteUrl($siteUrl)) {
             Notification::make()
                 ->title('GSC 站点属性格式无效')
-                ->body('必须是完整的 http/https 绝对地址（如 https://www.example.com/），不能是相对路径或缺少协议。')
+                ->body('必须是完整的 http/https 绝对地址（如 https://www.example.com/），或域名资源（如 sc-domain:example.com），不能是相对路径或缺少协议。')
                 ->danger()
                 ->send();
 

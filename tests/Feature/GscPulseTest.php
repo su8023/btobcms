@@ -344,6 +344,12 @@ class GscPulseTest extends TestCase
 
     public function test_oauth_callback_reports_token_exchange_failure(): void
     {
+        Setting::put('plugin.GscPulse', [
+            'client_id' => 'cid-1',
+            'client_secret' => 'csecret-1',
+            'site_url' => 'https://www.aples.xyz/',
+        ]);
+
         Http::fake([
             'https://oauth2.googleapis.com/token' => Http::response(
                 ['error_description' => 'Invalid authorization code'], 400
@@ -357,6 +363,101 @@ class GscPulseTest extends TestCase
             ->assertSessionHas('gsc_error');
 
         $this->assertSame(0, GscCredential::count());
+    }
+
+    public function test_oauth_callback_persists_failure_reason_for_diagnostics(): void
+    {
+        // 「静默失败」回归：失败原因除一次性 flash 外必须持久化，连接页才能常驻展示
+        Setting::put('plugin.GscPulse', [
+            'client_id' => 'cid-1',
+            'client_secret' => 'csecret-1',
+            'site_url' => 'https://www.aples.xyz/',
+        ]);
+
+        Http::fake([
+            'https://oauth2.googleapis.com/token' => Http::response(
+                ['error_description' => 'redirect_uri_mismatch'], 400
+            ),
+        ]);
+
+        session()->put('gsc-pulse.state', 'st-p1');
+
+        $this->get('/admin/gsc-pulse/callback?code=bad&state=st-p1')
+            ->assertRedirect()
+            ->assertSessionHas('gsc_error');
+
+        $attempt = \Modules\GscPulse\Support\OAuthClient::lastAttempt();
+
+        $this->assertNotNull($attempt);
+        $this->assertFalse($attempt['ok']);
+        $this->assertStringContainsString('redirect_uri_mismatch', $attempt['message']);
+    }
+
+    public function test_oauth_callback_survives_connection_error(): void
+    {
+        // 服务器连不上 Google 时 Http 抛连接异常：必须兜住回跳提示，而不是 500 白屏
+        Setting::put('plugin.GscPulse', [
+            'client_id' => 'cid-1',
+            'client_secret' => 'csecret-1',
+            'site_url' => 'https://www.aples.xyz/',
+        ]);
+
+        Http::fake([
+            'https://oauth2.googleapis.com/token' => Http::failedConnection(),
+        ]);
+
+        session()->put('gsc-pulse.state', 'st-p2');
+
+        $this->get('/admin/gsc-pulse/callback?code=bad&state=st-p2')
+            ->assertRedirect()
+            ->assertSessionHas('gsc_error');
+
+        $this->assertSame(0, GscCredential::count());
+        $this->assertFalse(\Modules\GscPulse\Support\OAuthClient::lastAttempt()['ok']);
+    }
+
+    public function test_sc_domain_property_is_supported(): void
+    {
+        // 域名资源（sc-domain:）是 Search Console 建站默认推荐形态，必须可用
+        $this->assertTrue(GscCredential::isValidSiteUrl('sc-domain:chinasupplier.shop'));
+        $this->assertSame('sc-domain:chinasupplier.shop', GscCredential::normalizeSiteUrl('sc-domain:chinasupplier.shop'));
+        $this->assertFalse(GscCredential::isValidSiteUrl('sc-domain:'));
+        $this->assertFalse(GscCredential::isValidSiteUrl('sc-domain:not a domain'));
+        // URL 前缀资源规则不变
+        $this->assertFalse(GscCredential::isValidSiteUrl('www.example.com'));
+        $this->assertSame('https://www.example.com/', GscCredential::normalizeSiteUrl('https://www.example.com'));
+    }
+
+    public function test_oauth_callback_accepts_sc_domain_property(): void
+    {
+        Setting::put('plugin.GscPulse', [
+            'client_id' => 'cid-1',
+            'client_secret' => 'csecret-1',
+            'site_url' => 'sc-domain:chinasupplier.shop',
+        ]);
+
+        Http::fake([
+            'https://oauth2.googleapis.com/token' => Http::response([
+                'access_token' => 'at-d', 'refresh_token' => 'rt-d', 'expires_in' => 3600,
+                'scope' => 'https://www.googleapis.com/auth/webmasters.readonly',
+            ]),
+            'https://searchconsole.googleapis.com/webmasters/v3/sites' => Http::response([
+                'siteEntry' => [
+                    ['siteUrl' => 'sc-domain:chinasupplier.shop', 'permissionLevel' => 'FULL'],
+                ],
+            ]),
+        ]);
+
+        session()->put('gsc-pulse.state', 'st-d');
+
+        $this->get('/admin/gsc-pulse/callback?code=good&state=st-d')
+            ->assertRedirect(GscConnectPage::getUrl());
+
+        $this->assertSame('sc-domain:chinasupplier.shop', GscCredential::first()->site_url);
+
+        $attempt = \Modules\GscPulse\Support\OAuthClient::lastAttempt();
+
+        $this->assertTrue($attempt['ok']);
     }
 
     /* ----------------------------------------------------------

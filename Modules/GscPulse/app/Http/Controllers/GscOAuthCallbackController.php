@@ -6,9 +6,12 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Modules\GscPulse\Filament\Pages\GscConnectPage;
 use Modules\GscPulse\Models\GscCredential;
 use Modules\GscPulse\Services\GscFetcher;
+use Modules\GscPulse\Support\OAuthClient;
+use Throwable;
 
 /**
  * Google OAuth 回调（GET admin/gsc-pulse/callback）：
@@ -19,6 +22,10 @@ use Modules\GscPulse\Services\GscFetcher;
  * 或被授权的 Google 账号对该站点属性没有访问权时，连接会显示成功、但之后每次拉取都是 400/403，
  * 典型症状是「连上了却一条数据都没有」。所以先验范围、再验属性，验不过就绝不落库
  * （连旧的有效凭据也不覆盖），并把原因明确回传给管理员。
+ *
+ * WHY 每个出口都记录 OAuthClient::recordAttempt：flash 提示是一次性的，管理员没看到就永久丢失，
+ * 而共享主机用户看不了 laravel.log。持久化后连接页常驻显示最近一次授权的结果与原因，
+ * 「静默失败」从此可追溯。
  */
 class GscOAuthCallbackController extends Controller
 {
@@ -34,12 +41,12 @@ class GscOAuthCallbackController extends Controller
 
         // 0. 插件开关关闭：页面已显示「未启用」，这里直接拒掉，不做任何换令牌动作
         if (! config('gsc-pulse.enabled')) {
-            return redirect($back)->with('gsc_error', 'GSC 数据回流功能当前未启用，未写入任何凭据。');
+            return $this->fail($back, 'GSC 数据回流功能当前未启用，未写入任何凭据。');
         }
 
         // 1. 用户在 Google 侧拒绝授权
         if ($request->filled('error')) {
-            return redirect($back)->with('gsc_error', 'Google 授权被取消或拒绝（'.$request->query('error').'），未写入任何凭据。');
+            return $this->fail($back, 'Google 授权被取消或拒绝（'.$request->query('error').'），未写入任何凭据。');
         }
 
         // 2. state 防 CSRF：必须与连接页存入 session 的值一致（一次性，取出即焚）
@@ -47,31 +54,37 @@ class GscOAuthCallbackController extends Controller
         $expected = (string) session()->pull('gsc-pulse.state', '');
 
         if ($state === '' || $expected === '' || ! hash_equals($expected, $state)) {
-            return redirect($back)->with('gsc_error', '授权状态校验失败（state 不匹配），请回到「GSC 连接」页重新点击「连接 Google」。');
+            return $this->fail($back, '授权状态校验失败（state 不匹配），请回到「GSC 连接」页重新点击「连接 Google」。');
         }
 
         // 3. 授权码必须存在
         $code = (string) $request->query('code', '');
 
         if ($code === '') {
-            return redirect($back)->with('gsc_error', '回调缺少授权码（code），请重新发起连接。');
+            return $this->fail($back, '回调缺少授权码（code），请重新发起连接。');
         }
 
         // 4. 站点属性格式校验：空值/相对路径会让后面的 GSC 请求路径变成无效的 '//'
         $siteUrl = GscCredential::defaultSiteUrl();
 
         if (! GscCredential::isValidSiteUrl($siteUrl)) {
-            return redirect($back)->with('gsc_error', '后台配置的 GSC 站点属性（site_url）不是合法的 http/https 绝对地址，请到「GSC 连接」页修正后再重新授权。');
+            return $this->fail($back, '后台配置的 GSC 站点属性（site_url）不是合法的 http/https 绝对地址或 sc-domain: 域名资源，请到「GSC 连接」页修正后再重新授权。');
         }
 
-        // 5. code 换 token（OAuth2 标准端点，表单提交）
-        $response = Http::asForm()->post(GscFetcher::TOKEN_URL, [
-            'code' => $code,
-            'client_id' => (string) plugin_setting('gsc-pulse', 'client_id', ''),
-            'client_secret' => \Modules\GscPulse\Support\OAuthClient::clientSecret(),
-            'redirect_uri' => route('gsc-pulse.callback'),
-            'grant_type' => 'authorization_code',
-        ]);
+        // 5. code 换 token（OAuth2 标准端点，表单提交）。
+        //    兜底 Throwable：连不上 Google（超时/DNS）时 Http 会抛连接异常，
+        //    不接住就是 500 白屏——管理员既看不到 flash 也无从排查。
+        try {
+            $response = Http::asForm()->post(GscFetcher::TOKEN_URL, [
+                'code' => $code,
+                'client_id' => OAuthClient::clientId(),
+                'client_secret' => OAuthClient::clientSecret(),
+                'redirect_uri' => route('gsc-pulse.callback'),
+                'grant_type' => 'authorization_code',
+            ]);
+        } catch (Throwable $e) {
+            return $this->fail($back, '服务器连接 Google 失败（'.$this->shortReason($e->getMessage()).'）。请稍后重试；若反复出现请检查服务器出站网络。');
+        }
 
         $accessToken = (string) $response->json('access_token', '');
 
@@ -81,7 +94,7 @@ class GscOAuthCallbackController extends Controller
                 ?? $response->body()), $accessToken);
             $detail = mb_substr(trim($detail), 0, 160);
 
-            return redirect($back)->with('gsc_error', '换取令牌失败：'.$detail);
+            return $this->fail($back, '换取令牌失败：'.$detail.'。常见原因：Client Secret 不对，或 Google 控制台里登记的重定向 URI 与连接页显示的不完全一致（redirect_uri_mismatch）。');
         }
 
         // 6. 校验实际授予的授权范围：必须包含只读范围，否则后续拉取一律 403
@@ -94,14 +107,18 @@ class GscOAuthCallbackController extends Controller
         }
 
         if (! $this->scopeContains($grantedScope, $requiredScope)) {
-            return redirect($back)->with('gsc_error', '本次授权没有包含 Search Console 只读权限（'.$requiredScope.'），未写入任何凭据。请重新点击「连接 Google」并在 Google 授权页勾选该权限。');
+            return $this->fail($back, '本次授权没有包含 Search Console 只读权限（'.$requiredScope.'），未写入任何凭据。请重新点击「连接 Google」并在 Google 授权页勾选该权限。');
         }
 
         // 7. 校验被授权账号确实能访问这个站点属性：否则会出现「连接成功但一条数据都没有」
-        $properties = $this->fetchSiteProperties($accessToken);
+        try {
+            $properties = $this->fetchSiteProperties($accessToken);
+        } catch (Throwable $e) {
+            return $this->fail($back, '读取 Search Console 站点列表时服务器请求失败（'.$this->shortReason($e->getMessage()).'），未写入任何凭据，请重试。');
+        }
 
         if ($properties['error'] !== null) {
-            return redirect($back)->with('gsc_error', '读取 Search Console 站点列表失败（'.$properties['error'].'），未写入任何凭据。请确认 Search Console API 已启用、且刚授权的账号确实拥有该资源，再重新授权。');
+            return $this->fail($back, '读取 Search Console 站点列表失败（'.$properties['error'].'），未写入任何凭据。请确认 Search Console API 已启用、且刚授权的账号确实拥有该资源，再重新授权。');
         }
 
         if (! $this->hasProperty($properties['entries'], $siteUrl)) {
@@ -110,7 +127,7 @@ class GscOAuthCallbackController extends Controller
                 $properties['entries']
             ), 0, 5));
 
-            return redirect($back)->with('gsc_error', '刚授权的 Google 账号没有站点属性「'.$siteUrl.'」的访问权限，未写入任何凭据。该账号当前可见的属性：'.($list !== '' ? $list : '（无）').'。请换用有权限的账号，或把「GSC 连接」页的站点属性改成上面某一个。');
+            return $this->fail($back, '刚授权的 Google 账号没有站点属性「'.$siteUrl.'」的访问权限，未写入任何凭据。该账号当前可见的属性：'.($list !== '' ? $list : '（无）').'。请换用有权限的账号，或把「GSC 连接」页的站点属性改成上面某一个（域名资源形如 sc-domain:example.com）。');
         }
 
         // 8. 校验全部通过才落库（每站点属性一行，重复授权覆盖旧令牌）。
@@ -127,7 +144,30 @@ class GscOAuthCallbackController extends Controller
             ],
         );
 
+        OAuthClient::recordAttempt(true, '连接成功（属性 '.$siteUrl.'），凭据已保存。');
+
         return redirect($back)->with('gsc_connected', true);
+    }
+
+    /**
+     * 统一失败出口：flash 给当次访问 + 持久化给连接页常驻展示 + 落一条 warning 日志。
+     */
+    private function fail(string $back, string $message): RedirectResponse
+    {
+        OAuthClient::recordAttempt(false, $message);
+        Log::warning('[GscPulse] OAuth 授权失败：'.$message);
+
+        return redirect($back)->with('gsc_error', $message);
+    }
+
+    /**
+     * 异常信息截短：连接异常的 message 可能带整段堆栈上下文，只留开头即可定位。
+     */
+    private function shortReason(string $message): string
+    {
+        $message = trim(preg_replace('/\s+/', ' ', $message) ?? $message);
+
+        return mb_substr($message, 0, 80);
     }
 
     /**
