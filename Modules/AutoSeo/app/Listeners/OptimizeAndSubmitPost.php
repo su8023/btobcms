@@ -80,7 +80,7 @@ class OptimizeAndSubmitPost implements ShouldQueue
 PROMPT],
                 ], purpose: 'seo.meta');
 
-                $data = json_decode((string) (preg_match('/\{.*\}/s', $raw, $m) ? $m[0] : ''), true) ?: [];
+                $data = json_decode((string) (\Modules\AiContentWriter\Support\JsonExtractor::extract($raw) ?? ''), true) ?: [];
 
                 if ($needsTitle && ! blank($data['seo_title'] ?? null)) {
                     $existing->setTranslation('title', $lang, (string) $data['seo_title']);

@@ -33,6 +33,10 @@ class FaqGenerator
             throw new \RuntimeException('该语言还没有正文，先填充内容再生成 FAQ');
         }
 
+        // 输入护栏：超长文不加截断会把 prompt 顶爆（对比 AutoSeo 截 3000 字符）；
+        // FAQ 只需要内容主旨，去标签后截前 6000 字符足够
+        $content = mb_substr(strip_tags($content), 0, 6000);
+
         $count = (int) config('geo-boost.faq_count', 5);
         $title = (string) $post->getTranslation('title', $locale, false);
 
@@ -89,6 +93,6 @@ PROMPT],
 
     protected function extractJson(string $raw): string
     {
-        return preg_match('/\{.*\}/s', $raw, $m) ? $m[0] : $raw;
+        return \Modules\AiContentWriter\Support\JsonExtractor::extract($raw) ?? $raw;
     }
 }

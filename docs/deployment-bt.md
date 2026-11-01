@@ -191,6 +191,9 @@ client_max_body_size 256m;   # 更新中心「本地上传安装包」最大 200
 cd /www/wwwroot/你的域名 && /www/server/php/84/bin/php artisan schedule:run >> /dev/null 2>&1
 ```
 
+> 这条调度同时内置了队列消费（`queue:work --stop-when-empty` 每分钟清空队列，见 `routes/console.php`）
+> ——AI 翻译按语言拆成的队列任务靠它逐个消化，未配 9a 常驻 worker 时也能正常工作。
+
 ## 10. SSL + 终验
 
 **网站 → 设置 → SSL → Let's Encrypt**：勾选域名 → 申请 → 开启「强制 HTTPS」。

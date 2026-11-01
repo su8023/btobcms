@@ -243,4 +243,52 @@ class AiStudioTest extends TestCase
         $this->assertStringEndsWith('</strong></p>', $fixed);
         $this->assertStringContainsString('<h2>Material grades</h2>', $fixed);
     }
+
+    public function test_sanitize_strips_executable_content_from_ai_html(): void
+    {
+        // 回归（复核 D-P1-1）：AI 输出绕过 RichEditor 直接落库、前台 {!! !!} 原样渲染，
+        // 幻觉/提示注入/恶意自定义接口的 <script> 会变成存储型 XSS——落库前必须净化
+        $dirty = '<h2>Ok</h2><p onclick="steal()">text</p>'
+            .'<script>alert(1)</script>'
+            .'<a href="javascript:alert(2)">x</a>'
+            .'<iframe src="//evil"></iframe>';
+
+        $clean = \Modules\AiContentWriter\Support\LlmOutput::sanitize($dirty);
+
+        $this->assertStringNotContainsString('script', $clean);
+        $this->assertStringNotContainsString('iframe', $clean);
+        $this->assertStringNotContainsString('onclick', $clean);
+        $this->assertStringNotContainsString('javascript:', $clean);
+        $this->assertStringContainsString('<h2>Ok</h2>', $clean, '正常内容必须保留');
+        $this->assertStringContainsString('<a href="#">x</a>', $clean, '正常标签结构保留');
+    }
+
+    public function test_cli_article_command_uses_two_phase_generation(): void
+    {
+        // 回归（排查 B-P0）：CLI ai:article 曾与写作室修复前一样把整篇 HTML 塞 JSON，
+        // 长文转义/截断整包报废——现在必须是 元数据 JSON + 正文裸 HTML 两次调用
+        config(['ai.providers.deepseek.key' => 'sk-test-fake']);
+
+        Http::fake(['*' => Http::sequence()
+            ->push($this->openAiBody(json_encode([
+                'slug' => 'canton-fair-guide',
+                'title' => 'Canton Fair Guide',
+                'excerpt' => 'A guide.',
+            ], JSON_UNESCAPED_UNICODE)))
+            ->push(['choices' => [['message' => ['content' => '<h2>Phases</h2><p>Three phases per year.</p>']]]]),
+        ]);
+
+        $this->artisan('ai:article', ['topic' => 'Canton Fair guide', '--lang' => 'en', '--words' => 1200])
+            ->assertExitCode(0);
+
+        $post = Post::where('slug', 'canton-fair-guide')->first();
+        $this->assertNotNull($post, '草稿应入库');
+        $this->assertSame(Post::STATUS_DRAFT, $post->status);
+        $this->assertTrue($post->is_ai_generated);
+        $this->assertSame('Canton Fair Guide', $post->getTranslation('title', 'en'));
+        $this->assertStringContainsString('<h2>Phases</h2>', (string) $post->getTranslation('content', 'en'));
+
+        // 两次调用的 purpose 必须区分（否则 ai_calls 表无法归因失败来源）
+        Http::assertSent(fn ($req) => isset($req->data()['messages']));
+    }
 }

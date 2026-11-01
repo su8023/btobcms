@@ -300,6 +300,21 @@ php artisan module:migrate MyPlugin     # 执行该插件的迁移
 （类 `Modules\{Name}\Filament\Pages\{AnyPage}`，继承 `Filament\Pages\Page`）即自动注册；
 模块停用自动从导航消失。参照 `UpdateCenter` 的更新中心页。
 
+**样式注意（v1.4.22 起）**：Filament 面板的预编译 CSS **不含应用自身的 Tailwind 类**
+（`bg-…` / `text-…` / `grid` 等写了不生效）。插件页版式需要应用 Tailwind 类的，统一使用
+核心的 `public/css/admin-plugins.css`——它已在 AdminPanelProvider 全局注册，插件页无需手动引入；
+通用样式请优先补进该文件而不是在视图中内联。
+
+**侧边栏分组**：面板按固定顺序注册分组（目录 / 内容 / 增长 / 数据与优化 / 系统 / 插件 / 主题）。
+数据回流类页面（看板、报表）返回 `__('admin.groups.growth_data')` 归入「数据与优化」组：
+
+```php
+public static function getNavigationGroup(): string|\UnitEnum|null
+{
+    return __('admin.groups.growth_data');   // 中文界面显示「数据与优化」
+}
+```
+
 ### 4.6 前台插槽位（Slots）
 
 | 插槽名 | 位置 | 典型用途 |

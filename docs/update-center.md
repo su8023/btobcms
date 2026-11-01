@@ -80,8 +80,11 @@ GitHub → Releases → Draft a new release
 
 ### 更新时发生了什么（全自动，v1.4.0 起自包含 zip 版）
 
-1. 从 GitHub 下载 `btobcms-{tag}.zip`，下载后做**三重校验**（字节数与 Release asset 声明比对 +
-   SHA-256 + zip 完整性，未通过自动重试共 3 次，v1.4.8）
+1. 从 GitHub 下载 `btobcms-{tag}.zip`——**API（octet-stream）与下载页直链双源自动轮换**
+   （v1.4.23 起，两个来源最终落不同的 GitHub CDN 域名，机房只拦其中一个也能下成）；
+   下载后做**三重校验**（字节数与 Release asset 声明比对 + SHA-256 + zip 完整性，
+   未通过自动重试共 3 次，v1.4.8），失败日志显示实际收到的内容类型与内容开头（被拦截的
+   错误页一眼可辨），不再靠猜
 2. 站点进入**维护模式**（访客看到维护页，不是报错）
 3. **备份数据库**（MySQL 用 mysqldump，SQLite 直接复制；保留最近 5 份）
 4. 解压包内**全部代码 + vendor 生产依赖**，保留式覆盖站点（`.env`、`storage/`、数据库不动）
@@ -106,7 +109,8 @@ GitHub → Releases → Draft a new release
 - 仓库**私有** + Deploy key 只读 + Token 最小权限（Contents: Read）
 - 更新功能仅登录管理员可用；`.env`/数据/上传文件不在 git 里，更新永不触碰
 - 每次更新自动产生数据库备份：`storage/app/backups/`（建议纳入异地同步）
-- 更新在后台 HTTP 请求内同步执行，**不依赖队列 worker**（worker 仍为邮件/飞书通知所需——确保进程守护在跑，宝塔手册第 9 步）
+- 更新在后台 HTTP 请求内同步执行，**不依赖队列 worker**（队列仍为邮件/飞书通知与 AI 翻译任务所需——
+  调度器每分钟借 `queue:work --stop-when-empty` 自动消化，宝塔手册第 9 步；无需另起常驻 worker）
 
 ## 五、常见问题
 
@@ -116,5 +120,5 @@ GitHub → Releases → Draft a new release
 | 检测报 403 限流 | 匿名 API 60 次/小时上限，配置 Token 即提升到 5000 |
 | 前置检查不通过 | 检查项：zip 扩展、storage/app 等目录可写、磁盘余量 ≥512 MB——按提示处理（git / composer 已不要求） |
 | 显示「已是最新」但 GitHub 有新版 | 点「检查更新」立即回源（v1.4.7 起提供）；否则等缓存过期，或靠 5 分钟节流自动复查 |
-| 下载报「传输截断 / SHA-256 不匹配」 | GitHub CDN 节流，v1.4.8 起自动重试共 3 次；仍失败走 docs/release-build.md 第七节两条恢复通道 |
-| 本地上传安装包报 must not be greater than 12288 kilobytes | 旧版本 Livewire 临时上传 12 MB 限制，v1.4.9 起放开到 200 MB；旧版本用文件管理器放 `storage/app/update/{tag}.zip` 后点「继续更新」 |
+| 下载报「传输截断 / SHA-256 不匹配」 | GitHub CDN 节流或机房拦截，v1.4.8 起自动重试共 3 次，v1.4.23 起 API/下载页直链**双源自动轮换**（失败日志显示实际收到的内容类型，被拦错误页一眼可辨）；仍失败走 docs/release-build.md 第七节两条恢复通道 |
+| 本地上传安装包报 must not be greater than 12288 kilobytes | 旧版本 Livewire 临时上传 12 MB 限制，v1.4.9 起放开到 200 MB（v1.4.21 起体积限制与 30 分钟签名有效期上移 App 层统一放开）；旧版本用文件管理器放 `storage/app/update/{tag}.zip` 后点「继续更新」 |

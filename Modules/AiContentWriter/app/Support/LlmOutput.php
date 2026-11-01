@@ -61,6 +61,47 @@ class LlmOutput
     }
 
     /**
+     * AI 产出的 HTML 落库前的净化：剥离可执行/嵌入类标签与事件属性。
+     *
+     * WHY 必须有：写作室与翻译的 AI 输出会绕过 Filament RichEditor 的表单净化
+     * 直接写库，前台文章页 {!! !!} 原样渲染——LLM 幻觉、文章主题里的提示注入、
+     * 或管理员配置的自定义接口返回恶意片段，任一都会变成存储型 XSS。
+     * 信任边界：LLM 供应商输出不可信，与本站自己的编辑器同等对待。
+     */
+    public static function sanitize(string $html): string
+    {
+        // 整块移除可执行/嵌入类标签（含内容）
+        $html = (string) preg_replace(
+            '#<(script|iframe|object|embed|form|link|meta|style)\b[^>]*>.*?</\1\s*>#is',
+            '',
+            $html,
+        );
+
+        // 无闭合的残余开标签
+        $html = (string) preg_replace(
+            '#<(script|iframe|object|embed|form|link|meta|style)\b[^>]*/?>#i',
+            '',
+            $html,
+        );
+
+        // 事件属性（onclick/onerror/onload …）
+        $html = (string) preg_replace(
+            '/\son[a-z]+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i',
+            '',
+            $html,
+        );
+
+        // javascript: 伪协议（href/src/action）；\2 吃掉成对的引号避免残留
+        $html = (string) preg_replace(
+            '/(href|src|action)\s*=\s*(["\']?)\s*javascript:[^"\'>\s]*\2/i',
+            '$1="#"',
+            $html,
+        );
+
+        return trim($html);
+    }
+
+    /**
      * 原始响应留档：网页端的解析失败此前不留痕，运营方无法自查也无法报修。
      *
      * @return string 相对 storage 的存档路径

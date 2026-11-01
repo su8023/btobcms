@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Modules\TransCoverage\Services\CoverageScanner;
 use Modules\TransCoverage\Services\TranslationFixer;
 use Tests\TestCase;
@@ -342,5 +343,22 @@ class TransCoverageTest extends TestCase
             // 产品行无 SEO 列数据时渲染占位符（此例产品有 seoMeta 关系，会输出数字；
             // 仍断言列标题存在即可）
             ->assertSee(strtoupper('es'));
+    }
+    public function test_ai_fix_dispatches_queue_jobs_when_queue_available(): void
+    {
+        // 回归：覆盖率页「AI 补翻」曾同步翻多语言（与编辑页同款超时问题），
+        // 队列可用时必须按语言拆任务派发
+        config(['queue.default' => 'database']);
+        Queue::fake();
+
+        $post = $this->makePost(['en' => 'Gate Valve Guide'], ['en' => '<h2>Material</h2><p>Body</p>']);
+        app(CoverageScanner::class)->scan();
+
+        \Livewire\Livewire::test(\Modules\TransCoverage\Filament\Pages\CoveragePage::class)
+            ->set('fixPostId', (string) $post->id)
+            ->call('runFix');
+
+        // 8 语言 - en（full）= 7 个补翻任务
+        Queue::assertPushed(\Modules\AiContentWriter\Jobs\TranslatePostJob::class, 7);
     }
 }

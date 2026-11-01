@@ -226,6 +226,9 @@ PROMPT;
                 $html = LlmOutput::closeTruncatedHtml($html);
             }
 
+            // 净化：AI 输出绕过 RichEditor 表单直接落库，前台原样渲染（见 LlmOutput::sanitize）
+            $html = LlmOutput::sanitize($html);
+
             // 有效性：必须是 HTML（以 < 开头且含块级标签），而不是道歉文本或半截 JSON
             if (str_starts_with($html, '<') && preg_match('/<(h2|h3|p)\b/i', $html) === 1) {
                 return $html;

@@ -204,6 +204,10 @@ class GscConnectPage extends Page
     {
         GscCredential::query()->where('site_url', GscCredential::defaultSiteUrl())->delete();
 
+        // 重新展开配置区：断开后 isConnected=false 分支没有 toggle 按钮，
+        // 不重置的话配置区会收死，用户只能刷新页面（复核 D-P2-1）
+        $this->showSetup = true;
+
         Notification::make()->title('已断开 Google Search Console 连接')->success()->send();
     }
 

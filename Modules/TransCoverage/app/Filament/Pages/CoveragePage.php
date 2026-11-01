@@ -106,6 +106,27 @@ class CoveragePage extends Page
             return;
         }
 
+        // 队列可用时按语言拆任务（与文章编辑页「AI 翻译」同通道）：多语言同步补翻
+        // 会在一个 HTTP 请求里跑几分钟，被服务器掐断后 Livewire 只能报「页面加载出错」。
+        // 任务由调度器每分钟消化一个并自动落库，矩阵按缓存 TTL 自然刷新。
+        if (config('queue.default') !== 'sync') {
+            foreach ($locales as $locale) {
+                \Modules\AiContentWriter\Jobs\TranslatePostJob::dispatch($post->id, $locale);
+            }
+
+            $this->fixPostId = null;
+
+            Notification::make()
+                ->title('已提交 '.count($locales).' 个补翻任务')
+                ->body('后台每分钟处理一个语言并自动保存，预计约 '.count($locales).' 分钟完成；矩阵将随缓存刷新更新。'
+                    .'个别语言失败不影响其余语言，失败的语言会留在矩阵里，可重新提交补齐。')
+                ->success()
+                ->send();
+
+            return;
+        }
+
+        // sync 队列退化为内联（一次全量同步——覆盖率页场景语言多，仅低风险兜底）
         try {
             $translated = app(TranslationFixer::class)->fix($post, $locales);
         } catch (\Throwable $e) {

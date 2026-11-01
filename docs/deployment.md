@@ -151,7 +151,7 @@ certbot --nginx -d 你的域名 -d www.你的域名
 # 自动续期已内置，验证：certbot renew --dry-run
 ```
 
-## 十、队列 Worker（邮件/飞书通知靠它）
+## 十、队列 Worker（邮件/飞书通知/AI 翻译等队列任务靠它）
 
 systemd 方式（`/etc/systemd/system/btobcms-queue.service`）：
 

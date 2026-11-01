@@ -12,6 +12,29 @@ Artisan::command('inspire', function () {
 // 每周日清理 7 天前的失败任务（各插件的业务清理在自己模块调度里）
 Schedule::command('queue:prune-failed --hours=168')->weekly()->sundays()->at('03:40');
 
+// AI 响应留档治理：写作室/翻译的解析失败会留档原始响应到 storage/app/ai-articles/
+// 供排障（复核 D-P2-2），无清理就会无限增长——每周清 30 天前的存档
+Schedule::call(function (): void {
+    $dir = storage_path('app/ai-articles');
+
+    if (! is_dir($dir)) {
+        return;
+    }
+
+    $pruned = 0;
+
+    foreach (glob($dir.'/*.txt') ?: [] as $file) {
+        if (filemtime($file) < now()->subDays(30)->getTimestamp()) {
+            @unlink($file);
+            $pruned++;
+        }
+    }
+
+    if ($pruned > 0) {
+        \Illuminate\Support\Facades\Log::info("[AiContentWriter] 清理 30 天前 AI 响应留档 {$pruned} 个。");
+    }
+})->name('ai-writer.prune-dumps')->weekly()->sundays()->at('03:50');
+
 // 队列消费：业务监听器（询盘邮件/飞书通知/AutoSeo TDK/ImageForge 转换）全部 ShouldQueue，
 // 默认 database 队列且宝塔环境无常驻 worker——没有这条，通知类任务会永远躺库静默丢失。
 // 每分钟借 schedule:run 清空队列（50 秒上限防跨分钟重叠），不需要常驻进程。

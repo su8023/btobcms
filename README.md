@@ -9,7 +9,7 @@
 - **SEO 引擎**：三级可编辑 TDK（全局/分类/产品，模板 + 单条覆盖）、canonical、结构化数据、分片 sitemap、301 重定向管理
 - **询盘获客**：产品页 Get Quote、询盘明细（RFQ）多语言自动回复邮件、垃圾防护
 - **插件化架构**：基于 [nwidart/laravel-modules](https://nwidart.github.io/laravel-modules)，核心只做"目录 / 内容 / 询盘 / SEO / 多语言"五大件，其余能力全部以插件形式挂载
-- **AI 能力**：统一 LLM 调用层（OpenAI 兼容协议，DeepSeek / GLM / OpenAI 一键切换），AI SEO 巡检 + AI 文章草稿（人审后发布）
+- **AI 能力**：统一 LLM 调用层（OpenAI 兼容协议，DeepSeek / GLM / OpenAI 一键切换），AI SEO 巡检 + AI 文章草稿（人审后发布）+ AI 多语言翻译（按语言队列化，自动保存；两段式生成）
 
 ## 技术栈
 
@@ -171,7 +171,7 @@ php artisan queue:work --daemon   # 询盘邮件 / SEO 巡检 / AI 任务都靠�
 
 0. **后台角色**：`admin` 全量权限（含插件中心/主题中心/更新中心/站点设置/AI 写作室/属性 code），`editor` 仅内容运营（产品/分类/文章/询盘）。安装向导与种子账号为 `admin`；新增账号默认 `editor`，提权用 `php artisan user:role <email> admin`
 1. **数据库切 MySQL**：修改 `.env` 中 `DB_CONNECTION=mysql` 及 `DB_HOST` / `DB_PORT` / `DB_DATABASE` / `DB_USERNAME` / `DB_PASSWORD`
-2. **队列**：保持 `QUEUE_CONNECTION=database`，常驻 `php artisan horizon`（或 `php artisan queue:work --daemon`）处理 AI 调用、邮件等异步任务
+2. **队列**：保持 `QUEUE_CONNECTION=database`。队列消费已内置调度器方案（`routes/console.php` 每分钟 `queue:work --stop-when-empty` 自动清空队列），也可常驻 `php artisan horizon`（或 `php artisan queue:work --daemon`）处理 AI 调用、邮件等异步任务；AI 翻译按语言拆成队列任务逐个消化并自动保存，`QUEUE_CONNECTION=sync` 时退化为单语言内联并提示
 3. **调度器**：配置 cron `* * * * * cd /path/to/BtoBcms && php artisan schedule:run`
 4. **CDN 与 HTTPS**：域名接入 Cloudflare（CDN/WAF），源站强制 HTTPS，并更新 `APP_URL`；若走 Cloudflare，在 `.env` 设 `TRUSTED_PROXIES` 为 Cloudflare 官方 IP 段（留空则不信任任何代理，询盘 IP 与限流用真实连接 IP）
 5. **安全**：立即修改默认管理员密码 `Admin@2026`；确认 `.env` 不在 web 可访问目录；确认 `storage/app/installed.lock` 已生成（安装向导据此关闭，防止被匿名重装）；配置 SPF/DKIM/DMARC 后用 SES/Postmark 等发信

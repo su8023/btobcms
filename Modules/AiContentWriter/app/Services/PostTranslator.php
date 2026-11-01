@@ -58,6 +58,15 @@ class PostTranslator
                 continue;
             }
 
+            // 写入前重取最新行：队列任务的 LLM 调用耗时 1~2 分钟，期间编辑者可能
+            // 保存过修改——save() 写的是 title/excerpt/content 整列 JSON，
+            // 用开始时的旧快照回写会静默回滚窗口期的人工修改（复核 D-P1-2）。
+            $post = $post->fresh();
+
+            if ($post === null) {
+                break; // 文章已被删除，剩余语言作废
+            }
+
             foreach (['title', 'excerpt', 'content'] as $field) {
                 if (filled($data[$field] ?? null)) {
                     $post->setTranslation($field, $locale, (string) $data[$field]);
@@ -72,6 +81,10 @@ class PostTranslator
                 if ($meta === null) {
                     // 文章从没填过 SEO：创建空元数据行，让翻译结果有落点
                     $meta = $post->seoMeta()->create();
+                } else {
+                    // SEO 行同理重取：编辑者同时改 SEO 的场景与上同（复核 D-P1-2）；
+                    // 行被删除时重建空行承接译文
+                    $meta = $meta->fresh() ?? $post->seoMeta()->create();
                 }
 
                 $metaTranslations = [
@@ -160,6 +173,9 @@ PROMPT;
             if (($result['finish_reason'] ?? '') === 'length') {
                 $html = LlmOutput::closeTruncatedHtml($html);
             }
+
+            // 净化：AI 输出绕过 RichEditor 表单直接落库，前台原样渲染（见 LlmOutput::sanitize）
+            $html = LlmOutput::sanitize($html);
 
             // 有效性：必须是 HTML 片段（而非道歉文本/半截 JSON）
             if (str_starts_with($html, '<') && str_contains($html, '</')) {

@@ -167,6 +167,19 @@ class PostActions
                         return;
                     }
 
+                    // 0 个语言成功（如 AI 返回无法解析被内部跳过）时明确报失败，
+                    // 不能让「已翻译 1 种语言」的空括号假成功糊弄过去（复核 D-P1-3）
+                    if ($translated === []) {
+                        Notification::make()
+                            ->title('AI 翻译失败')
+                            ->body('该语言的 AI 输出无法解析（详细原因见 storage/logs/laravel.log），请重试。')
+                            ->danger()
+                            ->persistent()
+                            ->send();
+
+                        return;
+                    }
+
                     self::fillTranslatedLocales($livewire, $record, $translated);
 
                     Notification::make()
