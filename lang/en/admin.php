@@ -498,9 +498,11 @@ return [
         'changelog' => 'Release notes',
         'history' => 'Version history',
         'update_to' => 'Update to this version',
-        'current_badge' => 'running',
+        'current_badge' => 'current',
         'log' => 'Update log',
         'log_empty' => 'No update has been run yet.',
+
+        'log_auto_refresh' => 'Auto-refreshes every 5s',
         'view_on_github' => 'View on GitHub',
         'check_now' => 'Check for updates',
         'check_failed' => 'Check failed: :reason',

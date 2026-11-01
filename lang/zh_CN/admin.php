@@ -501,6 +501,8 @@ return [
         'current_badge' => '当前运行',
         'log' => '更新日志',
         'log_empty' => '尚未执行过更新。',
+
+        'log_auto_refresh' => '每 5 秒自动刷新',
         'view_on_github' => '在 GitHub 查看',
         'check_now' => '检查更新',
         'check_failed' => '检查失败：:reason',
