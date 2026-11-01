@@ -40,7 +40,10 @@ return [
             'connection' => env('DB_QUEUE_CONNECTION'),
             'table' => env('DB_QUEUE_TABLE', 'jobs'),
             'queue' => env('DB_QUEUE', 'default'),
-            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 90),
+            // 900 秒：AI 翻译任务（ai-translate 队列）单任务可达十几分钟，
+            // 默认 90 秒的 retry_after 会让长任务中途被杀后立刻被重判失败——
+            // 配合 $tries=1 该语言翻译就静默丢失（复核 P2-4）
+            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 900),
             'after_commit' => false,
         ],
 

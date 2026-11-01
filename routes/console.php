@@ -38,7 +38,11 @@ Schedule::call(function (): void {
 // 队列消费：业务监听器（询盘邮件/飞书通知/AutoSeo TDK/ImageForge 转换）全部 ShouldQueue，
 // 默认 database 队列且宝塔环境无常驻 worker——没有这条，通知类任务会永远躺库静默丢失。
 // 每分钟借 schedule:run 清空队列（50 秒上限防跨分钟重叠），不需要常驻进程。
-Schedule::command('queue:work --stop-when-empty --max-time=50')
+// AI 翻译任务在独立的 ai-translate 队列（单任务可达十几分钟），排在 default
+// 之后消化——邮件等快任务不被长任务队头阻塞（复核 P2-5）。
+$defaultQueue = (string) config('queue.connections.database.queue', 'default');
+
+Schedule::command("queue:work --stop-when-empty --max-time=50 --queue={$defaultQueue},ai-translate")
     ->everyMinute()
     ->withoutOverlapping()
     ->onOneServer();

@@ -143,16 +143,30 @@ PROMPT],
         // WHY 拆出来：旧实现把整篇 1500 词的 HTML 塞进一个 JSON 字符串返回，
         // 模型只要漏转义一个正文引号，整个 JSON 就废了——这正是
         // 「AI 返回的正文无法解析」的根因。长文不再进 JSON。
-        $metaRaw = $this->llm->chat([
-            ['role' => 'system', 'content' => '只输出 JSON，不要输出任何其他文本或代码块标记。'],
-            ['role' => 'user', 'content' => <<<PROMPT
+        $meta = [];
+
+        for ($attempt = 1; $attempt <= 2; $attempt++) {
+            $metaRaw = $this->llm->chat([
+                ['role' => 'system', 'content' => '只输出 JSON，不要输出任何其他文本或代码块标记。'],
+                ['role' => 'user', 'content' => <<<PROMPT
 为 SEO 文章生成元数据，语言 {$lang}。标题：{$title}
 
 输出 JSON：{"slug":"url-slug（小写连字符，贴合标题关键词）","excerpt":"2 句面向海外买家的摘要"}
 PROMPT],
-        ], purpose: 'article.meta');
+            ], purpose: 'article.meta');
 
-        $meta = json_decode($this->extractJson($metaRaw), true) ?? [];
+            $meta = json_decode($this->extractJson($metaRaw), true) ?? [];
+
+            if (filled($meta['slug'] ?? null) || filled($meta['excerpt'] ?? null)) {
+                break;
+            }
+        }
+
+        // 两次都失败：slug 由 write() 用标题兜底，摘要留空——记录日志留痕（复核 P2-3），
+        // 不再静默降级成什么都没发生
+        if (!(filled($meta['slug'] ?? null) || filled($meta['excerpt'] ?? null))) {
+            \Illuminate\Support\Facades\Log::warning("[AiContentWriter] 元数据两次解析失败，文章「{$title}」slug 用标题兜底、摘要留空。");
+        }
 
         $html = $this->generateBody($plan, $lang, $words, $title);
 

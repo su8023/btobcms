@@ -35,10 +35,16 @@ class TranslatePostJob implements ShouldQueue
     /** 长文翻译（两次 LLM 调用）可能超过 1 分钟 */
     public int $timeout = 900;
 
-    public function __construct(
-        public int $postId,
-        public string $locale,
-    ) {}
+    public function __construct(int $postId, string $locale)
+    {
+        $this->postId = $postId;
+        $this->locale = $locale;
+
+        // 独立队列：单次翻译最长 15 分钟，与询盘邮件等秒级任务共用 default
+        // 会队头阻塞快任务（复核 P2-5）。调度器按 default,ai-translate 顺序消费。
+        // （不用属性声明：Queueable trait 已定义 $queue，类型不兼容会组合失败）
+        $this->onQueue('ai-translate');
+    }
 
     public function handle(): void
     {

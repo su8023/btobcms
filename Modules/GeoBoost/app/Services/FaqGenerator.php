@@ -40,9 +40,7 @@ class FaqGenerator
         $count = (int) config('geo-boost.faq_count', 5);
         $title = (string) $post->getTranslation('title', $locale, false);
 
-        $raw = $this->llm->chat([
-            ['role' => 'system', 'content' => '你是 B2B 外贸 SEO 专家。只输出 JSON，不要输出任何其他文本或代码块标记。'],
-            ['role' => 'user', 'content' => <<<PROMPT
+        $prompt = <<<PROMPT
 根据以下文章生成 {$count} 组海外买家常见问答（{$locale}）。
 
 标题：{$title}
@@ -54,15 +52,35 @@ class FaqGenerator
 2. 答案 40~80 词，信息密度高，可直接被 AI 搜索引擎引用；
 3. 不编造具体参数；
 4. 输出 JSON：{"faqs":[{"q":"...","a":"..."}]}
-PROMPT],
-        ], purpose: 'geo.faq');
+PROMPT;
 
-        $data = json_decode($this->extractJson($raw), true);
-        $faqs = collect($data['faqs'] ?? [])->filter(
-            fn ($f) => is_array($f) && filled($f['q'] ?? null) && filled($f['a'] ?? null),
-        );
+        // 5 组答案的 JSON 转义面不小（引号/英文标点），一次漏转义整包报废——
+        // 与写作室同源的失败模式：自动重试一次，失败留档原始响应（复核 B-P1）
+        $faqs = collect();
+        $lastRaw = '';
+
+        for ($attempt = 1; $attempt <= 2; $attempt++) {
+            $raw = $this->llm->chat([
+                ['role' => 'system', 'content' => '你是 B2B 外贸 SEO 专家。只输出 JSON，不要输出任何其他文本或代码块标记。'],
+                ['role' => 'user', 'content' => $prompt],
+            ], purpose: 'geo.faq');
+
+            $lastRaw = $raw;
+
+            $data = json_decode($this->extractJson($raw), true);
+            $faqs = collect($data['faqs'] ?? [])->filter(
+                fn ($f) => is_array($f) && filled($f['q'] ?? null) && filled($f['a'] ?? null),
+            );
+
+            if ($faqs->isNotEmpty()) {
+                break;
+            }
+        }
+
         if ($faqs->isEmpty()) {
-            throw new \RuntimeException('AI 返回的 FAQ 无法解析，请重试');
+            $dump = \Modules\AiContentWriter\Support\LlmOutput::dumpRaw($lastRaw, 'geoboost-faq');
+
+            throw new \RuntimeException("AI 返回的 FAQ 无法解析（重试后仍失败），原始响应已存档：{$dump}");
         }
 
         \DB::transaction(function () use ($post, $locale, $faqs): void {
