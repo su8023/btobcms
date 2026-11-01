@@ -19,7 +19,7 @@ class CoveragePage extends Page
 {
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-language';
 
-    protected static ?int $navigationSort = 35;
+    protected static ?int $navigationSort = 13;
 
     protected static ?string $slug = 'trans-coverage';
 
@@ -30,7 +30,7 @@ class CoveragePage extends Page
 
     public static function getNavigationGroup(): string|\UnitEnum|null
     {
-        return __('admin.groups.growth');
+        return __('admin.groups.growth_data');
     }
 
     public static function getNavigationLabel(): string

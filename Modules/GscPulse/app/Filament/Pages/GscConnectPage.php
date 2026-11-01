@@ -34,7 +34,7 @@ class GscConnectPage extends Page
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-link';
 
-    protected static ?int $navigationSort = 39;
+    protected static ?int $navigationSort = 11;
 
     protected static ?string $slug = 'gsc-pulse-connect';
 
@@ -47,12 +47,24 @@ class GscConnectPage extends Page
 
     public string $siteUrl = '';
 
+    /** 是否展开「凭据配置」区：已连接时默认收起（页面只留状态），避免一屏塞满四步教程 */
+    public bool $showSetup = false;
+
     public function mount(): void
     {
         $this->fillFromSettings();
 
+        // 未连接才需要看到配置引导；已连接的常态访问只看状态，要改凭据再手动展开
+        $this->showSetup = ! GscCredential::isConnected();
+
         // OAuth state 防 CSRF：一次性存入 session，回调处 hash_equals 校验后取出即焚
         session()->put('gsc-pulse.state', csrf_token());
+    }
+
+    /** 展开/收起凭据配置区 */
+    public function toggleSetup(): void
+    {
+        $this->showSetup = ! $this->showSetup;
     }
 
     /**
@@ -70,7 +82,7 @@ class GscConnectPage extends Page
 
     public static function getNavigationGroup(): string|\UnitEnum|null
     {
-        return __('admin.groups.growth');
+        return __('admin.groups.growth_data');
     }
 
     public static function getNavigationLabel(): string

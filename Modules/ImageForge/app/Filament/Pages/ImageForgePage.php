@@ -18,7 +18,7 @@ class ImageForgePage extends Page
 {
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-photo';
 
-    protected static ?int $navigationSort = 38;
+    protected static ?int $navigationSort = 15;
 
     protected static ?string $slug = 'image-forge';
 
@@ -26,7 +26,7 @@ class ImageForgePage extends Page
 
     public static function getNavigationGroup(): string|\UnitEnum|null
     {
-        return __('admin.groups.growth');
+        return __('admin.groups.growth_data');
     }
 
     public static function getNavigationLabel(): string

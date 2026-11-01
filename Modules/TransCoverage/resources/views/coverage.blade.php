@@ -7,25 +7,16 @@
         @php($statusMark = ['full' => '✓', 'partial' => '◐', 'missing' => '✗'])
         @php($statusText = ['full' => '完整', 'partial' => '仅标题', 'missing' => '缺失'])
 
-        {{-- ===== 顶部统计卡 ===== --}}
-        <div class="grid gap-4 md:grid-cols-3">
-            <div class="fi-widget p-4 rounded-xl bg-white shadow dark:bg-gray-900">
-                <div class="text-sm text-gray-500">内容总数（文章 + 产品）</div>
-                <div class="text-3xl font-bold">{{ number_format($stats['total']) }}</div>
-            </div>
-            <div class="fi-widget p-4 rounded-xl bg-white shadow dark:bg-gray-900">
-                <div class="text-sm text-gray-500">完全翻译率</div>
-                <div class="text-3xl font-bold">
-                    {{ $stats['full_rate'] }}%
-                    <span class="text-base font-normal text-gray-400">{{ $stats['full_count'] }}/{{ $stats['total'] }}</span>
-                </div>
-            </div>
-            <div class="fi-widget p-4 rounded-xl bg-white shadow dark:bg-gray-900">
-                <div class="text-sm text-gray-500">待补翻的语言缺口</div>
-                <div class="text-3xl font-bold {{ $stats['total_gaps'] > 0 ? 'text-danger-500' : 'text-success-500' }}">
-                    {{ number_format($stats['total_gaps']) }}
-                </div>
-            </div>
+        {{-- ===== 顶部统计卡：图标 + 大数字，一眼分层 ===== --}}
+        <div class="plugin-stats-grid">
+            <x-plugin-stat icon="heroicon-o-document-text" tone="gray"
+                label="内容总数（文章 + 产品）" value="{{ number_format($stats['total']) }}" />
+            <x-plugin-stat icon="heroicon-o-language" tone="primary"
+                label="完全翻译率" value="{{ $stats['full_rate'] }}%"
+                sub="{{ $stats['full_count'] }}/{{ $stats['total'] }} 全语言齐备" />
+            <x-plugin-stat icon="heroicon-o-puzzle-piece"
+                tone="{{ $stats['total_gaps'] > 0 ? 'warning' : 'success' }}"
+                label="待补翻的语言缺口" value="{{ number_format($stats['total_gaps']) }}" />
         </div>
 
         {{-- ===== AI 补翻缺失语言 ===== --}}
@@ -33,13 +24,13 @@
             <x-slot name="heading">AI 补翻缺失语言</x-slot>
             <x-slot name="description">选一篇文章，AI 自动把它缺的语言全部翻译好（含 SEO 标题描述），几分钟完成。</x-slot>
             @if (! \Modules\TransCoverage\Services\TranslationFixer::available())
-                <p class="text-sm text-warning-600">
+                <p class="plugin-empty__desc" style="text-align:left; max-width:none; color: var(--warning-600, #b45309)">
                     未安装 AiContentWriter 插件，AI 补翻不可用；下方矩阵仍可正常查看缺口。
                 </p>
             @else
-                <div class="flex flex-wrap items-center gap-3">
+                <div class="plugin-row" style="align-items:center">
                     <select wire:model="fixPostId"
-                        class="min-w-72 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900">
+                        class="plugin-input" style="min-width: 18rem">
                         <option value="">— 选择缺语言最多的文章 —</option>
                         @foreach ($this->fixCandidates as $candidate)
                             <option value="{{ $candidate['id'] }}">{{ $candidate['label'] }}</option>
@@ -65,7 +56,8 @@
                 <span class="ml-2">按缺失语言数降序排列。</span>
             </x-slot>
             @if (empty($coverage['rows']))
-                <p class="text-sm text-gray-500">暂无内容：创建文章或产品后自动出现在这里。</p>
+                <x-plugin-empty icon="heroicon-o-table-cells" title="暂无内容"
+                    description="创建文章或产品后，翻译覆盖情况会自动出现在这里。" />
             @else
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">

@@ -29,11 +29,11 @@ class LinkTermResource extends Resource
 
     protected static string|\BackedEnum|null $navigationIcon = Heroicon::OutlinedLink;
 
-    protected static ?int $navigationSort = 36;
+    protected static ?int $navigationSort = 14;
 
     public static function getNavigationGroup(): string|\UnitEnum|null
     {
-        return __('admin.groups.growth');
+        return __('admin.groups.growth_data');
     }
 
     public static function getNavigationLabel(): string

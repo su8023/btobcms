@@ -1,0 +1,162 @@
+/* ============================================================
+   BtoBcms 后台插件页组件样式（admin-plugins.css）
+   ------------------------------------------------------------
+   WHY 独立样式表：Filament 面板 CSS 是预编译产物，只含 Filament
+   自身用到的 Tailwind 类；插件页自定义 Blade 组件里的任意工具类
+   （grid / flex / rounded-xl …）不会被编译，全部失效——这就是此前
+   插件页统计区呈"裸文本堆叠"的根因。本文件用 Filament 的 CSS
+   变量系统（--gray-* / --radius-* / --spacing，暗色自动切换）手写
+   组件样式，注册于 AdminPanelProvider，随面板加载，零构建依赖。
+   ============================================================ */
+
+/* ---------- 布局网格（Filament 编译 CSS 无 grid 工具类） ---------- */
+.plugin-stats-grid {
+    display: grid;
+    gap: calc(var(--spacing) * 4);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.plugin-cols-2 {
+    display: grid;
+    gap: calc(var(--spacing) * 6);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 860px) {
+    .plugin-stats-grid, .plugin-cols-2 { grid-template-columns: 1fr; }
+}
+.plugin-stack { display: flex; flex-direction: column; gap: calc(var(--spacing) * 6); }
+.plugin-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: calc(var(--spacing) * 3); }
+.plugin-row > * { min-width: 0; }
+
+/* ---------- 指标卡（x-plugin-stat） ---------- */
+.plugin-stat {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--spacing) * 4);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-xl);
+    background: var(--gray-50);
+    padding: calc(var(--spacing) * 4);
+    min-width: 0;
+}
+.dark .plugin-stat {
+    border-color: color-mix(in oklab, var(--gray-500) 25%, transparent);
+    background: color-mix(in oklab, var(--gray-500) 8%, transparent);
+}
+.plugin-stat__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: calc(var(--spacing) * 11);
+    height: calc(var(--spacing) * 11);
+    border-radius: calc(var(--spacing) * 2.5);
+}
+.plugin-stat__icon .fi-icon { width: calc(var(--spacing) * 5); height: calc(var(--spacing) * 5); }
+
+/* 指标卡色调（图标底色 / 数字色） */
+.plugin-stat--gray .plugin-stat__icon { background: var(--gray-100); color: var(--gray-600); }
+.plugin-stat--primary .plugin-stat__icon { background: color-mix(in oklab, var(--primary) 12%, transparent); color: var(--primary); }
+.plugin-stat--success .plugin-stat__icon { background: color-mix(in oklab, var(--success) 14%, transparent); color: var(--success); }
+.plugin-stat--warning .plugin-stat__icon { background: color-mix(in oklab, var(--warning) 15%, transparent); color: var(--warning); }
+.plugin-stat--danger .plugin-stat__icon { background: color-mix(in oklab, var(--danger) 12%, transparent); color: var(--danger); }
+
+.plugin-stat__body { min-width: 0; }
+.plugin-stat__label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    color: var(--gray-500);
+}
+.plugin-stat__value {
+    margin-top: calc(var(--spacing) * 0.5);
+    font-size: var(--text-2xl);
+    line-height: 1.15;
+    font-weight: var(--font-weight-bold);
+    font-variant-numeric: tabular-nums;
+    color: var(--gray-950);
+}
+.dark .plugin-stat__value { color: var(--gray-50); }
+.plugin-stat--primary .plugin-stat__value { color: var(--primary); }
+.plugin-stat--success .plugin-stat__value { color: var(--success); }
+.plugin-stat--warning .plugin-stat__value { color: var(--warning); }
+.plugin-stat--danger .plugin-stat__value { color: var(--danger); }
+.plugin-stat__sub {
+    margin-top: calc(var(--spacing) * 0.5);
+    font-size: var(--text-xs);
+    line-height: var(--text-xs--line-height);
+    color: var(--gray-400);
+}
+
+/* ---------- 空状态（x-plugin-empty） ---------- */
+.plugin-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--spacing) * 2);
+    border: 1px dashed var(--gray-300);
+    border-radius: var(--radius-xl);
+    padding: calc(var(--spacing) * 10) calc(var(--spacing) * 6);
+    text-align: center;
+}
+.dark .plugin-empty { border-color: color-mix(in oklab, var(--gray-500) 30%, transparent); }
+.plugin-empty__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: calc(var(--spacing) * 12);
+    height: calc(var(--spacing) * 12);
+    border-radius: 9999px;
+    background: var(--gray-100);
+    color: var(--gray-400);
+}
+.dark .plugin-empty__icon { background: color-mix(in oklab, var(--gray-500) 12%, transparent); }
+.plugin-empty__icon .fi-icon { width: calc(var(--spacing) * 6); height: calc(var(--spacing) * 6); }
+.plugin-empty__title {
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    font-weight: var(--font-weight-semibold);
+    color: var(--gray-600);
+}
+.dark .plugin-empty__title { color: var(--gray-300); }
+.plugin-empty__desc {
+    max-width: 28rem;
+    font-size: var(--text-xs);
+    line-height: 1.7;
+    color: var(--gray-400);
+}
+.plugin-empty__desc a { color: var(--primary); text-decoration: underline; }
+
+/* ---------- AI 写作室表单（原生控件统一质感） ---------- */
+.plugin-field__label {
+    display: block;
+    margin-bottom: calc(var(--spacing) * 1);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    font-weight: var(--font-weight-medium);
+    color: var(--gray-700);
+}
+.dark .plugin-field__label { color: var(--gray-300); }
+.plugin-input {
+    display: block;
+    width: 100%;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-lg);
+    background: var(--gray-50);
+    padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    color: var(--gray-950);
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+.plugin-input::placeholder { color: var(--gray-400); }
+.plugin-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 25%, transparent);
+}
+.dark .plugin-input { border-color: color-mix(in oklab, var(--gray-500) 35%, transparent); background: color-mix(in oklab, var(--gray-500) 8%, transparent); color: var(--gray-50); }
+textarea.plugin-input { resize: vertical; }
+select.plugin-input { cursor: pointer; }

@@ -8,6 +8,8 @@ return [
         'plugins' => '插件',
         'themes' => '主题',
         'growth' => '增长',
+
+        'growth_data' => '数据与优化',
     ],
 
     'themes' => [

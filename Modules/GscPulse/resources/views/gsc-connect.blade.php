@@ -25,12 +25,13 @@
                 @unless ($lastAttempt['ok'])
                     <div class="mt-1 text-xs opacity-80">
                         若刚点完「连接 Google」回到本页却只有这条旧记录，说明本次回调没有到达网站——
-                        请到 Google Cloud Console 核对「已获授权的重定向 URI」与本页上方显示的地址是否一字不差（多空格、http/https、域名不同都算不一致）。
+                        请到 Google Cloud Console 核对「已获授权的重定向 URI」与本页配置说明里显示的地址是否一字不差（多空格、http/https、域名不同都算不一致）。
                     </div>
                 @endunless
             </div>
         @endif
 
+        {{-- ===== 连接状态：常态只看这一块 ===== --}}
         <x-filament::section>
             <x-slot name="heading">连接状态</x-slot>
             <div class="flex flex-wrap items-center justify-between gap-3">
@@ -38,7 +39,7 @@
                     <div>
                         <p class="text-sm">
                             <span class="fi-badge fi-badge-color-success">已连接</span>
-                            <span class="ml-2 font-mono">{{ $this->credential?->site_url }}</span>
+                            <span class="ml-2 break-all font-mono">{{ $this->credential?->site_url }}</span>
                         </p>
                         @if ($this->credential?->token_expires_at)
                             <p class="mt-1 text-xs text-gray-500">
@@ -46,11 +47,17 @@
                             </p>
                         @endif
                     </div>
-                    <button type="button" wire:click="disconnect"
-                        wire:confirm="确定断开 Google Search Console 连接吗？断开后每日拉取将静默跳过。"
-                        class="rounded-lg bg-danger-500 px-4 py-2 text-sm font-medium text-white hover:bg-danger-600">
-                        断开
-                    </button>
+                    <div class="flex items-center gap-3">
+                        <button type="button" wire:click="toggleSetup"
+                            class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-white/20 dark:text-gray-200 dark:hover:bg-white/10">
+                            {{ $this->showSetup ? '收起配置' : '重新配置凭据' }}
+                        </button>
+                        <button type="button" wire:click="disconnect"
+                            wire:confirm="确定断开 Google Search Console 连接吗？断开后每日拉取将静默跳过。"
+                            class="rounded-lg bg-danger-500 px-4 py-2 text-sm font-medium text-white hover:bg-danger-600">
+                            断开
+                        </button>
+                    </div>
                 @else
                     <p class="text-sm text-gray-500">
                         <span class="fi-badge fi-badge-color-gray">未连接</span>
@@ -60,63 +67,66 @@
             </div>
         </x-filament::section>
 
-        <x-filament::section class="mt-6">
-            <x-slot name="heading">连接谷歌看板：跟着做 4 步（约 5 分钟）</x-slot>
-            <x-slot name="description">
-                <ol class="list-decimal ps-5 space-y-1 text-sm">
-                    <li>打开 <a href="https://console.cloud.google.com/" target="_blank" rel="noopener" class="fi-link">Google Cloud Console</a> 新建一个项目（一路默认下一步即可）。</li>
-                    <li>在顶部搜索框输入「Google Search Console API」，点进去点<b>「启用」</b>（漏了这步，稍后连接会报错）。</li>
-                    <li>「凭据」→「创建凭据」→ OAuth 客户端 ID → 应用类型选<b>「Web 应用」</b>，在「已获授权的重定向 URI」里粘贴下面这行：<br>
-                        <code class="mt-1 inline-block rounded bg-gray-100 px-2 py-1 text-xs dark:bg-white/10">{{ route('gsc-pulse.callback') }}</code></li>
-                    <li>把生成的 <b>Client ID</b> 和 <b>Client Secret</b> 填到下方并保存，然后点上面的「连接 Google」。卡在哪一步，把页面截图发给技术人员。</li>
-                </ol>
-            </x-slot>
-            <div class="max-w-xl space-y-4">
-                <div>
-                    <label class="mb-1 block text-sm font-medium">Client ID</label>
-                    <input type="text" wire:model="clientId"
-                        class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
-                        placeholder="xxxx.apps.googleusercontent.com">
-                </div>
-                <div>
-                    <label class="mb-1 block text-sm font-medium">Client Secret</label>
-                    <input type="password" wire:model="clientSecret" autocomplete="off"
-                        class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
-                        placeholder="{{ \Modules\GscPulse\Support\OAuthClient::isConfigured() ? '已保存（留空则不修改）' : 'GOCSPX-...' }}">
-                    <p class="mt-1 text-xs text-gray-500">密钥加密存储，保存后不再回显；留空即沿用已保存的值。</p>
-                </div>
-                <div>
-                    <label class="mb-1 block text-sm font-medium">GSC 站点属性（site_url）</label>
-                    <input type="text" wire:model="siteUrl"
-                        class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
-                        placeholder="https://www.example.com/ 或 sc-domain:example.com">
-                    <p class="mt-1 text-xs text-gray-500">
-                        须与 Search Console 中的资源完全一致：「网址前缀」资源形如 <span class="font-mono">https://www.example.com/</span>（带尾斜杠），
-                        「域名」资源形如 <span class="font-mono">sc-domain:example.com</span>；改动后需重新授权。
-                    </p>
-                </div>
-                <button type="button" wire:click="save"
-                    class="rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white hover:bg-primary-600">
-                    保存凭据
-                </button>
-            </div>
-        </x-filament::section>
-
-        <x-filament::section class="mt-6">
-            <x-slot name="heading">连接 Google</x-slot>
-            <div class="flex flex-wrap items-center gap-3">
-                @if ($this->authReady)
-                    <a href="{{ $this->authUrl }}"
+        {{-- ===== 凭据配置区：未连接默认展开；已连接默认收起 ===== --}}
+        @if ($this->showSetup)
+            <x-filament::section class="mt-6">
+                <x-slot name="heading">连接谷歌看板：跟着做 4 步（约 5 分钟）</x-slot>
+                <x-slot name="description">
+                    <ol class="list-decimal space-y-1 ps-5 text-sm">
+                        <li>打开 <a href="https://console.cloud.google.com/" target="_blank" rel="noopener" class="fi-link">Google Cloud Console</a> 新建一个项目（一路默认下一步即可）。</li>
+                        <li>在顶部搜索框输入「Google Search Console API」，点进去点<b>「启用」</b>（漏了这步，稍后连接会报错）。</li>
+                        <li>「凭据」→「创建凭据」→ OAuth 客户端 ID → 应用类型选<b>「Web 应用」</b>，在「已获授权的重定向 URI」里粘贴下面这行：<br>
+                            <code class="mt-1 inline-block max-w-full break-all rounded bg-gray-100 px-2 py-1 text-xs dark:bg-white/10">{{ route('gsc-pulse.callback') }}</code></li>
+                        <li>把生成的 <b>Client ID</b> 和 <b>Client Secret</b> 填到下方并保存，然后点上面的「连接 Google」。卡在哪一步，把页面截图发给技术人员。</li>
+                    </ol>
+                </x-slot>
+                <div class="max-w-xl space-y-4">
+                    <div>
+                        <label class="mb-1 block text-sm font-medium">Client ID</label>
+                        <input type="text" wire:model="clientId"
+                            class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+                            placeholder="xxxx.apps.googleusercontent.com">
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium">Client Secret</label>
+                        <input type="password" wire:model="clientSecret" autocomplete="off"
+                            class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+                            placeholder="{{ \Modules\GscPulse\Support\OAuthClient::isConfigured() ? '已保存（留空则不修改）' : 'GOCSPX-...' }}">
+                        <p class="mt-1 text-xs text-gray-500">密钥加密存储，保存后不再回显；留空即沿用已保存的值。</p>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium">GSC 站点属性（site_url）</label>
+                        <input type="text" wire:model="siteUrl"
+                            class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+                            placeholder="https://www.example.com/ 或 sc-domain:example.com">
+                        <p class="mt-1 text-xs leading-relaxed text-gray-500">
+                            须与 Search Console 中的资源完全一致：「网址前缀」资源形如 <span class="font-mono">https://www.example.com/</span>（带尾斜杠），
+                            「域名」资源形如 <span class="font-mono">sc-domain:example.com</span>；改动后需重新授权。
+                        </p>
+                    </div>
+                    <button type="button" wire:click="save"
                         class="rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white hover:bg-primary-600">
-                        连接 Google
-                    </a>
-                    <p class="text-xs text-gray-500">
-                        仅申请 <span class="font-mono">webmasters.readonly</span> 只读权限；将跳转 Google 登录并授权后返回本页。
-                    </p>
-                @else
-                    <p class="text-sm text-gray-500">请先在上方填写并保存 Client ID 与 Client Secret，再连接 Google。</p>
-                @endif
-            </div>
-        </x-filament::section>
+                        保存凭据
+                    </button>
+                </div>
+            </x-filament::section>
+
+            <x-filament::section class="mt-6">
+                <x-slot name="heading">连接 Google</x-slot>
+                <div class="flex flex-wrap items-center gap-3">
+                    @if ($this->authReady)
+                        <a href="{{ $this->authUrl }}"
+                            class="rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white hover:bg-primary-600">
+                            连接 Google
+                        </a>
+                        <p class="text-xs text-gray-500">
+                            仅申请 <span class="font-mono">webmasters.readonly</span> 只读权限；将跳转 Google 登录并授权后返回本页。
+                        </p>
+                    @else
+                        <p class="text-sm text-gray-500">请先在上方填写并保存 Client ID 与 Client Secret，再连接 Google。</p>
+                    @endif
+                </div>
+            </x-filament::section>
+        @endif
     </x-filament-panels::page>
 </div>

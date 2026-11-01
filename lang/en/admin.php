@@ -8,6 +8,8 @@ return [
         'plugins' => 'Plugins',
         'themes' => 'Themes',
         'growth' => 'Growth',
+
+        'growth_data' => 'Data & Optimization',
     ],
 
     'themes' => [

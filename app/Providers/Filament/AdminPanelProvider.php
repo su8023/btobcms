@@ -7,6 +7,7 @@ use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Navigation\MenuItem;
+use Filament\Navigation\NavigationGroup;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -41,6 +42,22 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->colors([
                 'primary' => Color::Amber,
+            ])
+            // 侧边栏分组固定顺序（不声明时按字母序，"增长"里的 10 个数据页挤成一团）：
+            // 数据看板类独立成组（growth_data），获客工具留在增长组，切换才有逻辑层次。
+            ->navigationGroups([
+                NavigationGroup::make()->label(__('admin.groups.catalog')),
+                NavigationGroup::make()->label(__('admin.groups.content')),
+                NavigationGroup::make()->label(__('admin.groups.growth')),
+                NavigationGroup::make()->label(__('admin.groups.growth_data')),
+                NavigationGroup::make()->label(__('admin.groups.system')),
+                NavigationGroup::make()->label(__('admin.groups.plugins')),
+                NavigationGroup::make()->label(__('admin.groups.themes')),
+            ])
+            // 插件页组件样式：Filament 预编译 CSS 不含应用自定义的 Tailwind 类，
+            // 指标卡/空状态/表单控件用本文件手写样式（CSS 变量驱动，暗色自动适配）
+            ->assets([
+                \Filament\Support\Assets\Css::make('admin-plugins', asset('css/admin-plugins.css')),
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             // 插件 CRUD 资源：约定式发现 Modules/{Name}/app/Filament/Resources/*Resource.php

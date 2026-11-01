@@ -14,7 +14,7 @@ class AiTrafficPage extends Page
 {
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-cpu-chip';
 
-    protected static ?int $navigationSort = 37;
+    protected static ?int $navigationSort = 12;
 
     protected static ?string $slug = 'ai-traffic';
 
@@ -22,7 +22,7 @@ class AiTrafficPage extends Page
 
     public static function getNavigationGroup(): string|\UnitEnum|null
     {
-        return __('admin.groups.growth');
+        return __('admin.groups.growth_data');
     }
 
     public static function getNavigationLabel(): string
