@@ -1035,6 +1035,23 @@ class SelfUpdater
         if (str_starts_with($head, 'PK')) {
             $kind = '半截 zip 数据';
         } elseif (str_starts_with(ltrim($head), '{') || str_starts_with(ltrim($head), '[')) {
+            // JSON：优先提取对人有用的摘要，而不是甩一段原始 URL
+            $decoded = json_decode($head, true);
+
+            if (is_array($decoded)) {
+                $msg = $decoded['message'] ?? null;
+
+                if (is_string($msg) && $msg !== '') {
+                    return 'JSON 错误响应：「'.mb_substr($msg, 0, 100).'」';
+                }
+
+                if (isset($decoded['url']) && str_contains((string) $decoded['url'], '/releases/assets/')) {
+                    return 'JSON（GitHub 返回了资产元数据而非安装包内容——API 下载通道被网络降级/拦截，将切换直链源重试）';
+                }
+
+                return 'JSON 响应（键：'.implode('、', array_slice(array_keys($decoded), 0, 5)).'）';
+            }
+
             $kind = 'JSON 错误响应';
         } elseif (stripos($head, '<html') !== false || stripos($head, '<!doctype') !== false) {
             $kind = 'HTML 页面（疑似被网络拦截/代理劫持）';

@@ -56,7 +56,9 @@
     @if($latestNotes !== '' && $latestNotes !== null)
         <x-filament::section>
             <x-slot:heading>{{ __('admin.update_center.changelog') }}（{{ $latestTag }}）</x-slot:heading>
-            <pre class="whitespace-pre-wrap text-sm font-mono bg-gray-50 dark:bg-gray-900 rounded-lg p-4 max-h-96 overflow-y-auto">{{ $latestNotes }}</pre>
+            {{-- 内联换行样式：Filament 预编译 CSS 不含 whitespace-pre-wrap 等工具类，
+                 长行（诊断日志里的 JSON 摘录）会横向溢出容器 --}}
+            <pre style="white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-all; max-height: 24rem; overflow-y: auto; padding: 1rem; border-radius: 0.5rem;">{{ $latestNotes }}</pre>
         </x-filament::section>
     @endif
 
@@ -98,6 +100,6 @@
     {{-- 执行日志（队列进度实时轮询） --}}
     <x-filament::section wire:poll.5s="logTail">
         <x-slot:heading>{{ __('admin.update_center.log') }}</x-slot:heading>
-        <pre class="whitespace-pre-wrap text-xs font-mono bg-gray-950 text-gray-100 rounded-lg p-4 max-h-96 overflow-y-auto">{{ $this->logTail() ?: __('admin.update_center.log_empty') }}</pre>
+        <pre style="white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-all; max-height: 24rem; overflow-y: auto; padding: 1rem; border-radius: 0.5rem;" class="text-xs">{{ $this->logTail() ?: __('admin.update_center.log_empty') }}</pre>
     </x-filament::section>
 </x-filament-panels::page>
