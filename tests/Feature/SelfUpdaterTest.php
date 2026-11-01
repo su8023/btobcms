@@ -223,4 +223,87 @@ class SelfUpdaterTest extends TestCase
         $broken->abandon();
         $this->assertFalse($broken->isResumable());
     }
+
+    public function test_download_rotates_sources_when_cdn_intercepted(): void
+    {
+        // 回归：机房网络到 GitHub 资产 CDN 被拦截时，返回 200 + 几 KB 错误页，
+        // 旧代码只报「传输截断（0 MB）」。新代码逐次轮换下载源（API → 下载页直链），
+        // 并把每次实际收到的体积记入日志——排障不再靠猜。
+        $updater = new SelfUpdater(
+            basePath: $this->fakeBase,
+            updateDir: $this->fakeUpdateDir,
+            logPath: $this->fakeLog,
+            repo: 'acme/btobcms',
+            token: 'tok-1',
+            skipArtisan: true,
+        );
+
+        Http::fake([
+            // 来源 1（API octet-stream）：被链路拦截 → 200 + HTML 错误页
+            'https://api.github.com/repos/acme/btobcms/releases/assets/42' => Http::response(
+                '<html><body>Access blocked by network policy</body></html>', 200
+            ),
+            // 来源 2（下载页直链）：返回完整 zip 字节（fake 不落盘 → 走「HTTP 200」分支，但请求确实发出）
+            'https://github.com/acme/btobcms/releases/download/v9.9.9/btobcms-v9.9.9.zip' => Http::response('PK-fake-bytes', 200),
+            // Release 元数据（download() 先查资产清单）
+            'https://api.github.com/repos/acme/btobcms/releases/tags/v9.9.9' => Http::response([
+                'assets' => [[
+                    'name' => 'btobcms-v9.9.9.zip',
+                    'url' => 'https://api.github.com/repos/acme/btobcms/releases/assets/42',
+                    'browser_download_url' => 'https://github.com/acme/btobcms/releases/download/v9.9.9/btobcms-v9.9.9.zip',
+                    'size' => 24000000,
+                ]],
+            ]),
+        ]);
+
+        $method = new \ReflectionMethod($updater, 'download');
+        $method->setAccessible(true);
+        $log = [];
+        $args = ['v9.9.9', &$log];
+
+        try {
+            $method->invokeArgs($updater, $args);
+            $this->fail('fake 环境不落盘，三次校验必然失败');
+        } catch (\RuntimeException $e) {
+            // 预期：最终报错带宝塔/本地上传指引
+            $this->assertStringContainsString('本地上传安装包', $e->getMessage());
+        }
+
+        // 轮换顺序 1→2→1：两个来源都真实尝试过
+        Http::assertSent(fn ($req) => str_contains($req->url(), '/releases/assets/42'));
+        Http::assertSent(fn ($req) => str_contains($req->url(), '/releases/download/v9.9.9/'));
+        // 日志记录了每个来源的请求结果
+        $this->assertTrue(collect($log)->contains(fn ($l) => str_contains($l, '来源 GitHub API')),
+            implode(' | ', $log));
+        $this->assertTrue(collect($log)->contains(fn ($l) => str_contains($l, '来源 GitHub 下载页直链')),
+            implode(' | ', $log));
+    }
+
+    public function test_describe_bad_body_classifies_intercepted_responses(): void
+    {
+        $updater = new SelfUpdater(
+            basePath: $this->fakeBase,
+            updateDir: $this->fakeUpdateDir,
+            logPath: $this->fakeLog,
+            repo: 'acme/btobcms',
+            token: 'tok-1',
+            skipArtisan: true,
+        );
+        $method = new \ReflectionMethod($updater, 'describeBadBody');
+        $method->setAccessible(true);
+
+        $cases = [
+            '<html><body>blocked</body></html>' => 'HTML 页面',
+            '{"message":"Not Found"}' => 'JSON 错误响应',
+            'PK-partial' => '半截 zip 数据',
+        ];
+
+        foreach ($cases as $body => $expectedKind) {
+            $p = $this->fakeUpdateDir.'/peek-'.uniqid().'.bin';
+            file_put_contents($p, $body);
+            $desc = $method->invoke($updater, $p);
+            @unlink($p);
+            $this->assertStringContainsString($expectedKind, $desc, "内容「{$body}」应识别为 {$expectedKind}，实际: {$desc}");
+        }
+    }
 }

@@ -392,18 +392,46 @@ class SelfUpdater
         $expectedSize = (int) ($asset['size'] ?? 0);
         $actual = '';
 
+        // 备选下载源逐次轮换：API octet-stream 与下载页直链最终会落到不同的
+        // GitHub CDN 域名，个别机房网络只拦其中一个，轮换能提高直连成功率。
+        $sources = array_values(array_filter([
+            ['label' => 'GitHub API（octet-stream）', 'url' => (string) $asset['url']],
+            ['label' => 'GitHub 下载页直链', 'url' => (string) ($asset['browser_download_url'] ?? '')],
+        ], fn (array $s): bool => $s['url'] !== ''));
+
         for ($attempt = 1; $attempt <= 3; $attempt++) {
+            $source = $sources[($attempt - 1) % count($sources)];
             @unlink($partPath);
-            $resp = Http::timeout(300)
-                ->withHeaders($this->githubHeaders())
-                ->accept('application/octet-stream')
-                ->sink($partPath)
-                ->get($asset['url']);
+
+            try {
+                $resp = Http::timeout(300)
+                    ->withHeaders($this->githubHeaders())
+                    ->accept('application/octet-stream')
+                    ->sink($partPath)
+                    ->get($source['url']);
+            } catch (Throwable $e) {
+                // 连接层失败（超时/DNS/被重置）：Laravel 会抛 ConnectionException，
+                // 不接住就是整个更新命令崩溃；这里转成可读原因继续重试。
+                $reason = '连接 GitHub 失败（'.mb_substr(trim((string) preg_replace('/\s+/', ' ', $e->getMessage())), 0, 120).'）';
+                $log[] = '⚠ 第 '.$attempt.' 次下载未完成（来源 '.$source['label'].'：'.$reason.'）';
+
+                if ($attempt < 3) {
+                    sleep(2);
+
+                    continue;
+                }
+
+                throw new RuntimeException('安装包连续 3 次下载校验未通过（最后原因：'.$reason.'）');
+            }
+
+            $log[] = '↳ 来源 '.$source['label'].'：HTTP '.$resp->status().'，收到 '.round(filesize($partPath) / 1048576, 2).' MB';
 
             if (! $resp->successful() || ! is_file($partPath) || filesize($partPath) === 0) {
                 $reason = 'HTTP '.$resp->status();
             } elseif ($expectedSize > 0 && filesize($partPath) !== $expectedSize) {
-                $reason = '传输截断（'.round(filesize($partPath) / 1048576, 1).' MB，预期 '.round($expectedSize / 1048576, 1).' MB）';
+                // 体积不符：十有八九是链路上有人返回了错误页冒充安装包，
+                // 把实际收到的内容类型与开头摘录出来，排障不再靠猜。
+                $reason = '内容不符（收到 '.round(filesize($partPath) / 1048576, 2).' MB，预期 '.round($expectedSize / 1048576, 1).' MB；实际返回：'.$this->describeBadBody($partPath).'）';
             } else {
                 $actual = (string) hash_file('sha256', $partPath);
 
@@ -425,7 +453,9 @@ class SelfUpdater
                 continue;
             }
 
-            throw new RuntimeException('安装包连续 3 次下载校验未通过（最后原因：'.$reason.'）');
+            throw new RuntimeException('安装包连续 3 次下载校验未通过（最后原因：'.$reason.'）。'.
+                '多为服务器网络到 GitHub 资产 CDN 的链路被拦截——请在更新中心用「本地上传安装包」，'.
+                '或用宝塔把 btobcms-'.$tag.'.zip 上传到 storage/app/update/ 并重命名为 '.$tag.'.zip 后点「更新到此版本」。');
         }
 
         rename($partPath, $zipPath); // 原子落地
@@ -991,6 +1021,28 @@ class SelfUpdater
         return (is_string($digest) && str_starts_with($digest, 'sha256:'))
             ? substr($digest, 7)
             : null;
+    }
+
+    /**
+     * 下载体积不符时，辨认实际收到的内容（错误页/JSON/半截 zip），
+     * 摘录开头给更新日志——「传输截断 0 MB」这种黑话从此变成可读线索。
+     */
+    protected function describeBadBody(string $path): string
+    {
+        $head = (string) @file_get_contents($path, false, null, 0, 400);
+        $text = trim((string) preg_replace('/\s+/', ' ', strip_tags($head)));
+
+        if (str_starts_with($head, 'PK')) {
+            $kind = '半截 zip 数据';
+        } elseif (str_starts_with(ltrim($head), '{') || str_starts_with(ltrim($head), '[')) {
+            $kind = 'JSON 错误响应';
+        } elseif (stripos($head, '<html') !== false || stripos($head, '<!doctype') !== false) {
+            $kind = 'HTML 页面（疑似被网络拦截/代理劫持）';
+        } else {
+            $kind = '未知内容';
+        }
+
+        return $kind.'，开头「'.mb_substr($text, 0, 120).'」';
     }
 
     /** 纯 PHP 递归删除（不依赖 exec/rm，Windows 与禁用 exec 的环境同样可用） */
