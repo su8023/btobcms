@@ -51,8 +51,9 @@ class PostEditorActionsTest extends TestCase
                 ->push($this->openAiBody([
                     'slug' => 'source-valves-china',
                     'excerpt' => 'Sourcing guide.',
-                    'html' => '<h2>Quality</h2><p>Check AQL 2.5.</p>',
-                ]), 200),
+                ]), 200)
+                // 调用 B（正文）：裸 HTML 直出
+                ->push(['choices' => [['message' => ['content' => '<h2>Quality</h2><p>Check AQL 2.5.</p>']]], 'usage' => ['prompt_tokens' => 1, 'completion_tokens' => 2]], 200),
         ]);
 
         \Livewire\Livewire::test(\App\Filament\Resources\Posts\Pages\CreatePost::class)

@@ -24,6 +24,23 @@ class LlmManager
         string $tier = 'chat',
         float $temperature = 0.7,
     ): string {
+        return $this->chatResult($messages, $purpose, $tier, $temperature)['content'];
+    }
+
+    /**
+     * 与 chat() 相同，但返回完整元数据：finish_reason（length=被长度上限截断）
+     * 与原始响应体。长文生成（写作室正文）需要感知截断与留档排障。
+     *
+     * @return array{content: string, finish_reason: ?string, raw: string}
+     *
+     * @throws RuntimeException 未配置或调用失败
+     */
+    public function chatResult(
+        array $messages,
+        string $purpose = 'chat',
+        string $tier = 'chat',
+        float $temperature = 0.7,
+    ): array {
         $providerName = config("ai.tiers.{$tier}", config('ai.tiers.chat'));
         $provider = config("ai.providers.{$providerName}");
 
@@ -64,7 +81,11 @@ class LlmManager
             );
         }
 
-        return (string) data_get($json, 'choices.0.message.content', '');
+        return [
+            'content' => (string) data_get($json, 'choices.0.message.content', ''),
+            'finish_reason' => data_get($json, 'choices.0.finish_reason'),
+            'raw' => (string) $response->body(),
+        ];
     }
 
     /**

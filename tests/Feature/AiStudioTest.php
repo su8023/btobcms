@@ -59,14 +59,19 @@ class AiStudioTest extends TestCase
         ], JSON_UNESCAPED_UNICODE);
     }
 
-    private function articleContent(): string
+    /** 调用 A（元数据）：小 JSON —— slug + excerpt */
+    private function metaContent(): string
     {
         return json_encode([
             'slug' => 'stainless-steel-valves',
             'excerpt' => 'Guide for buyers.',
-            'html' => '<h2>Material grades</h2><p>316 is better.</p>',
-            'faq' => [['q' => 'MOQ?', 'a' => '50 pcs.']],
         ], JSON_UNESCAPED_UNICODE);
+    }
+
+    /** 调用 B（正文）：裸 HTML 直出，不走 JSON（长文转义是解析失败根因） */
+    private function bodyContent(): string
+    {
+        return '<h2>Material grades</h2><p>316 is better than 304.</p>';
     }
 
     public function test_studio_page_renders(): void
@@ -98,7 +103,10 @@ class AiStudioTest extends TestCase
 
     public function test_write_creates_draft_post_from_plan(): void
     {
-        Http::fake(['*' => Http::response($this->openAiBody($this->articleContent()), 200)]);
+        // 两次调用：先元数据（小 JSON），再正文（裸 HTML）
+        Http::fake(['*' => Http::sequence()
+            ->push($this->openAiBody($this->metaContent()))
+            ->push($this->openAiBody($this->bodyContent()))]);
 
         $plan = [
             'title' => 'How to Choose Stainless Steel Valves',
@@ -175,5 +183,67 @@ class AiStudioTest extends TestCase
 
         $this->get('/admin/ai-studio')->assertRedirect('/admin/login');
         $this->postJson('/admin/ai-studio/plan', ['topic' => 'x'])->assertUnauthorized();
+    }
+
+    public function test_body_generation_falls_back_when_first_attempt_is_not_html(): void
+    {
+        // 回归：正文第一轮输出不是 HTML（模型回了 JSON/道歉文本）时自动重试，
+        // 第二轮正常 HTML → 文章照常落库。
+        Http::fake(['*' => Http::sequence()
+            ->push($this->openAiBody($this->metaContent()))
+            ->push($this->openAiBody('抱歉，我无法完成这个请求。'))   // 第 1 轮正文：非 HTML
+            ->push($this->openAiBody($this->bodyContent()))]);      // 第 2 轮正文：正常
+
+        $plan = [
+            'title' => 'How to Choose Stainless Steel Valves',
+            'outline' => [['h2' => 'Material grades', 'points' => ['316 vs 304']]],
+            'keywords' => ['valve supplier'],
+            'faq' => [['q' => 'MOQ?']],
+        ];
+
+        $this->postJson('/admin/ai-studio/write', ['plan' => $plan, 'lang' => 'en'])
+            ->assertOk()
+            ->assertJsonPath('ok', true);
+
+        $this->assertNotNull(Post::where('slug', 'stainless-steel-valves')->first());
+    }
+
+    public function test_body_failure_dumps_raw_response_for_diagnostics(): void
+    {
+        // 回归：两轮正文都不是 HTML → 报错须带原始响应留档路径（运营方可自查/报修）
+        Http::fake(['*' => Http::sequence()
+            ->push($this->openAiBody($this->metaContent()))
+            ->push($this->openAiBody('{"broken": '))     // 第 1 轮：半截 JSON
+            ->push($this->openAiBody('{"broken": '))]);  // 第 2 轮：依旧
+
+        $plan = [
+            'title' => 'How to Choose Stainless Steel Valves',
+            'outline' => [['h2' => 'Material grades', 'points' => ['316 vs 304']]],
+        ];
+
+        $response = $this->postJson('/admin/ai-studio/write', ['plan' => $plan, 'lang' => 'en']);
+
+        $response->assertStatus(422);
+        $error = (string) $response->json('error');
+        $this->assertStringContainsString('原始响应已存档', $error);
+        // 留档文件真实存在：取报错里 storage/app/ 之后的相对路径核验
+        $this->assertTrue(
+            (bool) preg_match('/storage\/app\/(ai-articles\/[^\s（]+)/u', $error, $m),
+            '报错应包含留档路径：'.$error
+        );
+        $this->assertFileExists(storage_path('app/'.$m[1]));
+    }
+
+    public function test_truncated_body_gets_closed_tags(): void
+    {
+        // 回归：finish_reason=length 的截断正文须补齐未闭合标签（少一节好过整包报废）
+        $method = new \ReflectionMethod(ArticleStudio::class, 'closeTruncatedHtml');
+        $method->setAccessible(true);
+
+        $truncated = '<h2>Material grades</h2><p>316 is better <strong>than 304';
+        $fixed = $method->invoke(app(ArticleStudio::class), $truncated);
+
+        $this->assertStringEndsWith('</strong></p>', $fixed);
+        $this->assertStringContainsString('<h2>Material grades</h2>', $fixed);
     }
 }

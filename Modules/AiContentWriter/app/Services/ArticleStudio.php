@@ -137,6 +137,43 @@ PROMPT],
         }
 
         $words = $words ?: (int) (plugin_setting('ai-content-writer', 'default_words', 0) ?: 1200);
+
+        // -- 调用 A：slug + 摘要（几十 token 的小 JSON，几乎不会解析失败）。
+        // WHY 拆出来：旧实现把整篇 1500 词的 HTML 塞进一个 JSON 字符串返回，
+        // 模型只要漏转义一个正文引号，整个 JSON 就废了——这正是
+        // 「AI 返回的正文无法解析」的根因。长文不再进 JSON。
+        $metaRaw = $this->llm->chat([
+            ['role' => 'system', 'content' => '只输出 JSON，不要输出任何其他文本或代码块标记。'],
+            ['role' => 'user', 'content' => <<<PROMPT
+为 SEO 文章生成元数据，语言 {$lang}。标题：{$title}
+
+输出 JSON：{"slug":"url-slug（小写连字符，贴合标题关键词）","excerpt":"2 句面向海外买家的摘要"}
+PROMPT],
+        ], purpose: 'article.meta');
+
+        $meta = json_decode($this->extractJson($metaRaw), true) ?? [];
+
+        $html = $this->generateBody($plan, $lang, $words, $title);
+
+        return [
+            'slug' => trim((string) ($meta['slug'] ?? '')),
+            'excerpt' => trim((string) ($meta['excerpt'] ?? '')),
+            'html' => $html,
+        ];
+    }
+
+    /**
+     * 生成正文（裸 HTML 直出，不走 JSON）。
+     *
+     * WHY 不用 JSON 包正文：长文的引号/换行转义是大模型最易出错的输出形态，
+     * 一次漏转义就整包报废。裸 HTML 没有转义负担，即便被 max_tokens 截断，
+     * 补齐未闭合标签后仍是可用的正文（JSON 截断则整包作废）。
+     * 解析失败自动重试一次，两次的原始响应都留档到 storage/app/ai-articles/。
+     *
+     * @throws RuntimeException
+     */
+    protected function generateBody(array $plan, string $lang, int $words, string $title): string
+    {
         $faqCount = (int) plugin_setting('ai-content-writer', 'faq_count', 3);
         $tone = (string) plugin_setting('ai-content-writer', 'tone', 'professional');
         $toneText = $tone !== 'professional' ? "语气：{$tone}。" : '';
@@ -150,13 +187,11 @@ PROMPT],
         })->implode("\n");
 
         $keywords = implode(', ', $plan['keywords'] ?? []);
-        // FAQ 由方案阶段的问题列表 + 设置数量决定
-        $faqTopics = collect($plan['faq'] ?? [])->take($faqCount)->pluck('q')->implode('；');
-        $faqText = $faqCount > 0 ? "\nFAQ 题目（按这些写答案）：{$faqTopics}" : '';
+        // FAQ 直接写进正文小节（AI 生成的 FAQ 答案本就不落库，进正文才能被读者看到）
+        $faqTopics = collect($plan['faq'] ?? [])->take($faqCount)->pluck('q')->map(fn ($q) => '- '.$q)->implode("\n");
+        $faqText = $faqTopics !== '' ? "\n\n文末加 FAQ 小节（<h2>Frequently Asked Questions</h2>），按这些问题写答案：\n{$faqTopics}" : '';
 
-        $raw = $this->llm->chat([
-            ['role' => 'system', 'content' => "你是资深 B2B 外贸内容编辑，为外贸获客站撰写面向海外买家的 SEO 文章。写作风格：{$toneText} 只输出 JSON，不要输出任何其他文本或代码块标记。"],
-            ['role' => 'user', 'content' => <<<PROMPT
+        $prompt = <<<PROMPT
 标题：{$title}
 语言：{$lang}
 目标字数：约 {$words} 词{$audienceText}
@@ -169,21 +204,111 @@ SEO 关键词（自然融入，不堆砌）：{$keywords}{$faqText}
 要求：
 1. 严格按大纲的小节顺序组织内容，每个 h2 下 2~4 段；
 2. 面向海外采购商，包含选购要点与行业知识；
-3. 输出 JSON：{"slug":"url-slug","excerpt":"2 句摘要","html":"<h2>…</h2><p>…</p>…","faq":[{"q":"...","a":"..."}]}；
+3. 只输出 HTML 片段（用 <h2>/<p> 标签，不要 <html>/<body> 包裹，不要 markdown 代码块，不要任何解释文字，第一个字符必须是 '<'）；
 4. 严禁编造具体产品参数、认证编号或客户案例。
-PROMPT],
-        ], purpose: 'article.generate');
+PROMPT;
 
-        $data = json_decode($this->extractJson($raw), true);
-        if (! is_array($data) || blank($data['html'] ?? null)) {
-            throw new RuntimeException('AI 返回的正文无法解析，请重试。');
+        $lastRaw = '';
+        $lastReason = '';
+
+        for ($attempt = 1; $attempt <= 2; $attempt++) {
+            $result = $this->llm->chatResult([
+                ['role' => 'system', 'content' => "你是资深 B2B 外贸内容编辑，为外贸获客站撰写面向海外买家的 SEO 文章。写作风格：{$toneText} 只输出 HTML 片段，不要 markdown 代码块，不要任何解释文字。"],
+                ['role' => 'user', 'content' => $prompt],
+            ], purpose: 'article.generate');
+
+            $html = $this->stripFence(trim($result['content']));
+            $lastRaw = $result['raw'] !== '' ? $result['raw'] : $result['content'];
+
+            // 截断容忍：finish_reason=length 时补齐未闭合标签，正文少一节好过整包报废
+            if (($result['finish_reason'] ?? '') === 'length') {
+                $html = $this->closeTruncatedHtml($html);
+            }
+
+            // 有效性：必须是 HTML（以 < 开头且含块级标签），而不是道歉文本或半截 JSON
+            if (str_starts_with($html, '<') && preg_match('/<(h2|h3|p)\b/i', $html) === 1) {
+                return $html;
+            }
+
+            $lastReason = '输出不是 HTML 片段（开头：'.mb_substr($html, 0, 60).'）';
         }
 
-        return [
-            'slug' => (string) ($data['slug'] ?? ''),
-            'excerpt' => (string) ($data['excerpt'] ?? ''),
-            'html' => (string) $data['html'],
-        ];
+        $dump = $this->dumpRawResponse($lastRaw, 'body');
+
+        throw new RuntimeException(
+            'AI 返回的正文无法解析，请重试。'
+            ."原因：{$lastReason}。"
+            ."原始响应已存档：{$dump}（可发给技术人员排查）"
+        );
+    }
+
+    /**
+     * 剥离 markdown 代码围栏（```html ... ```）。
+     */
+    protected function stripFence(string $raw): string
+    {
+        if (preg_match('/```[a-zA-Z]*\s*(.*?)\s*```/s', $raw, $m) === 1) {
+            return trim($m[1]);
+        }
+
+        return $raw;
+    }
+
+    /**
+     * 截断修复：去掉尾部残缺标签并逆序补全未闭合的块级标签。
+     */
+    protected function closeTruncatedHtml(string $html): string
+    {
+        $html = trim($html);
+
+        // 截断常停在标签中间（"<p>xxx" 甚至 "<p"）：去掉最后一个 '>' 之后的残段
+        if (! str_ends_with($html, '>')) {
+            $pos = strrpos($html, '>');
+
+            if ($pos === false) {
+                return $html;
+            }
+
+            $html = substr($html, 0, $pos + 1);
+        }
+
+        if (preg_match_all('/<(\/?)(p|h2|h3|h4|ul|ol|li|blockquote|strong|em|table|thead|tbody|tr|td|th|div)\b[^>]*>/i', $html, $tags, PREG_SET_ORDER)) {
+            $stack = [];
+
+            foreach ($tags as $t) {
+                if ($t[1] === '/') {
+                    array_pop($stack);
+                } elseif (! str_ends_with($t[0], '/>')) {
+                    $stack[] = strtolower($t[2]);
+                }
+            }
+
+            foreach (array_reverse($stack) as $name) {
+                $html .= "</{$name}>";
+            }
+        }
+
+        return $html;
+    }
+
+    /**
+     * 原始响应留档：网页端的解析失败此前不留痕，运营方无法自查也无法报修。
+     *
+     * @return string 相对 storage 的存档路径
+     */
+    protected function dumpRawResponse(string $raw, string $stage): string
+    {
+        $dir = 'ai-articles';
+        $path = storage_path("app/{$dir}");
+
+        if (! is_dir($path)) {
+            @mkdir($path, 0775, true);
+        }
+
+        $file = "{$dir}/{$stage}-".now()->format('Ymd-His').'-'.Str::random(4).'.txt';
+        @file_put_contents(storage_path("app/{$file}"), $raw);
+
+        return "storage/app/{$file}";
     }
 
     /**
