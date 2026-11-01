@@ -21,7 +21,13 @@ class SeoChecklist
         foreach (site_locales() as $locale) {
             $title = trim((string) data_get($state, "title.{$locale}", ''));
             $excerpt = trim((string) data_get($state, "excerpt.{$locale}", ''));
-            $content = (string) data_get($state, "content.{$locale}", '');
+
+            // 正文：编辑页 Livewire 状态里 RichEditor 是 Tiptap JSON 数组（而非 HTML 字符串），
+            // 直接 (string) 强转会 500「Array to string conversion」——SEO 体检弹窗因此必炸
+            $contentState = data_get($state, "content.{$locale}");
+            $content = is_array($contentState)
+                ? $this->tiptapToHtml($contentState)
+                : (string) $contentState;
 
             // 只检查实际填了内容的语言
             if ($title === '' && $content === '') {
@@ -117,5 +123,53 @@ class SeoChecklist
         $words = preg_match_all("/[\p{L}\p{N}][\p{L}\p{N}'\-]*/u", preg_replace('/[\p{Han}\p{Hiragana}\p{Katakana}\p{Hangul}]+/u', ' ', $text) ?? '');
 
         return count($cjk[0] ?? []) + (int) $words;
+    }
+
+    /**
+     * Tiptap JSON 文档 → HTML：SEO 规则检查只需要标题层级/词数/链接结构，
+     * 覆盖 RichEditor 常用节点即可（未识别节点递归取子内容）。
+     */
+    protected function tiptapToHtml(array $node): string
+    {
+        $type = (string) ($node['type'] ?? '');
+
+        if ($type === 'text') {
+            $text = htmlspecialchars((string) ($node['text'] ?? ''), ENT_QUOTES, 'UTF-8');
+
+            foreach ((array) ($node['marks'] ?? []) as $mark) {
+                $html = match ((string) ($mark['type'] ?? '')) {
+                    'bold' => '<strong>'.$text.'</strong>',
+                    'italic' => '<em>'.$text.'</em>',
+                    'link' => '<a href="'.htmlspecialchars((string) ($mark['attrs']['href'] ?? '#'), ENT_QUOTES, 'UTF-8').'">'.$text.'</a>',
+                    default => $text,
+                };
+                $text = $html;
+            }
+
+            return $text;
+        }
+
+        if ($type === 'hardBreak') {
+            return '<br>';
+        }
+
+        $inner = '';
+
+        foreach ((array) ($node['content'] ?? []) as $child) {
+            if (is_array($child)) {
+                $inner .= $this->tiptapToHtml($child);
+            }
+        }
+
+        return match ($type) {
+            'paragraph' => $inner !== '' ? '<p>'.$inner.'</p>' : '',
+            'heading' => '<h'.(int) ($node['attrs']['level'] ?? 2).'>'.$inner.'</h'.(int) ($node['attrs']['level'] ?? 2).'>',
+            'bulletList' => '<ul>'.$inner.'</ul>',
+            'orderedList' => '<ol>'.$inner.'</ol>',
+            'listItem' => '<li>'.$inner.'</li>',
+            'blockquote' => '<blockquote>'.$inner.'</blockquote>',
+            'codeBlock' => '<pre>'.$inner.'</pre>',
+            default => $inner, // doc / 未识别节点：只透传子内容
+        };
     }
 }

@@ -153,4 +153,35 @@ class PostEditorActionsTest extends TestCase
         // 辅助：表达意图用（断言在测试体内直接写）
         return self::equalTo(0);
     }
+    public function test_seo_check_survives_tiptap_doc_content_state(): void
+    {
+        // 回归：编辑页 Livewire 状态里 RichEditor 正文是 Tiptap JSON 数组，
+        // SEO 体检曾直接 (string) 强转 → 500「Array to string conversion」弹窗必炸
+        $post = Post::create([
+            'type' => 'post', 'slug' => 'seo-check-'.uniqid(), 'status' => 'draft',
+            'title' => ['en' => 'Canton Fair Guide'],
+            'excerpt' => ['en' => 'Guide.'],
+            'content' => ['en' => '<h2>Phases</h2><p>Three phases per year with enough words for the check to run.</p>'],
+        ]);
+
+        // 打开 SEO 体检弹窗（modalDescription 闭包会真实执行 checkState）
+        \Livewire\Livewire::test(\App\Filament\Resources\Posts\Pages\EditPost::class, ['record' => $post->getKey()])
+            ->callAction('seoCheck');
+
+        // 服务层：Tiptap doc 数组形态必须可用，且 h2/词数规则照常命中
+        $doc = [
+            'type' => 'doc',
+            'content' => [
+                ['type' => 'heading', 'attrs' => ['level' => 2], 'content' => [['type' => 'text', 'text' => 'Phases']]],
+                ['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Three phases per year with enough words here to pass the minimum word requirement for the check.']]],
+            ],
+        ];
+        $problems = app(\Modules\AiContentWriter\Services\SeoChecklist::class)->checkState([
+            'title' => ['en' => 'Canton Fair Guide'],
+            'content' => ['en' => $doc],
+        ]);
+
+        $this->assertNotContains(' [en] 小节标题（H2）只有 0 个，建议 ≥2 个', $problems,
+            'Tiptap 转换后应能识别出 h2，实际问题: '.implode(' | ', $problems));
+    }
 }
