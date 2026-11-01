@@ -93,4 +93,44 @@ class SeoChecklistTest extends TestCase
 
         $this->assertSame([], $problems);
     }
+
+    public function test_report_groups_by_locale_with_stats(): void
+    {
+        $report = app(SeoChecklist::class)->report($this->goodState());
+
+        $this->assertTrue($report['checked']);
+        $this->assertSame(1, $report['summary']['checked'], '只有 en 有内容');
+        $this->assertSame(0, $report['summary']['problems'], '标准好文应零问题');
+
+        $locale = $report['locales'][0];
+        $this->assertSame('English', $locale['label']);
+        $this->assertSame([], $locale['problems']);
+        // 指标芯片结构完整
+        foreach (['words', 'h2', 'links', 'seo'] as $key) {
+            $this->assertArrayHasKey($key, $locale['stats']);
+            $this->assertArrayHasKey('value', $locale['stats'][$key]);
+            $this->assertArrayHasKey('ok', $locale['stats'][$key]);
+        }
+        $this->assertTrue($locale['stats']['words']['ok'], '660 词应通过');
+        $this->assertTrue($locale['stats']['h2']['ok'], '2 个 h2 应通过');
+        $this->assertTrue($locale['stats']['links']['ok'], '有 /product/ 内链应通过');
+    }
+
+    public function test_report_flags_problems_per_locale(): void
+    {
+        $report = app(SeoChecklist::class)->report([
+            'title' => ['en' => 'Valves'],
+            'content' => ['en' => '<p>Short.</p><img src="/a.jpg">'],
+        ]);
+
+        $this->assertTrue($report['checked']);
+        $locale = $report['locales'][0];
+        $this->assertNotEmpty($locale['problems']);
+        $this->assertFalse($locale['stats']['words']['ok'], '短正文 words 芯片应为 bad');
+        $this->assertFalse($locale['stats']['h2']['ok'], '无 h2 应为 bad');
+        $this->assertFalse($locale['stats']['links']['ok'], '无内链应为 bad');
+        // 图片缺 alt 时 images 芯片应存在且 bad
+        $this->assertNotNull($locale['stats']['images']);
+        $this->assertFalse($locale['stats']['images']['ok']);
+    }
 }

@@ -246,26 +246,22 @@ class PostActions
             ->color('gray')
             ->modalHeading('发布前 SEO 体检')
             ->modalDescription(function ($livewire): string {
-                $problems = app(SeoChecklist::class)->checkState(self::formState($livewire));
+                $report = app(SeoChecklist::class)->report(self::formState($livewire));
 
-                return $problems === []
+                if (! $report['checked']) {
+                    return '还没有任何语言的内容可检查。';
+                }
+
+                return $report['summary']['problems'] === 0
                     ? '✅ 当前内容全部通过，可以发布。'
-                    : '发现 '.count($problems).' 个问题，见下方明细：';
+                    : '发现 '.$report['summary']['problems'].' 个待修复项，见下方明细：';
             })
             ->modalContent(function ($livewire) {
-                $problems = app(SeoChecklist::class)->checkState(self::formState($livewire));
-
-                if ($problems === []) {
-                    return null;
-                }
-
-                $html = '<ul class="text-sm space-y-1">';
-                foreach ($problems as $p) {
-                    $html .= '<li>⚠️ '.e($p).'</li>';
-                }
-
-                return new \Illuminate\Support\HtmlString($html.'</ul>');
+                return view('aicontentwriter::seo-check', [
+                    'report' => app(SeoChecklist::class)->report(self::formState($livewire)),
+                ]);
             })
+            ->modalWidth(\Filament\Support\Enums\Width::FourExtraLarge)
             ->modalSubmitAction(false)
             ->modalCancelActionLabel('关闭')
             ->action(fn () => null);

@@ -110,6 +110,139 @@ class SeoChecklist
         return $problems;
     }
 
+    /**
+     * 结构化体检报告（SEO 体检弹窗用）：按语言分组，每语言带指标芯片与问题清单。
+     *
+     * @return array{checked: bool, summary: array{checked: int, problems: int}, locales: list<array{label: string, problems: list<string>, stats: array{words: array{value: string, ok: bool}, h2: array{value: string, ok: bool}, links: array{value: string, ok: bool}, images: array{value: string, ok: bool}|null, seo: array{value: string, ok: bool}}}>}
+     */
+    public function report(array $state): array
+    {
+        $seo = is_array($state['seo'] ?? null) ? $state['seo'] : [];
+        $localeReports = [];
+        $totalProblems = 0;
+
+        foreach (site_locales() as $locale) {
+            $title = trim((string) data_get($state, "title.{$locale}", ''));
+            $excerpt = trim((string) data_get($state, "excerpt.{$locale}", ''));
+            $contentState = data_get($state, "content.{$locale}");
+            $content = is_array($contentState) ? $this->tiptapToHtml($contentState) : (string) $contentState;
+
+            if ($title === '' && $content === '') {
+                continue; // 没填内容的语言不进报告
+            }
+
+            $problems = [];
+
+            $titleLen = mb_strlen($title);
+            if ($titleLen > 0 && ($titleLen < 20 || $titleLen > 80)) {
+                $problems[] = '标题长度 '.$titleLen.' 字符，建议 20~80';
+            }
+
+            $words = $this->wordCount($content);
+            $h2 = (int) preg_match_all('/<h2[ >]/i', $content);
+            $imgOk = true;
+            $imgsMissingAlt = 0;
+            $linkCount = 0;
+            $hasInternalLink = false;
+            $imgs = 0;
+            $imgsWithAlt = 0;
+
+            if ($content !== '') {
+                if ($words < 300) {
+                    $problems[] = '正文仅约 '.$words.' 词，B2B 长文建议 ≥600 词';
+                }
+                if ($h2 < 2) {
+                    $problems[] = '小节标题（H2）只有 '.$h2.' 个，建议 ≥2 个';
+                }
+
+                $imgs = (int) preg_match_all('/<img\b[^>]*>/i', $content);
+                $imgsWithAlt = (int) preg_match_all('/<img\b[^>]*\balt=["\'][^"\']+["\']/i', $content);
+                $imgsMissingAlt = max(0, $imgs - $imgsWithAlt);
+
+                if ($imgsMissingAlt > 0) {
+                    $imgOk = false;
+                    $problems[] = '有 '.$imgsMissingAlt.' 张图片缺 alt 属性';
+                }
+
+                $appHost = strtolower((string) parse_url((string) config('app.url'), PHP_URL_HOST));
+
+                if (preg_match_all('/<a\b[^>]*href=["\']([^"\']*)["\']/i', $content, $m)) {
+                    $linkCount = count($m[1]);
+
+                    foreach ($m[1] as $href) {
+                        if (preg_match('#^/[^/]#', $href) || ($appHost !== '' && str_contains(strtolower($href), $appHost))) {
+                            $hasInternalLink = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (! $hasInternalLink) {
+                    $problems[] = '正文没有站内链接，建议加入产品/行业页内链（可在发布后用内链词典回织）';
+                }
+            }
+
+            // SEO 元数据
+            $seoTitle = trim((string) data_get($seo, "title.{$locale}", ''));
+            $seoDesc = trim((string) data_get($seo, "description.{$locale}", ''));
+            $seoKeywords = trim((string) data_get($seo, "keywords.{$locale}", ''));
+            $seoFilled = 0;
+            $seoIssues = 0;
+
+            if ($seoTitle === '') {
+                $seoIssues++;
+                $problems[] = 'SEO 标题未填（留空则发布时由 AutoSeo 自动生成）';
+            } else {
+                $seoFilled++;
+
+                if (mb_strlen($seoTitle) > 60) {
+                    $seoIssues++;
+                    $problems[] = 'SEO 标题 '.mb_strlen($seoTitle).' 字符，谷歌通常截断 60 字符之后的内容';
+                }
+            }
+
+            if ($seoDesc === '') {
+                $seoIssues++;
+                $problems[] = 'SEO 描述未填（留空则发布时由 AutoSeo 自动生成）';
+            } else {
+                $seoFilled++;
+                $len = mb_strlen($seoDesc);
+
+                if ($len < 70 || $len > 160) {
+                    $seoIssues++;
+                    $problems[] = 'SEO 描述 '.$len.' 字符，建议 70~160';
+                }
+            }
+
+            if ($seoKeywords === '' && $excerpt !== '') {
+                $seoIssues++;
+                $problems[] = 'SEO 关键词未填';
+            } else {
+                $seoFilled++;
+            }
+
+            $totalProblems += count($problems);
+
+            $localeReports[] = [
+                'label' => (string) config("site.native_names.{$locale}", $locale),
+                'problems' => $problems,
+                'stats' => [
+                    'words' => ['value' => $words.' 词', 'ok' => $words >= 300],
+                    'h2' => ['value' => $h2.' 个', 'ok' => $h2 >= 2],
+                    'links' => ['value' => $linkCount.' 个', 'ok' => $hasInternalLink],
+                    'images' => $imgs > 0 ? ['value' => $imgsWithAlt.'/'.$imgs.' 有 alt', 'ok' => $imgOk] : null,
+                    'seo' => ['value' => $seoFilled.'/3 项', 'ok' => $seoIssues === 0 && $seoFilled === 3],
+                ],
+            ];
+        }
+
+        return [
+            'checked' => $localeReports !== [],
+            'summary' => ['checked' => count($localeReports), 'problems' => $totalProblems],
+            'locales' => $localeReports,
+        ];
+    }
+
     /** HTML 词数：Unicode 感知——拉丁/西里尔/阿语按词切，中日韩按字计（str_word_count 会把重音词切碎） */
     protected function wordCount(string $html): int
     {

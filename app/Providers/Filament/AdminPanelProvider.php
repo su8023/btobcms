@@ -55,9 +55,11 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make()->label(__('admin.groups.themes')),
             ])
             // 插件页组件样式：Filament 预编译 CSS 不含应用自定义的 Tailwind 类，
-            // 指标卡/空状态/表单控件用本文件手写样式（CSS 变量驱动，暗色自动适配）
+            // 指标卡/空状态/表单控件用本文件手写样式（CSS 变量驱动，暗色自动适配）。
+            // 带文件 mtime 版本号：发版后浏览器不再拿旧缓存（曾实测：更新中心改版被
+            // 旧 CSS 缓存干扰，新样式要强刷才出来）。
             ->assets([
-                \Filament\Support\Assets\Css::make('admin-plugins', asset('css/admin-plugins.css')),
+                \Filament\Support\Assets\Css::make('admin-plugins', asset('css/admin-plugins.css').'?v='.($cssVer = @filemtime(public_path('css/admin-plugins.css')) ?: 0)),
             ])
             // 后台报错提示带上真实原因（v1.4.29）：
             // Filament 默认只说「页面加载出错，请稍后重试」——管理员无从判断发生了什么，
