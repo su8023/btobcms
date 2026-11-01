@@ -9,6 +9,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Str;
+use Modules\AiContentWriter\Jobs\TranslatePostJob;
 use Modules\AiContentWriter\Services\ArticleStudio;
 use Modules\AiContentWriter\Services\PostTranslator;
 use Modules\AiContentWriter\Services\SeoChecklist;
@@ -118,7 +119,7 @@ class PostActions
             ->icon('heroicon-o-language')
             ->color('gray')
             ->modalHeading('AI 翻译到更多语言')
-            ->modalDescription('把当前文章（标题/摘要/正文/SEO 元数据）翻译到所选语言并合并保存，已存在的语言不会被覆盖。')
+            ->modalDescription('把当前文章（标题/摘要/正文/SEO 元数据）翻译到所选语言。所选语言进入后台队列逐个处理（每分钟一个）并自动保存，完成后刷新本页即可看到新语言；也可在「翻译覆盖率」页查看进度。已存在的语言不会被覆盖。')
             ->form(function ($livewire): array {
                 $record = $livewire->getRecord();
 
@@ -148,46 +149,80 @@ class PostActions
                     return;
                 }
 
-                try {
-                    $translated = app(PostTranslator::class)->translate($livewire->getRecord(), $locales);
-                } catch (\Throwable $e) {
+                $record = $livewire->getRecord();
+
+                // 队列未配置（QUEUE_CONNECTION=sync）时退化为单语言内联：
+                // 一次请求只跑一种语言，避免多语言同步超时被服务器掐断。
+                if (config('queue.default') === 'sync') {
+                    try {
+                        $translated = app(PostTranslator::class)->translate($record, array_slice($locales, 0, 1));
+                    } catch (\Throwable $e) {
+                        Notification::make()
+                            ->title('AI 翻译失败')
+                            ->body(mb_substr($e->getMessage(), 0, 300))
+                            ->danger()
+                            ->persistent()
+                            ->send();
+
+                        return;
+                    }
+
+                    self::fillTranslatedLocales($livewire, $record, $translated);
+
                     Notification::make()
-                        ->title('AI 翻译失败')
-                        ->body(mb_substr($e->getMessage(), 0, 300))
-                        ->danger()
+                        ->title('已翻译 1 种语言（'.implode('、', array_map(
+                            fn ($l) => config("site.native_names.{$l}", $l),
+                            $translated,
+                        )).'）')
+                        ->body('当前队列驱动是 sync（不支持后台任务），每次只能翻译一种语言——请再次点击「AI 翻译」继续其余语言。')
+                        ->warning()
                         ->persistent()
                         ->send();
 
                     return;
                 }
 
-                if ($translated !== []) {
-                    // 只填新翻译的语言键（fillPartially）：保留表单里未保存的其他修改，
-                    // 全量 fill 会把已编辑内容的未保存修改静默覆盖回库值
-                    $record = $livewire->getRecord();
-                    $meta = $record->seoMeta;
-                    $state = [];
-                    foreach ($translated as $locale) {
-                        foreach (['title', 'excerpt', 'content'] as $field) {
-                            $state[$field.'.'.$locale] = $record->getTranslation($field, $locale);
-                        }
-                        foreach (['title', 'description', 'keywords'] as $field) {
-                            $state['seo.'.$field.'.'.$locale] = (string) $meta?->getTranslation($field, $locale, false);
-                        }
-                    }
-                    $livewire->form->fillPartially($state, array_keys($state));
+                // 每语言一个队列任务：调度器每分钟消化一个，互不阻塞、单语言失败不拖累其余
+                foreach ($locales as $locale) {
+                    TranslatePostJob::dispatch($record->id, $locale);
                 }
 
                 Notification::make()
-                    ->title('翻译完成')
-                    ->body('已翻译：'.implode('、', array_map(
-                        fn ($l) => config("site.native_names.{$l}", $l),
-                        $translated,
-                    )))
+                    ->title('已提交 '.count($locales).' 个翻译任务')
+                    ->body('后台每分钟处理一个语言并自动保存，预计约 '.count($locales).' 分钟完成。'
+                        .'稍后刷新本页即可看到新语言，或在「翻译覆盖率」页查看进度。'
+                        .'个别语言失败不影响其余语言，失败的语言会留在覆盖率矩阵里，可重新提交补齐。')
                     ->success()
                     ->persistent()
                     ->send();
             });
+    }
+
+    /**
+     * 把已翻译语言填回表单（fillPartially）：保留表单里未保存的其他修改，
+     * 全量 fill 会把已编辑内容的未保存修改静默覆盖回库值。
+     *
+     * @param  list<string>  $translated
+     */
+    protected static function fillTranslatedLocales($livewire, $record, array $translated): void
+    {
+        if ($translated === []) {
+            return;
+        }
+
+        $meta = $record->seoMeta;
+        $state = [];
+
+        foreach ($translated as $locale) {
+            foreach (['title', 'excerpt', 'content'] as $field) {
+                $state[$field.'.'.$locale] = $record->getTranslation($field, $locale);
+            }
+            foreach (['title', 'description', 'keywords'] as $field) {
+                $state['seo.'.$field.'.'.$locale] = (string) $meta?->getTranslation($field, $locale, false);
+            }
+        }
+
+        $livewire->form->fillPartially($state, array_keys($state));
     }
 
     protected static function seoCheck(): Action

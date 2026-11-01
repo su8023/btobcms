@@ -237,11 +237,8 @@ class AiStudioTest extends TestCase
     public function test_truncated_body_gets_closed_tags(): void
     {
         // 回归：finish_reason=length 的截断正文须补齐未闭合标签（少一节好过整包报废）
-        $method = new \ReflectionMethod(ArticleStudio::class, 'closeTruncatedHtml');
-        $method->setAccessible(true);
-
         $truncated = '<h2>Material grades</h2><p>316 is better <strong>than 304';
-        $fixed = $method->invoke(app(ArticleStudio::class), $truncated);
+        $fixed = \Modules\AiContentWriter\Support\LlmOutput::closeTruncatedHtml($truncated);
 
         $this->assertStringEndsWith('</strong></p>', $fixed);
         $this->assertStringContainsString('<h2>Material grades</h2>', $fixed);

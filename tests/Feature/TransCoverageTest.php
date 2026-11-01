@@ -64,16 +64,22 @@ class TransCoverageTest extends TestCase
     }
 
     /** OpenAI 兼容的翻译响应体（PostTranslator 每语言一次 chat 调用） */
-    private function translateBody(string $marker): array
+    /** 两段式第 1 段：短字段元数据（小 JSON） */
+    private function translateMeta(string $marker): array
     {
         return ['choices' => [['message' => ['content' => json_encode([
             'title' => $marker.' 标题译文',
             'excerpt' => $marker.' 摘要译文',
-            'content' => '<h2>'.$marker.'</h2><p>正文译文</p>',
             'seo_title' => 'SEO '.$marker,
             'seo_description' => 'SEO 描述 '.$marker,
             'seo_keywords' => 'kw1, kw2',
         ], JSON_UNESCAPED_UNICODE)]]]];
+    }
+
+    /** 两段式第 2 段：正文裸 HTML */
+    private function translateBody(string $marker): array
+    {
+        return ['choices' => [['message' => ['content' => '<h2>'.$marker.'</h2><p>正文译文</p>']]]];
     }
 
     /** 从扫描结果里取指定内容行 */
@@ -266,10 +272,12 @@ class TransCoverageTest extends TestCase
         $scanner->scan();
         $keyBefore = $scanner->cacheKey();
 
-        // 每语言一次 LLM 调用：es、fr 各一个响应体（顺序区分）
+        // 两段式：每语言两次调用（元数据 JSON + 正文 HTML），es、fr 顺序区分
         Http::fake([
             '*' => Http::sequence()
+                ->push($this->translateMeta('ES'))
                 ->push($this->translateBody('ES'))
+                ->push($this->translateMeta('FR'))
                 ->push($this->translateBody('FR')),
         ]);
 

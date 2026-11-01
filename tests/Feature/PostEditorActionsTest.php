@@ -6,6 +6,7 @@ use App\Models\Post;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 /**
@@ -86,16 +87,13 @@ class PostEditorActionsTest extends TestCase
             ->assertActionVisible('seoCheck');
     }
 
-    public function test_ai_translate_action_translates_and_refills_form(): void
+    public function test_ai_translate_action_dispatches_queue_jobs_per_locale(): void
     {
-        Http::fake(['*' => Http::response($this->openAiBody([
-            'title' => 'Kaufberatung Ventile',
-            'excerpt' => 'Leitfaden.',
-            'content' => '<h2>Material</h2><p>316 Edelstahl.</p>',
-            'seo_title' => 'Ventile Ratgeber',
-            'seo_description' => 'Ventile aus China kaufen.',
-            'seo_keywords' => 'Ventile Lieferant',
-        ]), 200)]);
+        // 回归：多语言同步翻译曾在一个 HTTP 请求里跑 5~10 分钟被服务器掐断
+        //（Livewire 报「页面加载出错」）。现在按语言逐个派发队列任务。
+        // 测试环境默认 sync（会走内联回退），这里显式声明数据库队列以覆盖派发分支。
+        config(['queue.default' => 'database']);
+        Queue::fake();
 
         $post = Post::create([
             'type' => 'post', 'slug' => 'translate-'.uniqid(), 'status' => 'draft',
@@ -105,11 +103,49 @@ class PostEditorActionsTest extends TestCase
         ]);
 
         \Livewire\Livewire::test(\App\Filament\Resources\Posts\Pages\EditPost::class, ['record' => $post->getKey()])
-            ->callAction('aiTranslate', data: ['locales' => ['de']]);
+            ->callAction('aiTranslate', data: ['locales' => ['de', 'es']]);
+
+        Queue::assertPushed(\Modules\AiContentWriter\Jobs\TranslatePostJob::class, 2);
+        Queue::assertPushed(\Modules\AiContentWriter\Jobs\TranslatePostJob::class,
+            fn (\Modules\AiContentWriter\Jobs\TranslatePostJob $job) => $job->postId === $post->id && $job->locale === 'de');
+        Queue::assertPushed(\Modules\AiContentWriter\Jobs\TranslatePostJob::class,
+            fn (\Modules\AiContentWriter\Jobs\TranslatePostJob $job) => $job->postId === $post->id && $job->locale === 'es');
+
+        // 派发后不立即翻译：任务由调度器逐个消化
+        $post->refresh();
+        $this->assertFalse($post->hasTranslation('title', 'de'));
+    }
+
+    public function test_translate_job_runs_translation_and_is_idempotent(): void
+    {
+        Http::fake(['*' => Http::sequence()
+            ->push($this->openAiBody([
+                'title' => 'Kaufberatung Ventile',
+                'excerpt' => 'Leitfaden.',
+                'seo_title' => 'Ventile Ratgeber',
+                'seo_description' => 'Ventile aus China kaufen.',
+                'seo_keywords' => 'Ventile Lieferant',
+            ]))
+            ->push(['choices' => [['message' => ['content' => '<h2>Material</h2><p>316 Edelstahl.</p>']]]]),
+        ]);
+
+        $post = Post::create([
+            'type' => 'post', 'slug' => 'translate-'.uniqid(), 'status' => 'draft',
+            'title' => ['en' => 'Valve Buying Guide'],
+            'excerpt' => ['en' => 'A guide.'],
+            'content' => ['en' => '<h2>Material</h2><p>316 stainless.</p>'],
+        ]);
+
+        (new \Modules\AiContentWriter\Jobs\TranslatePostJob($post->id, 'de'))->handle();
 
         $post->refresh();
         $this->assertSame('Kaufberatung Ventile', $post->getTranslation('title', 'de'));
         $this->assertSame('Valve Buying Guide', $post->getTranslation('title', 'en'), '已有语言不得被覆盖');
+
+        // 幂等：语言已存在时任务空跑（不重复消耗 LLM 额度）
+        Http::fake(['*' => Http::response('should not be called')]);
+        (new \Modules\AiContentWriter\Jobs\TranslatePostJob($post->id, 'de'))->handle();
+        Http::assertNothingSent();
     }
 
     private function postCount(): \PHPUnit\Framework\Constraint\IsEqual

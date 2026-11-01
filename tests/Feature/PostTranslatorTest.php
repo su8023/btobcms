@@ -61,15 +61,16 @@ class PostTranslatorTest extends TestCase
 
     public function test_translates_post_and_seo_meta(): void
     {
-        Http::fake([
-            '*' => Http::response($this->openAiBody([
+        // 两段式：调用 A（短字段小 JSON）→ 调用 B（正文裸 HTML）
+        Http::fake(['*' => Http::sequence()
+            ->push($this->openAiBody([
                 'title' => 'Kaufberatung Absperrschieber',
                 'excerpt' => 'Ein Leitfaden.',
-                'content' => '<h2>Material</h2><p>316 Edelstahl ist am besten.</p>',
                 'seo_title' => 'Absperrschieber Ratgeber',
                 'seo_description' => 'Absperrschieber aus China kaufen.',
                 'seo_keywords' => 'Absperrschieber Lieferant',
-            ]), 200),
+            ]))
+            ->push(['choices' => [['message' => ['content' => '<h2>Material</h2><p>316 Edelstahl ist am besten.</p>']]]]),
         ]);
 
         $post = $this->makePost();
@@ -92,9 +93,10 @@ class PostTranslatorTest extends TestCase
     {
         // 已有 de 的情况下再翻 de：合并语义由 setTranslation 决定（覆盖该语言），
         // UI 层只列缺失语言——此处验证重复翻译不会破坏其他语言
-        Http::fake(['*' => Http::response($this->openAiBody([
-            'title' => 'Guía de compra', 'excerpt' => 'Guía.', 'content' => '<p>x</p>',
-        ]), 200)]);
+        Http::fake(['*' => Http::sequence()
+            ->push($this->openAiBody(['title' => 'Guía de compra', 'excerpt' => 'Guía.']))
+            ->push(['choices' => [['message' => ['content' => '<p>x</p>']]]]),
+        ]);
 
         $post = $this->makePost();
         app(PostTranslator::class)->translate($post->refresh(), ['es']);
@@ -108,12 +110,11 @@ class PostTranslatorTest extends TestCase
     {
         Http::fake([
             '*' => Http::sequence()
-                // 第一次（fr）返回垃圾 → 解析失败跳过
+                // 第一次（fr）元数据返回垃圾 → 解析失败跳过（不再发起正文调用）
                 ->push(['choices' => [['message' => ['content' => 'not json at all']]]], 200)
-                // 第二次（de）正常
-                ->push($this->openAiBody([
-                    'title' => 'Kaufberatung', 'excerpt' => 'L.', 'content' => '<p>ok</p>',
-                ]), 200),
+                // 第二次（de）：元数据 + 正文
+                ->push($this->openAiBody(['title' => 'Kaufberatung', 'excerpt' => 'L.']), 200)
+                ->push(['choices' => [['message' => ['content' => '<p>ok</p>']]]], 200),
         ]);
 
         $post = $this->makePost();
@@ -133,5 +134,24 @@ class PostTranslatorTest extends TestCase
 
         $this->expectException(\RuntimeException::class);
         app(PostTranslator::class)->translate($post, ['de']);
+    }
+    public function test_body_failure_retries_then_dumps_raw(): void
+    {
+        // 回归：元数据正常、正文两轮都不是 HTML → 整语言失败，
+        // 原始响应须留档到 storage/app/ai-articles/（排障可查）
+        Http::fake(['*' => Http::sequence()
+            ->push($this->openAiBody(['title' => 'Kaufberatung', 'excerpt' => 'L.']))
+            ->push(['choices' => [['message' => ['content' => '{"broken": ']]]])
+            ->push(['choices' => [['message' => ['content' => '{"broken": ']]]]),
+        ]);
+
+        $post = $this->makePost();
+        $translated = app(PostTranslator::class)->translate($post->refresh(), ['de']);
+
+        $this->assertSame([], $translated, '正文解析失败时该语言跳过');
+        $this->assertFalse($post->refresh()->hasTranslation('title', 'de'));
+
+        $dumps = glob(storage_path('app/ai-articles/translate-de-*.txt'));
+        $this->assertNotEmpty($dumps, '正文失败必须留档原始响应');
     }
 }

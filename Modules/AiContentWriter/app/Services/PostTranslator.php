@@ -6,11 +6,12 @@ use App\Models\Post;
 use App\Services\Ai\LlmManager;
 use Illuminate\Support\Facades\DB;
 use Modules\AiContentWriter\Support\JsonExtractor;
+use Modules\AiContentWriter\Support\LlmOutput;
 use RuntimeException;
 
 /**
  * 文章一键翻译：把已有内容（标题/摘要/正文/SEO 元数据）翻译到目标语言。
- * 每语言一次 LLM 调用返回 JSON；只新增语言不覆盖已有翻译。
+ * 每语言两次 LLM 调用（短字段小 JSON + 正文裸 HTML）；只新增语言不覆盖已有翻译。
  * 译文完整落库（模型层事务由调用方保证幂等：updateOrCreate 语义天然可重跑）。
  */
 class PostTranslator
@@ -98,6 +99,8 @@ class PostTranslator
 
     /**
      * @return array{title: string, excerpt: string, content: string, seo_title: string, seo_description: string, seo_keywords: string}
+     *
+     * @throws RuntimeException
      */
     protected function translateLocale(array $source, string $from, string $to, $meta): array
     {
@@ -107,37 +110,76 @@ class PostTranslator
             (string) $meta->getTranslation('description', $from, false),
         ) : '';
 
-        $raw = $this->llm->chat([
+        // -- 调用 A：短字段（标题/摘要/SEO）小 JSON —— 几乎不会解析失败。
+        // WHY 拆出来：旧实现把整篇译文 HTML 塞进一个 JSON 字符串，
+        // 漏转义一个正文引号就整包报废（与写作室正文同一根因）。
+        $metaRaw = $this->llm->chat([
             ['role' => 'system', 'content' => '你是专业 B2B 外贸内容译员。只输出 JSON，不要输出任何其他文本或代码块标记。'],
             ['role' => 'user', 'content' => <<<PROMPT
-把以下 B2B 外贸文章从 {$from} 翻译成 {$to}。
+把以下 B2B 外贸文章的短字段从 {$from} 翻译成 {$to}。
 
 标题：{$source['title']}
-摘要：{$source['excerpt']}
-正文 HTML：
-{$source['content']}{$seoText}
+摘要：{$source['excerpt']}{$seoText}
 
-要求：
-1. 保留正文全部 HTML 标签结构（h2/p/ul/li/table 等）不增不减；
-2. 术语符合目标语言行业习惯，品牌/参数/数字不变；
-3. SEO 标题控制在 60 字符内、SEO 描述 70~160 字符，自然融入目标语言关键词；
-4. 输出 JSON：{"title":"...","excerpt":"...","content":"<h2>...</h2>...","seo_title":"...","seo_description":"...","seo_keywords":"keyword1, keyword2"}
+要求：SEO 标题控制在 60 字符内、SEO 描述 70~160 字符，自然融入目标语言关键词。
+输出 JSON：{"title":"...","excerpt":"...","seo_title":"...","seo_description":"...","seo_keywords":"keyword1, keyword2"}
 PROMPT],
-        ], purpose: 'post.translate');
+        ], purpose: 'post.translate.meta');
 
-        $data = json_decode($this->extractJson($raw), true);
-        if (! is_array($data) || blank($data['title'] ?? null) || blank($data['content'] ?? null)) {
-            throw new RuntimeException("AI 返回的 {$to} 译文无法解析");
+        $metaData = json_decode($this->extractJson($metaRaw), true);
+
+        if (! is_array($metaData) || blank($metaData['title'] ?? null)) {
+            throw new RuntimeException("AI 返回的 {$to} 译文无法解析（标题字段缺失）");
         }
 
-        return [
-            'title' => (string) $data['title'],
-            'excerpt' => (string) ($data['excerpt'] ?? ''),
-            'content' => (string) $data['content'],
-            'seo_title' => (string) ($data['seo_title'] ?? ''),
-            'seo_description' => (string) ($data['seo_description'] ?? ''),
-            'seo_keywords' => (string) ($data['seo_keywords'] ?? ''),
-        ];
+        // -- 调用 B：正文裸 HTML 直出（两次机会）
+        $bodyPrompt = <<<PROMPT
+把以下 B2B 外贸文章正文从 {$from} 翻译成 {$to}。
+
+正文 HTML：
+{$source['content']}
+
+要求：
+1. 保留全部 HTML 标签结构（h2/p/ul/li/table 等）不增不减；
+2. 术语符合 {$to} 行业习惯，品牌/参数/数字不变；
+3. 只输出译文 HTML，不要 markdown 代码块，不要任何解释文字，第一个字符必须是 '<'。
+PROMPT;
+
+        $lastRaw = '';
+
+        for ($attempt = 1; $attempt <= 2; $attempt++) {
+            $result = $this->llm->chatResult([
+                ['role' => 'system', 'content' => '你是专业 B2B 外贸内容译员。只输出译文 HTML，不要 markdown 代码块，不要任何解释文字。'],
+                ['role' => 'user', 'content' => $bodyPrompt],
+            ], purpose: 'post.translate.body');
+
+            $html = LlmOutput::stripFence(trim($result['content']));
+            $lastRaw = $result['raw'] !== '' ? $result['raw'] : $result['content'];
+
+            // 截断容忍：补齐未闭合标签（少一节好过整包报废）
+            if (($result['finish_reason'] ?? '') === 'length') {
+                $html = LlmOutput::closeTruncatedHtml($html);
+            }
+
+            // 有效性：必须是 HTML 片段（而非道歉文本/半截 JSON）
+            if (str_starts_with($html, '<') && str_contains($html, '</')) {
+                return [
+                    'title' => (string) $metaData['title'],
+                    'excerpt' => (string) ($metaData['excerpt'] ?? ''),
+                    'content' => $html,
+                    'seo_title' => (string) ($metaData['seo_title'] ?? ''),
+                    'seo_description' => (string) ($metaData['seo_description'] ?? ''),
+                    'seo_keywords' => (string) ($metaData['seo_keywords'] ?? ''),
+                ];
+            }
+        }
+
+        $dump = LlmOutput::dumpRaw($lastRaw, 'translate-'.$to);
+
+        throw new RuntimeException(
+            "AI 返回的 {$to} 译文无法解析。原因：输出不是 HTML 片段。"
+            ."原始响应已存档：{$dump}（可发给技术人员排查）"
+        );
     }
 
     /** 源语言：默认 en，缺失时取第一个有标题的语言 */
