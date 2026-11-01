@@ -324,8 +324,26 @@ class UpdateCenterPage extends Page
         $uploaded = $data['package'] ?? [];
         $stored = is_array($uploaded) ? (string) ($uploaded[0] ?? '') : (string) $uploaded;
 
-        if ($stored === '' || ! is_file(storage_path($stored))) {
-            Notification::make()->title('请选择安装包文件')->danger()->send();
+        if ($stored === '') {
+            // 表单值为空 = 文件压根没传上来（选完文件浏览器就开始传，失败时字段保持空）。
+            // 大包跨国慢上行最常见：传到一半签名过期或被 PHP 上传限制拦截，前端只闪一下错误。
+            Notification::make()
+                ->title('安装包没有上传成功')
+                ->body('文件未到达服务器——常见原因：上传太慢超时、或服务器 PHP 上传限制过小。'.
+                    '更稳妥的做法：用宝塔「文件」把 btobcms-'.$tag.'.zip 上传到站点目录的 storage/app/update/ 下，'.
+                    '重命名为 '.$tag.'.zip，然后回版本列表点「更新到此版本」（会自动跳过下载直接安装）。')
+                ->danger()
+                ->persistent()
+                ->send();
+
+            return;
+        }
+
+        if (! is_file(storage_path($stored))) {
+            Notification::make()
+                ->title('上传的文件已失效，请重新选择并再次提交')
+                ->danger()
+                ->send();
 
             return;
         }

@@ -179,4 +179,21 @@ class UpdateCenterTest extends TestCase
 
         $this->assertSame([], $problems);
     }
+
+    public function test_livewire_large_upload_gates_are_lifted(): void
+    {
+        // 回归：安装包约 23MB，Livewire 默认 12MB 校验 + 5 分钟签名有效期
+        // 会让「本地上传安装包」静默失败（字段留空 → 提交报"请选择安装包文件"）。
+        // AppServiceProvider 必须在所有请求（含 /livewire/upload-file）放开这两道闸门。
+        $this->assertSame('file|max:204800', config('livewire.temporary_file_upload.rules'));
+        $this->assertSame(30, config('livewire.temporary_file_upload.max_upload_time'));
+    }
+
+    public function test_local_package_submit_explains_when_upload_never_arrived(): void
+    {
+        // package 为空时的提示必须可自助排障：告知原因 + 宝塔直传路径，而不是一句"请选择文件"
+        \Livewire\Livewire::test(\Modules\UpdateCenter\Filament\Pages\UpdateCenterPage::class)
+            ->call('updateFromLocalPackage', ['tag' => 'v9.9.9', 'package' => []])
+            ->assertNotified('安装包没有上传成功');
+    }
 }

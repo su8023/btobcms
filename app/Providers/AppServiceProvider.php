@@ -80,6 +80,17 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // 大文件上传通道（更新中心「本地上传安装包」，安装包约 23MB）：
+        // Livewire 临时上传有两道默认闸门会把大包拦成「无声失败」——
+        //  1. 校验规则 file|max:12288（12MB）：超限直接 422，表单值留空；
+        //  2. 上传签名 URL 只有 5 分钟有效期：跨国慢上行传一半就 401。
+        // 放在 App 层 boot 而非模块里：与模块启用状态、加载顺序、配置缓存都无关，
+        // 所有请求（含 /livewire/upload-file）必然生效。
+        config([
+            'livewire.temporary_file_upload.rules' => 'file|max:204800',
+            'livewire.temporary_file_upload.max_upload_time' => 30,
+        ]);
+
         // URL 协议与代理信任解耦：
         // 默认不信任代理（未配 TRUSTED_PROXIES）时 X-Forwarded-Proto 不被采信，
         // 于是 CDN 后面的站点会把 canonical / hreflang / sitemap / og:url
