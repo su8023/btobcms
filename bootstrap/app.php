@@ -46,4 +46,33 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        // 后台请求失败的诊断留痕（v1.4.29）：
+        // Filament 把组件异常统一显示成「页面加载出错」——通用文案让排障只能靠猜
+        // （本轮内链词典报错即如此：本地不复现、线上必现）。
+        // 这里把真实异常（类名 + 消息 + 出错位置）写进 laravel.log，
+        // 下次线上再犯时可直接从日志定位，无需 SSH 现场复现。
+        $exceptions->reportable(function (Throwable $e) use ($exceptions): void {
+            $request = request();
+
+            // 只关心后台与 Livewire：前台 404/500 量大且与后台排障无关
+            if (! $request->is('admin', 'admin/*', 'livewire/*')) {
+                return;
+            }
+
+            \Illuminate\Support\Facades\Log::error('[backend-request-failed] '.$request->method().' '.$request->fullUrl(), [
+                'exception' => $e::class,
+                // 异常消息可能是 GBK 字节（非 UTF-8）——直接写进日志会让
+                // Monolog 的 json_encode 失败、整个上下文变成 null，诊断页就什么都读不到。
+                // 换行也要压成单行：Laravel 的 LineFormatter 开了 allowInlineLineBreaks，
+                // 真实换行会把一条记录拆成多行（逐行清理会漏、逐行解析会丢字段）。
+                'message' => \App\Services\BackendErrorLog::singleLine(
+                    \App\Services\BackendErrorLog::toUtf8($e->getMessage())
+                ),
+                'status' => $e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface
+                    ? $e->getStatusCode()
+                    : 500,
+                'at' => $e->getFile().':'.$e->getLine(),
+            ]);
+        });
     })->create();

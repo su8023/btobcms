@@ -59,6 +59,13 @@ class AdminPanelProvider extends PanelProvider
             ->assets([
                 \Filament\Support\Assets\Css::make('admin-plugins', asset('css/admin-plugins.css')),
             ])
+            // 后台报错提示带上真实原因（v1.4.29）：
+            // Filament 默认只说「页面加载出错，请稍后重试」——管理员无从判断发生了什么，
+            // 排障只能靠猜。这里把排查入口写进提示正文（真实细节已写入 laravel.log）。
+            ->registerErrorNotification(
+                '页面加载出错',
+                '请求未能完成。原因已记入 storage/logs/laravel.log，请把该文件里的「[后台请求失败]」记录发给技术人员。',
+            )
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             // 插件 CRUD 资源：约定式发现 Modules/{Name}/app/Filament/Resources/*Resource.php
             ->resources(\App\Support\PluginPages::discoverResources())

@@ -89,7 +89,10 @@ class LinkTermResource extends Resource
                 TextColumn::make('keyword')->label('关键词')->searchable()->sortable(),
                 TextColumn::make('target')->label('目标链接')->limit(48)->copyable(),
                 TextColumn::make('locale')->label('语言')->badge()->placeholder('全部'),
-                TextColumn::make('appliedLinks_count')->counts('appliedLinks')->label('已织入')->sortable(),
+                // withCount('appliedLinks') 生成的别名是蛇形 applied_links_count，
+                // 列名必须与别名一致：驼峰会导致列永远取不到值、按此列排序 Unknown column
+                // （线上内链词典页「页面加载出错」的根因）
+                TextColumn::make('applied_links_count')->counts('appliedLinks')->label('已织入')->sortable(),
                 IconColumn::make('enabled')->label('启用')->boolean(),
                 TextColumn::make('updated_at')->label('更新于')->since(),
             ])
