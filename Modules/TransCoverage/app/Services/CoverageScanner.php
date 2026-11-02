@@ -2,20 +2,21 @@
 
 namespace Modules\TransCoverage\Services;
 
+use App\Models\Category;
 use App\Models\Post;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * 翻译覆盖率扫描：统计 Post / Product 在全站语言下的翻译完整度。
+ * 翻译覆盖率扫描：统计 Post / Product / Category 在全站语言下的翻译完整度。
  *
  * 输出每条内容：
- *   - 逐语言状态（full = 标题+正文 / name+summary 都有；partial = 仅标题/name；missing = 全缺）
+ *   - 逐语言状态（full = 标题+正文 / name+summary / name+description 都有；partial = 仅标题/name；missing = 全缺）
  *   - 缺失 SEO 语言数（经 metable 多态关联查 SeoMeta；模型无该关联时为 null，前端渲染 '—'）
  *   - 缺失语言数（补翻目标数量，用于排序与 AI 补翻选项标注）
  *
- * 整表结果缓存 10 分钟；缓存 key 携带 Post/Product 两模型的内容指纹
+ * 整表结果缓存 10 分钟；缓存 key 携带各模型的内容指纹
  * （count + max(id) + updated_at 摘要 + 最近改动行的正文摘要），
  * 任何内容变化（增删改）都会生成新 key，自动失效重算，无需手动清缓存。
  */
@@ -45,7 +46,8 @@ class CoverageScanner
     {
         return self::CACHE_PREFIX.md5(
             $this->fingerprint(Post::class, ['title', 'content']).'|'
-            .$this->fingerprint(Product::class, ['name', 'summary'])
+            .$this->fingerprint(Product::class, ['name', 'summary']).'|'
+            .$this->fingerprint(Category::class, ['name', 'description'])
             .'|'.implode(',', site_locales())
         );
     }
@@ -125,7 +127,7 @@ class CoverageScanner
     }
 
     /**
-     * 全量构建（无缓存路径）：扫描全部状态与类型的 Post / Product。
+     * 全量构建（无缓存路径）：扫描全部状态与类型的 Post / Product / Category。
      *
      * @return array{locales: list<string>, rows: list<array<string, mixed>>, stats: array<string, int>}
      */
@@ -141,6 +143,10 @@ class CoverageScanner
 
         foreach (Product::query()->with('seoMeta')->get() as $product) {
             $rows[] = $this->row($product, 'product', ['name', 'summary'], $locales);
+        }
+
+        foreach (Category::query()->with('seoMeta')->get() as $category) {
+            $rows[] = $this->row($category, 'category', ['name', 'description'], $locales);
         }
 
         // 按缺失语言数降序；并列时按 type、id 保证顺序稳定
@@ -160,7 +166,7 @@ class CoverageScanner
     }
 
     /**
-     * 构建单行结果。$fields = [标题字段, 正文字段]（Post: title/content；Product: name/summary）。
+     * 构建单行结果。$fields = [标题字段, 正文字段]（Post: title/content；Product: name/summary；Category: name/description）。
      *
      * @param  list<string>  $fields
      * @param  list<string>  $locales

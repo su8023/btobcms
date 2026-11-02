@@ -6,11 +6,14 @@
         @php($statusColor = ['full' => 'success', 'partial' => 'warning', 'missing' => 'danger'])
         @php($statusMark = ['full' => '✓', 'partial' => '◐', 'missing' => '✗'])
         @php($statusText = ['full' => '完整', 'partial' => '仅标题', 'missing' => '缺失'])
+        @php($typeTone = ['post' => 'primary', 'product' => 'gray', 'category' => 'warning'])
+        @php($typeLabel = ['post' => '文章', 'product' => '产品', 'category' => '分类'])
+        @php($labelTone = ['文章' => 'primary', '产品' => 'gray', '分类' => 'warning'])
 
         {{-- ===== 顶部统计卡：图标 + 大数字，一眼分层 ===== --}}
         <div class="plugin-stats-grid">
             <x-plugin-stat icon="heroicon-o-document-text" tone="gray"
-                label="内容总数（文章 + 产品）" value="{{ number_format($stats['total']) }}" />
+                label="内容总数（文章 + 产品 + 分类）" value="{{ number_format($stats['total']) }}" />
             <x-plugin-stat icon="heroicon-o-language" tone="primary"
                 label="完全翻译率" value="{{ $stats['full_rate'] }}%"
                 sub="{{ $stats['full_count'] }}/{{ $stats['total'] }} 全语言齐备" />
@@ -58,6 +61,7 @@
                     @foreach ($progress as $block)
                         <div class="uc-panel" style="padding:calc(var(--spacing) * 3) calc(var(--spacing) * 4)">
                             <p style="margin:0 0 8px; font-size:var(--text-sm); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                <span class="tp-badge tp-badge--sm tp-badge--{{ $labelTone[$block['type_label']] ?? 'gray' }}">{{ $block['type_label'] }}</span>
                                 {{ $block['title'] }}
                                 @if ($block['in_flight'])
                                     <span class="tp-badge tp-badge--info" style="margin-left:8px">进行中</span>
@@ -91,7 +95,7 @@
             </x-slot>
             @if (empty($coverage['rows']))
                 <x-plugin-empty icon="heroicon-o-table-cells" title="暂无内容"
-                    description="创建文章或产品后，翻译覆盖情况会自动出现在这里。" />
+                    description="创建文章、产品或分类后，翻译覆盖情况会自动出现在这里。" />
             @else
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
@@ -108,8 +112,8 @@
                             @foreach ($coverage['rows'] as $row)
                                 <tr class="border-b">
                                     <td class="py-2 pr-4">
-                                        <span class="tp-badge tp-badge--sm tp-badge--{{ $row['type'] === 'post' ? 'primary' : 'gray' }}" style="margin-right:6px">
-                                            {{ $row['type'] === 'post' ? '文章' : '产品' }}
+                                        <span class="tp-badge tp-badge--sm tp-badge--{{ $typeTone[$row['type']] ?? 'gray' }}" style="margin-right:6px">
+                                            {{ $typeLabel[$row['type']] ?? '内容' }}
                                         </span>
                                         {{ $row['title'] }}
                                     </td>

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Category;
 use App\Models\Post;
 use App\Models\Product;
 use App\Models\SeoMeta;
@@ -31,6 +32,7 @@ class TransCoverageTest extends TestCase
         // 清空种子内容，让统计卡断言完全可控；同时清跨用例残留的数组缓存
         Post::query()->delete();
         Product::query()->delete();
+        Category::query()->delete();
         Cache::flush();
 
         config([
@@ -61,6 +63,16 @@ class TransCoverageTest extends TestCase
             'status' => 'published',
             'name' => $name,
             'summary' => $summary,
+        ]);
+    }
+
+    private function makeCategory(array $name = [], array $description = []): Category
+    {
+        return Category::create([
+            'slug' => 'cov-c-'.uniqid(),
+            'status' => true,
+            'name' => $name,
+            'description' => $description,
         ]);
     }
 
@@ -175,6 +187,27 @@ class TransCoverageTest extends TestCase
 
         // 已填 en 的 SEO → 只缺其余 7 种
         $this->assertSame(7, $this->rowOf($scan, 'post', $withSeo->id)['missing_seo']);
+    }
+
+    public function test_categories_are_scanned_with_name_and_description(): void
+    {
+        // name+description 齐 → en full；description 空 → partial
+        $full = $this->makeCategory(['en' => 'Gate Valves'], ['en' => '<p>Intro</p>']);
+        $nameOnly = $this->makeCategory(['en' => 'Ball Valves']);
+
+        $scan = app(CoverageScanner::class)->scan();
+
+        $fullRow = $this->rowOf($scan, 'category', $full->id);
+        $this->assertSame('full', $fullRow['statuses']['en']);
+        $this->assertSame('missing', $fullRow['statuses']['es']);
+        $this->assertSame(7, $fullRow['missing_count']);
+        $this->assertSame('Gate Valves', $fullRow['title']);
+        $this->assertIsInt($fullRow['missing_seo']); // Category 也有 seoMeta 关系
+
+        $partialRow = $this->rowOf($scan, 'category', $nameOnly->id);
+        $this->assertSame('partial', $partialRow['statuses']['en']); // 有名称无描述 → 半缺
+        $this->assertSame(8, $partialRow['missing_count']);          // en partial + 其余 7 种 missing
+        $this->assertSame('Ball Valves', $partialRow['title']);
     }
 
     /* ----------------------------------------------------------
@@ -370,6 +403,26 @@ class TransCoverageTest extends TestCase
         // 进度区随页面渲染出现
         \Livewire\Livewire::test(\Modules\TransCoverage\Filament\Pages\CoveragePage::class)
             ->assertSee('补翻进度')
+            ->assertSee('排队中');
+    }
+
+    public function test_progress_area_lists_product_and_category_jobs(): void
+    {
+        $product = $this->makeProduct(['en' => 'Pump X'], ['en' => 's']);
+        $category = $this->makeCategory(['en' => 'Gate Valves']);
+
+        // 产品/分类翻译任务同样登记进度（type 维度），进度区应一起列出
+        \Modules\AiContentWriter\Support\TranslationProgress::mark($product->id, 'es', 'queued', '', 'product');
+        \Modules\AiContentWriter\Support\TranslationProgress::mark($product->id, 'fr', 'running', '', 'product');
+        \Modules\AiContentWriter\Support\TranslationProgress::mark($category->id, 'de', 'queued', '', 'category');
+
+        \Livewire\Livewire::test(\Modules\TransCoverage\Filament\Pages\CoveragePage::class)
+            ->assertSee('补翻进度')
+            ->assertSee('Pump X')      // 实体标题取自各类型主字段
+            ->assertSee('Gate Valves')
+            ->assertSee('产品')
+            ->assertSee('分类')
+            ->assertSee('翻译中')
             ->assertSee('排队中');
     }
 }

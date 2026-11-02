@@ -2,10 +2,13 @@
 
 namespace Modules\TransCoverage\Filament\Pages;
 
+use App\Models\Category;
 use App\Models\Post;
+use App\Models\Product;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Collection;
+use Modules\AiContentWriter\Support\TranslationProgress;
 use Modules\TransCoverage\Services\CoverageScanner;
 use Modules\TransCoverage\Services\TranslationFixer;
 
@@ -55,33 +58,45 @@ class CoveragePage extends Page
     }
 
     /**
-     * 补翻进度区数据：近期有任务记录的文章 × 各语言状态。
+     * 补翻进度区数据：近期有任务记录的实体（文章/产品/分类）× 各语言状态。
      * 页面 5 秒轮询 refresh 时随之更新（无在途任务时轮询由视图侧关闭）。
      *
-     * @return list<array{post_id: int, title: string, entries: list<array{locale: string, state: string, at: string, note: string}>, in_flight: bool}>
+     * @return list<array{title: string, type_label: string, entries: list<array{locale: string, state: string, at: string, note: string}>, in_flight: bool}>
      */
     protected function progressRows(): array
     {
-        if (! class_exists(\Modules\AiContentWriter\Support\TranslationProgress::class)) {
+        if (! class_exists(TranslationProgress::class)) {
             return []; // AiContentWriter 未启用：无任务可跟踪
         }
 
+        $typeLabels = ['post' => '文章', 'product' => '产品', 'category' => '分类'];
         $rows = [];
 
-        foreach (\Modules\AiContentWriter\Support\TranslationProgress::trackedPosts() as $postId) {
-            $entries = \Modules\AiContentWriter\Support\TranslationProgress::forPost($postId);
+        foreach (TranslationProgress::trackedEntities() as $entity) {
+            ['type' => $type, 'id' => $id] = $entity;
+            $entries = TranslationProgress::forEntity($type, $id);
 
             if ($entries === []) {
                 continue;
             }
 
-            $post = Post::find($postId);
+            $model = match ($type) {
+                'post' => Post::find($id),
+                'product' => Product::find($id),
+                'category' => Category::find($id),
+                default => null,
+            };
+
+            $title = $model !== null
+                ? $model->getTranslation($type === 'post' ? 'title' : 'name', default_locale(), false)
+                : '';
+            $title = trim((string) $title) ?: ($typeLabels[$type] ?? '内容')." #{$id}";
 
             $rows[] = [
-                'post_id' => $postId,
-                'title' => $post?->getTranslation('title', default_locale(), false) ?: "文章 #{$postId}",
+                'title' => $title,
+                'type_label' => $typeLabels[$type] ?? '内容',
                 'entries' => $entries,
-                'in_flight' => \Modules\AiContentWriter\Support\TranslationProgress::hasInFlight($postId),
+                'in_flight' => TranslationProgress::hasInFlight($id, $type),
             ];
         }
 

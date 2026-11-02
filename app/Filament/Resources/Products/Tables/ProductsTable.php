@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Products\Tables;
 
 use App\Filament\Resources\Products\Schemas\ProductForm;
 use App\Models\Attachment;
+use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -17,6 +18,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use Modules\AiContentWriter\Support\RecordTranslation;
 
 class ProductsTable
 {
@@ -24,12 +26,20 @@ class ProductsTable
     {
         return $table
             ->defaultPaginationPageOption(25)
+            ->poll(class_exists(RecordTranslation::class) ? '10s' : null)
             ->columns([
                 TextColumn::make('name')
                     ->label(__('admin.common.name'))
                     ->limit(50)
                     ->searchable()
                     ->sortable(),
+
+                TextColumn::make('translation_status')
+                    ->label(__('admin.common.translation'))
+                    ->badge()
+                    ->getStateUsing(fn (Model $record): string => RecordTranslation::badge($record, 'product')['label'])
+                    ->color(fn (Model $record): string => RecordTranslation::badge($record, 'product')['color'])
+                    ->visible(fn (): bool => class_exists(RecordTranslation::class)),
 
                 TextColumn::make('category.name')
                     ->label(__('admin.products.fields.category'))
@@ -119,6 +129,30 @@ class ProductsTable
                     }),
 
                 EditAction::make(),
+
+                Action::make('translate_missing')
+                    ->label(__('admin.common.translate_missing'))
+                    ->icon('heroicon-o-language')
+                    ->visible(fn (Model $record): bool => RecordTranslation::available('product')
+                        && RecordTranslation::badge($record, 'product')['hasGap'])
+                    ->action(function (Model $record): void {
+                        $count = RecordTranslation::enqueue($record, 'product');
+
+                        if ($count === 0) {
+                            Notification::make()
+                                ->title(__('admin.common.translate_no_source'))
+                                ->warning()
+                                ->send();
+
+                            return;
+                        }
+
+                        Notification::make()
+                            ->title(__('admin.common.translate_queued', ['count' => $count]))
+                            ->body(__('admin.common.translate_queued_body'))
+                            ->success()
+                            ->send();
+                    }),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
@@ -165,6 +199,30 @@ class ProductsTable
                                 ->title(__('admin.products.bulk.move_category'))
                                 ->success()
                                 ->body(__('admin.products.bulk.move_category_done', ['count' => $records->count()]))
+                                ->send();
+                        }),
+
+                    BulkAction::make('translate_missing_bulk')
+                        ->label(__('admin.common.translate_missing_bulk'))
+                        ->icon('heroicon-o-language')
+                        ->deselectRecordsAfterCompletion()
+                        ->visible(fn (): bool => RecordTranslation::available('product'))
+                        ->action(function (Collection $records): void {
+                            $total = $records->sum(fn (Model $record): int => RecordTranslation::enqueue($record, 'product'));
+
+                            if ($total === 0) {
+                                Notification::make()
+                                    ->title(__('admin.common.translate_bulk_none'))
+                                    ->success()
+                                    ->send();
+
+                                return;
+                            }
+
+                            Notification::make()
+                                ->title(__('admin.common.translate_bulk_queued', ['count' => $total]))
+                                ->body(__('admin.common.translate_queued_body'))
+                                ->success()
                                 ->send();
                         }),
                 ]),
