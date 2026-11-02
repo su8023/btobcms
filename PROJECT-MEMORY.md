@@ -133,6 +133,8 @@ curl -s https://api.github.com/repos/su8023/btobcms/releases/latest | grep tag_n
 | 迁移/种子在测试里失败 | RefreshDatabase + seed 是标配，别绕过；清种子数据用 `Xxx::query()->delete()`（统计类断言必须） |
 | 删了插件后后台 500 | 核心静态调用插件类（`RecordTranslation::available()`）→ 类不存在抛 `Error`。改用 `App\Support\PluginGuard::available($class, $module)` 守卫，**短路必须在调用之前** |
 | 测试里改 modules_statuses.json 无效 | `FileActivator` 是容器单例、构造时读盘；且测试中 `Module::find()` 每次重扫会新建 Module → 换掉容器里的 `ActivatorInterface` 实例才生效 |
+| 插件停用后前台全站 500 | 全新库若插件停用再 `migrate`，模块迁移没跑 → 数据表没建；但类文件在盘上（`class_exists` 为 true）→ 渲染路径查询直接 QueryException。**连 404 页都挂**（404 页也要渲染全站插槽）。查询插件表前必须 `Schema::hasTable()` |
+| module:migrate 报 include 失败 | Git Bash 下中文路径（`E:\桌面文件\...`）被转义成 `\xE6\xA1\x8C` → 用 `artisan migrate --path=Modules/Xxx/database/migrations --force` 绕过 |
 
 ## 七、重要决策记录（为什么这么做）
 
