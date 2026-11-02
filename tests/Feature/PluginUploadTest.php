@@ -33,6 +33,10 @@ class PluginUploadTest extends TestCase
         $this->composerBackup = (string) file_get_contents(base_path('composer.json'));
         $this->statusesBackup = (string) file_get_contents(base_path('modules_statuses.json'));
 
+        // delete() 不带 skipAutoload 参数，refreshAutoload() 失败现在会中止操作：
+        // 测试进程 PATH 里没有 composer，给 composerPhar() 喂真实 phar 路径让回退生效
+        config(['app.composer_phar' => 'E:/dev-tools/composer.phar']);
+
         $this->testDir = storage_path('app/plugin-upload-tests');
 
         if (! is_dir($this->testDir)) {
@@ -186,7 +190,7 @@ class MyTestPluginServiceProvider extends ServiceProvider
 }
 PHP;
 
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
         $zip->addFromString('MyTestPlugin/module.json', $moduleJson."\n");
         $zip->addFromString('MyTestPlugin/app/Providers/MyTestPluginServiceProvider.php', $provider."\n");
@@ -201,7 +205,7 @@ PHP;
         $zipPath = $this->testDir.'/traversal-plugin.zip';
         @unlink($zipPath);
 
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
         $zip->addFromString('MyTestPlugin/module.json', '{"name":"MyTestPlugin","providers":["Modules\\\\MyTestPlugin\\\\Providers\\\\MyTestPluginServiceProvider"]}');
         $zip->addFromString('../evil.php', '<?php // 前置路径穿越探测文件，绝不允许被写出');

@@ -4,6 +4,10 @@ namespace Modules\GeoBoost\Services;
 
 use App\Models\Post;
 use App\Services\Ai\LlmManager;
+use App\Support\PluginGuard;
+use Modules\AiContentWriter\Services\ArticleStudio;
+use Modules\AiContentWriter\Support\JsonExtractor;
+use Modules\AiContentWriter\Support\LlmOutput;
 use Modules\GeoBoost\Models\GeoFaq;
 
 /**
@@ -15,9 +19,10 @@ class FaqGenerator
     public function __construct(
         private readonly LlmManager $llm,
     ) {
-        // 自定义模型覆盖来自 AiContentWriter 的设置：模块可独立停用，先做存在性防御
-        if (class_exists(\Modules\AiContentWriter\Services\ArticleStudio::class)) {
-            \Modules\AiContentWriter\Services\ArticleStudio::applyCustomProvider();
+        // 自定义模型覆盖来自 AiContentWriter 的设置：插件被停用（类仍在）时
+        // 不应继续借用其配置烧 LLM 额度，走 PluginGuard 判定（类存在 + 模块启用）
+        if (PluginGuard::available(ArticleStudio::class, 'AiContentWriter')) {
+            ArticleStudio::applyCustomProvider();
         }
     }
 
@@ -78,7 +83,7 @@ PROMPT;
         }
 
         if ($faqs->isEmpty()) {
-            $dump = \Modules\AiContentWriter\Support\LlmOutput::dumpRaw($lastRaw, 'geoboost-faq');
+            $dump = LlmOutput::dumpRaw($lastRaw, 'geoboost-faq');
 
             throw new \RuntimeException("AI 返回的 FAQ 无法解析（重试后仍失败），原始响应已存档：{$dump}");
         }
@@ -111,6 +116,6 @@ PROMPT;
 
     protected function extractJson(string $raw): string
     {
-        return \Modules\AiContentWriter\Support\JsonExtractor::extract($raw) ?? $raw;
+        return JsonExtractor::extract($raw) ?? $raw;
     }
 }

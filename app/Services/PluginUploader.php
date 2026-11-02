@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Process;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+use RuntimeException;
 use ZipArchive;
 
 /**
@@ -64,7 +65,7 @@ class PluginUploader
             return $this->fail($steps, "zip 文件不存在或不可读：{$zipPath}");
         }
 
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         $errorCode = $zip->open($zipPath);
 
         if ($errorCode !== true) {
@@ -110,6 +111,7 @@ class PluginUploader
 
             if ($extracted === null) {
                 $this->removeDirectory($dest);
+
                 return $this->fail($steps, (string) $error);
             }
             $steps[] = "已解压 {$extracted} 个文件到 Modules/{$name}";
@@ -144,11 +146,16 @@ class PluginUploader
             }
             $steps[] = "已在 modules_statuses.json 中启用插件 {$name}";
 
-            // 8. 刷新 autoload
+            // 8. 刷新 autoload（失败抛 RuntimeException → 按安装失败处理：
+            // stale autoload 会让每次请求 bootstrap 抛 Class not found，全站 500）
             if ($skipAutoload) {
                 $steps[] = '已按参数跳过 composer dump-autoload';
             } else {
-                $steps[] = $this->refreshAutoload();
+                try {
+                    $steps[] = $this->refreshAutoload();
+                } catch (RuntimeException $e) {
+                    return $this->fail($steps, $e->getMessage());
+                }
             }
 
             // 9. 执行迁移：带数据表的插件不跑迁移，首次触达即 SQL 报错
@@ -218,8 +225,14 @@ class PluginUploader
         $this->removeStatus($name);
         $steps[] = "已从 modules_statuses.json 移除 {$name}";
 
-        // 5. 刷新 autoload
-        $steps[] = $this->refreshAutoload();
+        // 5. 刷新 autoload（失败抛 RuntimeException → 按删除失败处理：
+        // stale classmap 条目会让 class_exists 抛 ErrorException，全站 500。
+        // 此时目录已删、状态已清，autoload 残留映射只能靠重试刷新清掉）
+        try {
+            $steps[] = $this->refreshAutoload();
+        } catch (RuntimeException $e) {
+            return $this->fail($steps, $e->getMessage().'（插件目录与状态已清理，修复 composer 后重试删除即可）');
+        }
 
         return ['ok' => true, 'steps' => $steps];
     }
@@ -231,7 +244,7 @@ class PluginUploader
     /**
      * 逐条扫描 zip 条目并做安全校验，返回文件条目列表（目录与打包垃圾已剔除）。
      *
-     * @return list<array{name: string, index: int}>|null  失败返回 null 并填充 $error
+     * @return list<array{name: string, index: int}>|null 失败返回 null 并填充 $error
      */
     private function scanEntries(ZipArchive $zip, ?string &$error = null): ?array
     {
@@ -303,7 +316,7 @@ class PluginUploader
      * 定位 module.json：优先根目录；否则要求唯一一级子目录内恰好一个。
      *
      * @param  list<array{name: string, index: int}>  $entries
-     * @return array{0: array<string, mixed>, 1: int, 2: string}|null  [清单数据, 条目序号, 需剥离的公共根前缀]
+     * @return array{0: array<string, mixed>, 1: int, 2: string}|null [清单数据, 条目序号, 需剥离的公共根前缀]
      */
     private function locateManifest(ZipArchive $zip, array $entries, ?string &$error = null): ?array
     {
@@ -367,7 +380,7 @@ class PluginUploader
      * 逐文件解压到 $dest：剥离公共根前缀、自动创建目录、realpath 前缀校验。
      *
      * @param  list<array{name: string, index: int}>  $entries
-     * @return int|null  成功返回写出文件数，失败返回 null 并填充 $error
+     * @return int|null 成功返回写出文件数，失败返回 null 并填充 $error
      */
     private function extract(ZipArchive $zip, array $entries, string $dest, string $stripPrefix, ?string &$error = null): ?int
     {
@@ -466,7 +479,7 @@ class PluginUploader
 
         $encoded = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
-        if ($encoded === false || file_put_contents($path, $encoded."\n") === false) {
+        if ($encoded === false || ! $this->atomicWrite($path, $encoded."\n")) {
             $error = '根 composer.json 写入失败，无法注册 PSR-4 映射';
 
             return false;
@@ -505,7 +518,7 @@ class PluginUploader
 
         $encoded = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
-        return $encoded !== false && file_put_contents($path, $encoded."\n") !== false;
+        return $encoded !== false && $this->atomicWrite($path, $encoded."\n");
     }
 
     /**
@@ -534,7 +547,7 @@ class PluginUploader
 
         $encoded = json_encode($statuses, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
-        if ($encoded === false || file_put_contents(base_path('modules_statuses.json'), $encoded."\n") === false) {
+        if ($encoded === false || ! $this->atomicWrite(base_path('modules_statuses.json'), $encoded."\n")) {
             $error = 'modules_statuses.json 写入失败，无法启用插件';
 
             return false;
@@ -556,13 +569,52 @@ class PluginUploader
         $encoded = json_encode($statuses, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
         if ($encoded !== false) {
-            file_put_contents(base_path('modules_statuses.json'), $encoded."\n");
+            $this->atomicWrite(base_path('modules_statuses.json'), $encoded."\n");
         }
     }
 
     /**
-     * 刷新 autoload：先尝试 composer 命令，失败回退 PHP_BINARY + composer.phar；
-     * 再失败不视为安装失败，仅在步骤日志中提示手动执行。
+     * 原子写：tmp + rename，避免并发/中断产生半写文件。
+     *
+     * modules_statuses.json 是全站命门：nwidart 的 FileActivator 在每个请求
+     * bootstrap 时读它，readJson(): array 遇到半写/损坏的 JSON 直接 TypeError
+     * → 全站 500 且无自愈路径。裸 file_put_contents 在写入中途被杀（断电、
+     * 超时、并发写）就会留下这种文件。rename 在同一卷上是原子操作。
+     */
+    private function atomicWrite(string $path, string $content): bool
+    {
+        $tmp = $path.'.tmp';
+
+        if (file_put_contents($tmp, $content, LOCK_EX) === false) {
+            return false;
+        }
+
+        // Windows 的 rename() 不能覆盖已存在的目标——先删旧再 rename（与 SelfUpdater 同法）
+        if (is_file($path) && ! @unlink($path)) {
+            @unlink($tmp);
+
+            return false;
+        }
+
+        if (! @rename($tmp, $path)) {
+            @unlink($tmp);
+
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * 刷新 autoload：先尝试 composer 命令，失败回退 PHP_BINARY + composer.phar。
+     *
+     * 刷新失败必须让调用方知道并按失败处理：autoload 里残留旧映射时，
+     * 已删插件的 stale classmap 条目会让 class_exists 触发 include 缺失文件
+     * → ErrorException → 全站 500；新装插件的 Provider 类解析不到，
+     * ModuleManifest 注册的 Provider 在每次请求 bootstrap 时抛 Class not found。
+     * 这两种都不是「提示一下手动执行」能兜住的——是全站不可用。
+     *
+     * @return string 成功时的步骤日志；失败时抛 RuntimeException
      */
     private function refreshAutoload(): string
     {
@@ -584,9 +636,16 @@ class PluginUploader
             if ($fallback->successful()) {
                 return 'composer dump-autoload 完成（通过 composer.phar 回退执行）';
             }
+
+            $stderr = trim($fallback->errorOutput());
+        } else {
+            $stderr = trim($result->errorOutput());
         }
 
-        return 'autoload 未刷新：请手动执行 composer dump-autoload';
+        throw new RuntimeException(
+            'composer dump-autoload 失败（'.($stderr !== '' ? mb_substr($stderr, 0, 200) : '无错误输出')
+            .'）。autoload 未刷新会导致全站 500，操作已中止；请修复 composer 环境后重试。'
+        );
     }
 
     /**

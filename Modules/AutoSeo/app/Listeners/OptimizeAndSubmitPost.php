@@ -8,6 +8,7 @@ use App\Models\SeoMeta;
 use App\Services\Ai\LlmManager;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Log;
+use Modules\AiContentWriter\Support\JsonExtractor;
 use Modules\AutoSeo\Support\IndexNow;
 use Throwable;
 
@@ -80,7 +81,18 @@ class OptimizeAndSubmitPost implements ShouldQueue
 PROMPT],
                 ], purpose: 'seo.meta');
 
-                $data = json_decode((string) (\Modules\AiContentWriter\Support\JsonExtractor::extract($raw) ?? ''), true) ?: [];
+                // JsonExtractor 属于 AiContentWriter 插件：它被删后本插件仍要能
+                // 兜底工作（裸调用会被外层 catch 吞掉 → TDK 静默永久失效）。
+                // 退化路径：直接 json_decode（长文塞 JSON 的截断场景兜不住，但 TDK
+                // 都是短字段小 JSON，绝大多数响应可直接解析）。
+                if (class_exists(JsonExtractor::class)) {
+                    $extracted = JsonExtractor::extract($raw);
+                } else {
+                    // 剥掉 markdown 代码栅栏后再解析
+                    $extracted = trim((string) preg_replace('/^```(?:json)?|```$/m', '', (string) $raw));
+                }
+
+                $data = json_decode((string) $extracted, true) ?: [];
 
                 if ($needsTitle && ! blank($data['seo_title'] ?? null)) {
                     $existing->setTranslation('title', $lang, (string) $data['seo_title']);

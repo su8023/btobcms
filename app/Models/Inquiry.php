@@ -52,10 +52,16 @@ class Inquiry extends Model
      * 关系是惰性的——类在真正访问时才解析。插件被删（目录被移除）后
      * 一旦访问本关系就会抛 Error: Class "..." not found，
      * 因此这里先判类是否存在，不可用时返回 null（调用方 null-safe）。
+     * class_exists 包 try/catch：stale classmap 场景下 include 缺失文件
+     * 会抛 ErrorException（见 PluginGuard 注释）。
      */
     public function enrichment()
     {
-        if (! class_exists(InquiryEnrichment::class)) {
+        try {
+            if (! class_exists(InquiryEnrichment::class)) {
+                return null;
+            }
+        } catch (\Throwable) {
             return null;
         }
 

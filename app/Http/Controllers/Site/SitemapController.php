@@ -95,12 +95,19 @@ class SitemapController extends Controller
     private function sectionAvailable(string $section): bool
     {
         if ($section === 'cases') {
-            // TrustBuilder 是可选插件，三种失效都要挡住：
+            // TrustBuilder 是可选插件，四种失效都要挡住：
             // 1. 目录被删除 → 类不存在
-            // 2. 插件被停用 → 模块未启用
-            // 3. 表不存在 → 全新库里该插件从未启用过，迁移没跑，表根本没建
+            // 2. stale classmap → class_exists 触发 include 缺失文件抛 ErrorException
+            // 3. 插件被停用 → 模块未启用
+            // 4. 表不存在 → 全新库里该插件从未启用过，迁移没跑，表根本没建
             //    （class_exists 为 true 但表缺失 → 查询直接 QueryException 500）
-            return class_exists(TrustCase::class)
+            try {
+                $classExists = class_exists(TrustCase::class);
+            } catch (\Throwable) {
+                $classExists = false;
+            }
+
+            return $classExists
                 && $this->trustBuilderEnabled()
                 && $this->trustCasesTableExists();
         }

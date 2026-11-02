@@ -30,10 +30,20 @@ class PluginGuard
      *
      * 任何异常都按「不可用」处理——这个方法用在渲染路径上，
      * 抛异常等于把后台打挂，比降级严重得多。
+     *
+     * class_exists 也要包 try/catch：插件目录被删后若 autoload 未刷新
+     * （composer dump-autoload 失败的场景），Composer 的 stale classmap
+     * 仍持有已删类的条目，class_exists 触发 include 缺失文件 → warning，
+     * 被 Laravel 的错误处理器转成 ErrorException 抛出（实测确认）。
      */
     public static function available(string $class, ?string $module = null): bool
     {
-        if (! class_exists($class)) {
+        try {
+            if (! class_exists($class)) {
+                return false;
+            }
+        } catch (\Throwable) {
+            // stale classmap 指向已删除的文件：include 失败抛 ErrorException
             return false;
         }
 

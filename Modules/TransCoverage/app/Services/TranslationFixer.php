@@ -3,7 +3,10 @@
 namespace Modules\TransCoverage\Services;
 
 use App\Models\Post;
+use App\Support\PluginGuard;
 use Illuminate\Support\Facades\Cache;
+use Modules\AiContentWriter\Services\ArticleStudio;
+use Modules\AiContentWriter\Services\PostTranslator;
 use RuntimeException;
 
 /**
@@ -14,17 +17,26 @@ use RuntimeException;
  */
 class TranslationFixer
 {
-    /** AiContentWriter 插件是否可用（class_exists 防御，模块未安装时为 false） */
+    /**
+     * AiContentWriter 插件是否可用。
+     *
+     * 只查 class_exists 不够：插件被「停用」（目录在、类在）时补翻仍会
+     * 照常工作并烧 LLM 额度，与插件中心的启停语义矛盾。
+     * 复用核心 PluginGuard：类存在 + 模块启用，模块被删抛的异常也被吞掉。
+     */
     public static function available(): bool
     {
-        return class_exists(\Modules\AiContentWriter\Services\PostTranslator::class);
+        return PluginGuard::available(
+            PostTranslator::class,
+            'AiContentWriter',
+        );
     }
 
     /**
      * 把 $post 的指定语言补翻出来；成功后清掉补翻前的覆盖率缓存，看板立即刷新。
      *
      * @param  list<string>  $locales  目标语言（一般来自 CoverageScanner::missingLocalesFor）
-     * @return list<string>  实际翻译成功并落库的语言
+     * @return list<string> 实际翻译成功并落库的语言
      *
      * @throws RuntimeException 插件未安装、无目标语言或翻译失败时
      */
@@ -45,10 +57,10 @@ class TranslationFixer
         $keyBefore = $scanner->cacheKey();
 
         // 与写作室一致：先应用插件自定义模型覆盖（PostTranslator 构造器也会调，双保险）
-        \Modules\AiContentWriter\Services\ArticleStudio::applyCustomProvider();
+        ArticleStudio::applyCustomProvider();
 
         try {
-            $translated = app(\Modules\AiContentWriter\Services\PostTranslator::class)
+            $translated = app(PostTranslator::class)
                 ->translate($post, $locales);
         } catch (\Throwable $e) {
             throw new RuntimeException('AI 补翻失败：'.$e->getMessage(), 0, $e);

@@ -2,8 +2,12 @@
 
 namespace App\Filament\Pages;
 
+use App\Services\PluginUploader;
+use App\Support\PluginDocs;
+use App\Support\PluginSettingsStore;
 use BackedEnum;
-use App\Models\Setting;
+use Filament\Actions\Action;
+use Filament\Forms\Components\FileUpload;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
@@ -35,7 +39,7 @@ class PluginCenter extends Page
     protected function getHeaderActions(): array
     {
         return [
-            \Filament\Actions\Action::make('runCheck')
+            Action::make('runCheck')
                 ->label(__('admin.plugins.run_check'))
                 ->icon('heroicon-o-shield-check')
                 ->color('gray')
@@ -58,11 +62,11 @@ class PluginCenter extends Page
                         ->send();
                 }),
 
-            \Filament\Actions\Action::make('uploadPlugin')
+            Action::make('uploadPlugin')
                 ->label(__('admin.plugins.upload'))
                 ->icon('heroicon-o-arrow-up-tray')
                 ->form([
-                    \Filament\Forms\Components\FileUpload::make('zip')
+                    FileUpload::make('zip')
                         ->label(__('admin.plugins.upload_file'))
                         ->acceptedFileTypes(['application/zip', 'application/x-zip-compressed'])
                         ->disk('local')
@@ -72,7 +76,7 @@ class PluginCenter extends Page
                 ->action(function (array $data): void {
                     $zipPath = \Storage::disk('local')->path($data['zip']);
 
-                    $result = app(\App\Services\PluginUploader::class)->upload($zipPath);
+                    $result = app(PluginUploader::class)->upload($zipPath);
 
                     \Storage::disk('local')->delete($data['zip']);
 
@@ -133,7 +137,9 @@ class PluginCenter extends Page
 
         /** @var \Nwidart\Modules\Module $module */
         foreach (Module::all() as $module) {
-            $manifest = json_decode((string) file_get_contents($module->getPath().'/module.json'), true) ?: [];
+            // glob 扫到 module.json 与真正读它之间可能被删（竞态：另一标签页在删插件），
+            // warning 会被 Laravel 错误处理器转 ErrorException → 插件中心 500
+            $manifest = json_decode((string) @file_get_contents($module->getPath().'/module.json'), true) ?: [];
 
             $category = (string) ($manifest['category'] ?? 'general');
             if (! in_array($category, $order, true)) {
@@ -194,12 +200,12 @@ class PluginCenter extends Page
 
     public function hasSettings(string $name): bool
     {
-        return \App\Support\PluginSettingsStore::hasSettings($name);
+        return PluginSettingsStore::hasSettings($name);
     }
 
     public function settingsUrl(string $name): string
     {
-        return \App\Filament\Pages\PluginSettingsPage::getUrl(['plugin' => $name]);
+        return PluginSettingsPage::getUrl(['plugin' => $name]);
     }
 
     /* ----------------------------------------------------------
@@ -208,11 +214,11 @@ class PluginCenter extends Page
 
     public function hasDocs(string $name): bool
     {
-        return \App\Support\PluginDocs::has($name);
+        return PluginDocs::has($name);
     }
 
     public function docs(string $name): string
     {
-        return (string) \App\Support\PluginDocs::content($name);
+        return (string) PluginDocs::content($name);
     }
 }
