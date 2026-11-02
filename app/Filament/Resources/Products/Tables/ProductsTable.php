@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Products\Tables;
 
 use App\Filament\Resources\Products\Schemas\ProductForm;
 use App\Models\Attachment;
+use App\Support\PluginGuard;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
@@ -37,9 +38,9 @@ class ProductsTable
                 TextColumn::make('translation_status')
                     ->label(__('admin.common.translation'))
                     ->badge()
-                    ->getStateUsing(fn (Model $record): string => RecordTranslation::badge($record, 'product')['label'])
-                    ->color(fn (Model $record): string => RecordTranslation::badge($record, 'product')['color'])
-                    ->visible(fn (): bool => class_exists(RecordTranslation::class)),
+                    ->getStateUsing(fn (Model $record): string => self::translationBadge($record)['label'])
+                    ->color(fn (Model $record): string => self::translationBadge($record)['color'])
+                    ->visible(fn (): bool => self::translationAvailable()),
 
                 TextColumn::make('category.name')
                     ->label(__('admin.products.fields.category'))
@@ -133,9 +134,20 @@ class ProductsTable
                 Action::make('translate_missing')
                     ->label(__('admin.common.translate_missing'))
                     ->icon('heroicon-o-language')
-                    ->visible(fn (Model $record): bool => RecordTranslation::available('product')
+                    ->visible(fn (Model $record): bool => self::translationAvailable()
+                        && RecordTranslation::available('product')
                         && RecordTranslation::badge($record, 'product')['hasGap'])
                     ->action(function (Model $record): void {
+                        // 兜底：页面渲染后、点击前插件可能被删除（另一标签页操作）
+                        if (! self::translationAvailable()) {
+                            Notification::make()
+                                ->title(__('admin.common.translate_missing'))
+                                ->warning()
+                                ->send();
+
+                            return;
+                        }
+
                         $count = RecordTranslation::enqueue($record, 'product');
 
                         if ($count === 0) {
@@ -206,8 +218,19 @@ class ProductsTable
                         ->label(__('admin.common.translate_missing_bulk'))
                         ->icon('heroicon-o-language')
                         ->deselectRecordsAfterCompletion()
-                        ->visible(fn (): bool => RecordTranslation::available('product'))
+                        ->visible(fn (): bool => self::translationAvailable()
+                            && RecordTranslation::available('product'))
                         ->action(function (Collection $records): void {
+                            // 兜底：页面渲染后、点击前插件可能被删除（另一标签页操作）
+                            if (! self::translationAvailable()) {
+                                Notification::make()
+                                    ->title(__('admin.common.translate_missing_bulk'))
+                                    ->warning()
+                                    ->send();
+
+                                return;
+                            }
+
                             $total = $records->sum(fn (Model $record): int => RecordTranslation::enqueue($record, 'product'));
 
                             if ($total === 0) {
@@ -227,5 +250,30 @@ class ProductsTable
                         }),
                 ]),
             ]);
+    }
+
+    /**
+     * AiContentWriter 插件是否可用（类存在且插件处于启用状态）。
+     *
+     * 插件中心的「删除插件」会真的删掉 Modules/AiContentWriter 目录：
+     * 此时 RecordTranslation 类不存在，直接调用会抛
+     * Error: Class "..." not found，产品列表页整个 500。
+     */
+    private static function translationAvailable(): bool
+    {
+        return PluginGuard::available(RecordTranslation::class, 'AiContentWriter');
+    }
+
+    /**
+     * 翻译徽章状态。插件不可用时返回中性占位，
+     * 让列保持可见但不发散（visible() 已保证正常情况下才有值）。
+     */
+    private static function translationBadge(Model $record): array
+    {
+        if (! self::translationAvailable()) {
+            return ['label' => __('admin.common.translation'), 'color' => 'gray'];
+        }
+
+        return RecordTranslation::badge($record, 'product');
     }
 }

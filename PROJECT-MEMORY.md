@@ -35,11 +35,19 @@
 `"E:/dev-tools/php84/php.exe" C:/Users/Alion/AppData/Local/Temp/btob-install/artisan optimize:clear`。
 判断 8140 serve 的是谁：往某边 `public/` 放标记文件 curl 一下即可（见 troubleshooting-history）。
 
+### 2.1 Laravel Boost（v1.4.31 起已装）
+- `laravel/boost` v2.10.4（dev 依赖）；`boost:install --guidelines --skills --mcp` 已执行。
+- **guidelines 落在 `CLAUDE.md` + `AGENTS.md`**（两者内容相同，Boost 自动写入）。原 bootstrap 提示已被替换。
+- **skills 落在 `.claude/skills/`**（5 个：infer-conventions / deploying-to-cloud / laravel-best-practices / testing-best-practices / tailwindcss-development）——团队共享，**要入库**。
+- **`.mcp.json` 含本机绝对路径**（`E:/dev-tools/php84/php.exe`，因 php 不在 PATH）——**已 gitignore**，逐人不同不入库。
+- `boost.json` 是 Boost 的开关清单，入库。
+
 ## 三、架构要点（动代码前先读这节）
 
 ### 3.1 模块化插件体系
 - 15 个模块在 `Modules/`，启停状态在 `modules_statuses.json`（SelfUpdater 更新时会按保留清单合并，旧站点手动关掉的保持关闭）。
 - 核心代码引用模块的**门禁惯例**：`class_exists(\Modules\Xxx\...)` 防模块被删；要区分「停用」用 `Module::isEnabled('Xxx')` 包 try/catch（模块被删会抛异常，见 `RecordTranslation::available()`）。
+- **统一走 `App\Support\PluginGuard::available($class, $module)`**（v1.4.31 起）：类存在 + 模块启用，一站式判定；模块被删时 `isEnabled` 抛 `ModuleNotFoundException` 会被吞掉返回 false。**短路必须在静态调用之前**——`Foo::class` 是编译期字符串常量不报错，但 `Foo::bar()` 会 autoload 并抛 `Error`。
 - 惯例式发现（核心零插件依赖）：`Modules/{Name}/app/Support/PostActions.php::editorActions($page)` → 文章编辑页动作（见 `App\Support\PluginPostActions`）；`PluginPages` 同模式。
 - 更新机制：SelfUpdater v2 自包含 zip（代码+vendor），下载双源（GitHub API octet-stream + browser_download_url 兜底，因为 GitHub CDN 屏蔽过 Dallas 服务器 IP）。
 
@@ -123,6 +131,8 @@ curl -s https://api.github.com/repos/su8023/btobcms/releases/latest | grep tag_n
 | 本地站改完没生效 | btob-install 是独立副本 → cp 同步 + optimize:clear |
 | CoverageScanner 改了但看板没变 | 10 分钟指纹缓存；`Cache::forget(app(CoverageScanner::class)->cacheKey())`（TranslateRecordJob 已内置） |
 | 迁移/种子在测试里失败 | RefreshDatabase + seed 是标配，别绕过；清种子数据用 `Xxx::query()->delete()`（统计类断言必须） |
+| 删了插件后后台 500 | 核心静态调用插件类（`RecordTranslation::available()`）→ 类不存在抛 `Error`。改用 `App\Support\PluginGuard::available($class, $module)` 守卫，**短路必须在调用之前** |
+| 测试里改 modules_statuses.json 无效 | `FileActivator` 是容器单例、构造时读盘；且测试中 `Module::find()` 每次重扫会新建 Module → 换掉容器里的 `ActivatorInterface` 实例才生效 |
 
 ## 七、重要决策记录（为什么这么做）
 

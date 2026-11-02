@@ -44,3 +44,7 @@ btobcms-deploy-*.zip
 # 发布包构建产物（scripts/build-release.php 生成，体积大，不入仓库）
 /dist/
 cookies.txt
+
+# Laravel Boost 的本机 MCP 配置（含绝对路径，逐人不同，不入仓库）
+# .claude/skills/ 与 boost.json 是团队共享的项目资产，需要入库
+/.mcp.json
