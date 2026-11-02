@@ -23,28 +23,33 @@
 | 前台 | Blade + 原生 CSS | 服务端渲染，SEO 天然友好，无 SPA/构建复杂度 |
 | 队列 | Laravel Queue（database 驱动） | 生产可切 Horizon/worker |
 
-## 快速开始（Windows 本机）
+## 快速开始（Linux 本机）
 
-本机工具链实际位置（Git Bash 路径）：
+工具链（均在 PATH，Debian 13 apt 安装）：
 
-| 工具 | Windows 路径 | Git Bash 路径 |
+| 工具 | 版本 | 路径 |
 |---|---|---|
-| PHP 8.4 | `E:\dev-tools\php84\php.exe` | `/e/dev-tools/php84/php.exe` |
-| Composer | `E:\dev-tools\composer.phar` | `/e/dev-tools/composer.phar` |
+| PHP 8.4 | 8.4.27 | `/usr/bin/php` |
+| Composer | 2.11.1 | `~/.local/bin/composer` |
+| Node / npm | 24.9 / 11.21 | `/usr/local/bin/node` |
 
 ```bash
 # 1. 安装依赖
-/e/dev-tools/php84/php.exe /e/dev-tools/composer.phar install
+composer install
+npm install --ignore-scripts
 
 # 2. 初始化环境（首次；.env 与 database/database.sqlite 已就绪则跳过）
 cp .env.example .env
-/e/dev-tools/php84/php.exe artisan key:generate
+php artisan key:generate
 
 # 3. 建表 + 种子数据
-/e/dev-tools/php84/php.exe artisan migrate --seed
+php artisan migrate --seed
 
-# 4. 启动开发服务器
-/e/dev-tools/php84/php.exe artisan serve
+# 4. 构建前端资源
+npm run build
+
+# 5. 启动开发服务器
+php artisan serve
 ```
 
 - 前台：<http://127.0.0.1:8000>
@@ -81,11 +86,11 @@ php artisan queue:work --daemon   # 询盘邮件 / SEO 巡检 / AI 任务都靠�
 
 | 命令 | 说明 |
 |---|---|
-| `/e/dev-tools/php84/php.exe artisan seo:audit --base-url=https://example.com --limit=100` | 抓取站点 sitemap 做规则化 SEO 巡检（TDK 缺失/长度、H1 数量、canonical、HTTP 状态码），报告写入 `storage/app/seo-audits/` 并触发 `SeoAuditFinished` 事件。`--base-url` 缺省取 `APP_URL`，另有 `--timeout` 控制单页超时 |
-| `/e/dev-tools/php84/php.exe artisan ai:article "how to choose led strip supplier" --lang=en --words=1200` | AI 生成一篇 SEO 文章并保存为**草稿**（含 FAQ 与内链占位），后台人审后才发布 |
-| `/e/dev-tools/php84/php.exe artisan feishu:test` | 向配置的飞书群发送测试卡片，验证 Webhook 连通性 |
-| `/e/dev-tools/php84/php.exe artisan module:list` | 列出全部插件及启停状态 |
-| `/e/dev-tools/php84/php.exe artisan module:make Xxx` | 在 `Modules/` 下生成新插件骨架 |
+| `php artisan seo:audit --base-url=https://example.com --limit=100` | 抓取站点 sitemap 做规则化 SEO 巡检（TDK 缺失/长度、H1 数量、canonical、HTTP 状态码），报告写入 `storage/app/seo-audits/` 并触发 `SeoAuditFinished` 事件。`--base-url` 缺省取 `APP_URL`，另有 `--timeout` 控制单页超时 |
+| `php artisan ai:article "how to choose led strip supplier" --lang=en --words=1200` | AI 生成一篇 SEO 文章并保存为**草稿**（含 FAQ 与内链占位），后台人审后才发布 |
+| `php artisan feishu:test` | 向配置的飞书群发送测试卡片，验证 Webhook 连通性 |
+| `php artisan module:list` | 列出全部插件及启停状态 |
+| `php artisan module:make Xxx` | 在 `Modules/` 下生成新插件骨架 |
 
 ## 环境变量说明
 
@@ -180,7 +185,7 @@ php artisan queue:work --daemon   # 询盘邮件 / SEO 巡检 / AI 任务都靠�
 ## 测试
 
 ```bash
-/e/dev-tools/php84/php.exe artisan test
+php artisan test
 ```
 
 ## 相关文档

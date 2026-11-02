@@ -14,32 +14,29 @@
 | 技术栈 | Laravel 13 + Filament 5 + Livewire v4 + Spatie Translatable + nwidart 模块 |
 | 线上站 | https://www.chinasupplier.shop（Dallas 服务器，宝塔 nginx + PHP-FPM） |
 | 线上当前版本 | 看后台上「更新中心」，或 GitHub `releases/latest`（发版流程见第五节） |
-| 本仓库 | `E:\桌面文件\文件夹\BtoBcms`，remote `github.com/su8023/btobcms`（HTTPS + Windows 凭据管理器） |
-| Shell | Git Bash on Windows；**php/composer 不在 PATH**（见下） |
+| 本仓库 | `/home/bskhk/文件/BtoBcms`，remote `github.com/su8023/btobcms`（HTTPS） |
+| Shell | Debian 13 (trixie) + bash；php/composer/node 均在 PATH（见下） |
 | 语言 | 站点 8 语言（en 默认无前缀，es/ar/ru/pt/fr/de/it 带 `/es/` 前缀）；`site_locales()` / `default_locale()` helpers |
 | 版本号 | 唯一出处 `config/version.php`，必须与 git tag 完全一致（如 `v1.4.30`） |
 
-## 二、本机环境（路径要背下来）
+## 二、本机环境（Debian 13，2026-11-03 重建）
 
-| 工具 | 路径 |
+| 工具 | 路径 / 版本 |
 |---|---|
-| PHP 8.4（主力，跑 artisan/测试/构建） | `E:/dev-tools/php84/php.exe` |
-| PHP 8.3（备用，勿混用） | `C:/php-cli/php.exe` |
-| Composer | `E:/dev-tools/composer.phar`（构建时 `--composer=` 传入） |
-| 本地测试站代码 | `C:/Users/Alion/AppData/Local/Temp/btob-install`（**独立副本，不是 junction**） |
-| 本地测试站服务 | `php -S 127.0.0.1:8140 -t public`（常驻进程，重启站不用管它） |
-| 本地站管理员 | `tbskhk@gmail.com` / `Admin@2026`（密码曾重置过，登不上就 tinker 重置） |
-| 本地站 APP_URL | `install-test.local`（**签名 URL 校验含 host**，curl 验证要带 `-H "Host: install-test.local"`） |
+| PHP 8.4（主力，跑 artisan/测试/构建） | `/usr/bin/php`，8.4.27；扩展：sqlite3/mbstring/xml/curl/zip/gd/bcmath/intl |
+| Composer | `~/.local/bin/composer`，2.11.1（构建时 `--composer="composer"`） |
+| Node / npm | `/usr/local/bin/node` v24.9.0 / npm 11.21.0 |
+| 本地开发站 | `php artisan serve` → 127.0.0.1:8000（前台 200、/admin 302 登录跳转正常） |
+| 数据库 | `database/database.sqlite`（已在，迁移已跑完） |
 
-⚠️ **改代码 ≠ 本地站生效**：主仓库改完后必须 `cp` 同步改动文件到 btob-install 对应路径，再
-`"E:/dev-tools/php84/php.exe" C:/Users/Alion/AppData/Local/Temp/btob-install/artisan optimize:clear`。
-判断 8140 serve 的是谁：往某边 `public/` 放标记文件 curl 一下即可（见 troubleshooting-history）。
+⚠️ 本仓库已从 Windows 迁到 Linux：历史文档里的 `E:/dev-tools/...` 路径全部失效，
+命令一律写 `php artisan ...` / `composer ...`。`.mcp.json` 改成 `"command": "php"`。
 
 ### 2.1 Laravel Boost（v1.4.31 起已装）
 - `laravel/boost` v2.10.4（dev 依赖）；`boost:install --guidelines --skills --mcp` 已执行。
 - **guidelines 落在 `CLAUDE.md` + `AGENTS.md`**（两者内容相同，Boost 自动写入）。原 bootstrap 提示已被替换。
 - **skills 落在 `.claude/skills/`**（5 个：infer-conventions / deploying-to-cloud / laravel-best-practices / testing-best-practices / tailwindcss-development）——团队共享，**要入库**。
-- **`.mcp.json` 含本机绝对路径**（`E:/dev-tools/php84/php.exe`，因 php 不在 PATH）——**已 gitignore**，逐人不同不入库。
+- **`.mcp.json` 指向本机 php**（Linux 走 PATH 的 `"php"`）——**已 gitignore**，逐人不同不入库。
 - `boost.json` 是 Boost 的开关清单，入库。
 
 ### 2.2 线上服务器（宝塔 + 共享多站点机）
@@ -54,7 +51,7 @@
 - 线上是**私有仓库**，匿名 `api.github.com/repos/su8023/btobcms` 返回 404 是正常的，验证发布要用带 token 的请求。
 
 ### 2.3 CDP 浏览器自动化（线上验证专用）
-- 工具：`E:/dev-tools/cdp.php`（本项目外，独立工具），Chrome 带 `--remote-debugging-port=9222` + 独立 user-data-dir。
+- 工具：Windows 侧的 `E:/dev-tools/cdp.php`（本项目外，独立工具）——**Linux 迁移后尚未迁移该工具**，需要时再装。
 - 命令：`nav <url>` / `eval "<js>"` / `shot <out.png>` / `console [N]` / `tabs` / `new` / `close`。
 - **`eval` 的 URL 参数不要用嵌套引号**（Windows shell + PHP 双层转义会炸）→ 用 `eval` 的多行形式或写临时 JS 文件。
 - 页面里 `Livewire.find(wireId)` 可直接调组件方法（`set()`/`call('save')`），但 **Filament v5 表单状态是数组式**，路径写成 `data.status` 会静默无效（真实路径 `data.data.0.status`）。
@@ -93,7 +90,7 @@
 - LLM 调用：`LlmManager::chat(messages, purpose:)` 返回文本；`chatResult()` 返回 `['content','raw','finish_reason']`；测试里用 `config('ai.providers.deepseek.key' => 'sk-test-fake')` + `Http::fake()` 序列应答。
 
 ### 3.5 测试约定
-- 全套：`"E:/dev-tools/php84/php.exe" artisan test`（326+ 例，约 4-5 分钟）；单套 `--filter="XxxTest"`。
+- 全套：`php artisan test`（326+ 例，约 4-5 分钟）；单套 `--filter="XxxTest"`。
 - 惯例：`RefreshDatabase` + `$this->seed()` + `actingAs(User::first())`；测试输出是 **phpunit JSON 风格**（result/passed/failed 字段）。
 - ⚠️ 断言中文文案前先 `app()->setLocale('zh_CN')`（测试默认 locale 是 en）。
 - LLM 相关测试一律 Http::fake，**绝不真调 AI**。
@@ -114,10 +111,10 @@
 sed -i "s/'version' => 'v1.4.XX'/'version' => 'v1.4.XY'/" config/version.php
 git add config/version.php && git commit -m "release v1.4.XY：主题"
 # 2) 构建（自包含 zip，约 1-3 分钟）
-"E:/dev-tools/php84/php.exe" scripts/build-release.php --composer="E:/dev-tools/composer.phar"
+php scripts/build-release.php --composer="composer"
 # 3) 双校验（18 项完整性 + 16 项覆盖语义，非 0 退出即失败，别发）
-"E:/dev-tools/php84/php.exe" scripts/verify-release.php dist/btobcms-v1.4.XY.zip
-"E:/dev-tools/php84/php.exe" scripts/verify-swap.php  dist/btobcms-v1.4.XY.zip   # 较慢，可放后台
+php scripts/verify-release.php dist/btobcms-v1.4.XY.zip
+php scripts/verify-swap.php  dist/btobcms-v1.4.XY.zip   # 较慢，可放后台
 # 4) tag + push
 git tag -a v1.4.XY -m "v1.4.XY" && git push origin main --tags
 # 5) GitHub Release + 上传资产（gh 未安装！见下）
@@ -154,13 +151,13 @@ curl -s https://api.github.com/repos/su8023/btobcms/releases/latest | grep tag_n
 | 签名 URL 明明对却 403 | 签名校验**含 host**；curl 验证带 `-H "Host: <APP_URL>"`，或从同域名页面生成 |
 | artisan test 断言中文失败 | 测试 locale 是 en → setUp 里 `app()->setLocale('zh_CN')` |
 | tinker --execute 报 parse error | Git Bash 引号问题 → 外层单引号、内层双引号；复杂逻辑写临时 PHP 文件执行 |
-| 本地站改完没生效 | btob-install 是独立副本 → cp 同步 + optimize:clear |
+| 本地站改完没生效 | 迁移前是 btob-install 独立副本需 cp 同步；Linux 下直接改本仓库即生效 |
 | CoverageScanner 改了但看板没变 | 10 分钟指纹缓存；`Cache::forget(app(CoverageScanner::class)->cacheKey())`（TranslateRecordJob 已内置） |
 | 迁移/种子在测试里失败 | RefreshDatabase + seed 是标配，别绕过；清种子数据用 `Xxx::query()->delete()`（统计类断言必须） |
 | 删了插件后后台 500 | 核心静态调用插件类（`RecordTranslation::available()`）→ 类不存在抛 `Error`。改用 `App\Support\PluginGuard::available($class, $module)` 守卫，**短路必须在调用之前** |
 | 测试里改 modules_statuses.json 无效 | `FileActivator` 是容器单例、构造时读盘；且测试中 `Module::find()` 每次重扫会新建 Module → 换掉容器里的 `ActivatorInterface` 实例才生效 |
 | 插件停用后前台全站 500 | 全新库若插件停用再 `migrate`，模块迁移没跑 → 数据表没建；但类文件在盘上（`class_exists` 为 true）→ 渲染路径查询直接 QueryException。**连 404 页都挂**（404 页也要渲染全站插槽）。查询插件表前必须 `Schema::hasTable()` |
-| module:migrate 报 include 失败 | Git Bash 下中文路径（`E:\桌面文件\...`）被转义成 `\xE6\xA1\x8C` → 用 `artisan migrate --path=Modules/Xxx/database/migrations --force` 绕过 |
+| module:migrate 报 include 失败 | Windows Git Bash 下中文路径被转义 → 用 `artisan migrate --path=Modules/Xxx/database/migrations --force` 绕过（Linux 无此问题） |
 | 文章编辑页点「保存」没反应、什么都没存 | **SEO 关键词超 255 字符**（AutoSeo 写入时未截断）→ 后台 SEO 字段 `maxLength(255)` 校验失败，而错误藏在**默认折叠的 SEO 区域**→ 整个表单校验失败，连「状态」都存不进去。已修：AutoSeo 截断 + SEO 区域默认展开 + 数据迁移修存量 |
 | 排查「Livewire 保存没反应」 | 抓 Livewire 请求快照看 `memo.errors`：CDP 里 patch `window.fetch` 拦 `/livewire/*` 请求，读 body 里的 `memo.errors`——校验错误就在那儿（Filament v5 表单状态是数组式，错误键形如 `data.data.seo.keywords.en`） |
 | 改完 301 规则线上仍跳旧地址 | `RedirectRequests` 中间件缓存命中结果 1 小时 → Redirect 模型加 `saved`/`deleted` 钩子立即清缓存（含 from_path 变更时的旧路径、负缓存） |

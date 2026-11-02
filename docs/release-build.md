@@ -15,11 +15,11 @@
 #    'version' => 'v1.3.7',
 
 # 2) 构建（产物：dist/btobcms-v1.3.7.zip）
-"E:/dev-tools/php84/php.exe" scripts/build-release.php --composer="E:/dev-tools/composer.phar"
+php scripts/build-release.php --composer="composer"
 
 # 3) 校验（完整性 18 项 + 覆盖语义 16 项，全 PASS 才发版）
-"E:/dev-tools/php84/php.exe" scripts/verify-release.php dist/btobcms-v1.3.7.zip
-"E:/dev-tools/php84/php.exe" scripts/verify-swap.php  dist/btobcms-v1.3.7.zip
+php scripts/verify-release.php dist/btobcms-v1.3.7.zip
+php scripts/verify-swap.php  dist/btobcms-v1.3.7.zip
 
 # 4) 上传到 GitHub Release（资产名必须保持 btobcms-{tag}.zip）
 gh release upload v1.3.7 dist/btobcms-v1.3.7.zip --clobber
@@ -63,7 +63,7 @@ php scripts/build-release.php [--composer="composer"] [--keep-staging] [--out="d
 
 | 参数 | 默认 | 说明 |
 |---|---|---|
-| `--composer=` | `composer` | Composer 可执行。填 `.phar` 路径（`E:/dev-tools/composer.phar`）时脚本用当前 PHP 解释器跑它；也可直接填 `composer`（走 PATH） |
+| `--composer=` | `composer` | Composer 可执行。填 `.phar` 路径时脚本用当前 PHP 解释器跑它；也可直接填 `composer`（走 PATH） |
 | `--keep-staging` | 关 | 保留 `dist/staging/` 中间目录，便于排查；默认构建完自动删除 |
 | `--out=` | `dist` | 输出目录 |
 
@@ -247,7 +247,7 @@ A：多半是 staging 里 `artisan package:discover` 报错。脚本已加 `--no
 先在项目根跑 `composer install` 确认 `composer.lock` 与 `composer.json` 同步（`composer validate`），再重试。
 
 **Q：构建报「复制失败：xxx（文件名过长或权限不足？）」**
-A：Windows 下路径超过 260 字符。项目路径太深时把项目挪到短路径（如 `E:\btobcms`）再构建。
+A：Windows 下路径超过 260 字符。项目路径太深时把项目挪到短路径再构建。Linux 无此限制。
 
 **Q：构建很慢 / composer 装不上**
 A：首次构建要下载约 40 MB 生产依赖。内网/离线机器先在能联网的机器上执行一次 `composer install`，
