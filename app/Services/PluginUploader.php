@@ -614,13 +614,18 @@ class PluginUploader
      * ModuleManifest 注册的 Provider 在每次请求 bootstrap 时抛 Class not found。
      * 这两种都不是「提示一下手动执行」能兜住的——是全站不可用。
      *
+     * --no-scripts：跳过 post-autoload-dump 钩子（package:discover / filament:upgrade）。
+     * 刷 PSR-4 映射不需要它们，而 filament:upgrade 要发布大量静态资源、很慢，
+     * 在 120 秒超时下经常失败（实测本地测试间歇失败）。插件 zip 不含 composer 包，
+     * package:discover 也不会因装插件而变化。
+     *
      * @return string 成功时的步骤日志；失败时抛 RuntimeException
      */
     private function refreshAutoload(): string
     {
         $result = Process::path(base_path())
             ->timeout(self::AUTOLOAD_TIMEOUT)
-            ->run('composer dump-autoload');
+            ->run('composer dump-autoload --no-scripts');
 
         if ($result->successful()) {
             return 'composer dump-autoload 完成（PSR-4 映射已刷新）';
@@ -631,7 +636,7 @@ class PluginUploader
         if ($phar !== null) {
             $fallback = Process::path(base_path())
                 ->timeout(self::AUTOLOAD_TIMEOUT)
-                ->run([PHP_BINARY, $phar, 'dump-autoload']);
+                ->run([PHP_BINARY, $phar, 'dump-autoload', '--no-scripts']);
 
             if ($fallback->successful()) {
                 return 'composer dump-autoload 完成（通过 composer.phar 回退执行）';

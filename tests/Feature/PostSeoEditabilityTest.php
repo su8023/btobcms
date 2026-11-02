@@ -67,6 +67,52 @@ class PostSeoEditabilityTest extends TestCase
             ->assertHasNoFormErrors();
     }
 
+    public function test_overlong_seo_keywords_block_every_field_on_save(): void
+    {
+        // 因果链：SEO 关键词超长 → 整个表单校验失败 → 连「状态」这种
+        // 与 SEO 无关的字段也存不进去（线上实测：文章状态改 draft 保存后仍是 published）。
+        // 这条用例锁定「SEO 错误会阻断全部字段」，修复后不再触发。
+        $post = Post::create([
+            'type' => 'post',
+            'slug' => 'seo-blocks-all-probe',
+            'status' => Post::STATUS_PUBLISHED,
+            'title' => ['en' => 'Blocker Probe'],
+            'content' => ['en' => '<p>Body.</p>'],
+            'published_at' => now(),
+        ]);
+
+        $overlong = implode(', ', array_fill(0, 8, 'stainless steel gate valve manufacturer china'));
+
+        SeoMeta::create([
+            'metable_type' => Post::class,
+            'metable_id' => $post->id,
+            'keywords' => ['en' => $overlong],
+        ]);
+
+        // 修复前：状态改成 draft 也保存不了（表单报错，用户看不到）
+        $component = Livewire::test(EditPost::class, ['record' => $post->getRouteKey()])
+            ->set('data.status', Post::STATUS_DRAFT)
+            ->call('save');
+
+        $errorKeys = array_keys($component->errors()->toArray());
+        $this->assertNotEmpty(
+            array_filter($errorKeys, fn (string $k): bool => str_ends_with($k, 'seo.keywords.en')),
+            '超长 SEO 关键词应产生校验错误（阻断整个保存）：实际错误键 '.implode(',', $errorKeys)
+        );
+
+        // 修复后：迁移截断 → 状态可正常保存
+        $migration = require database_path('migrations/2026_11_03_100000_truncate_overlong_seo_keywords.php');
+        $migration->up();
+
+        Livewire::test(EditPost::class, ['record' => $post->getRouteKey()])
+            ->set('data.status', Post::STATUS_DRAFT)
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $post->refresh();
+        $this->assertSame(Post::STATUS_DRAFT, $post->status);
+    }
+
     public function test_seo_section_is_visible_by_default_so_errors_are_not_hidden(): void
     {
         $post = Post::create([
