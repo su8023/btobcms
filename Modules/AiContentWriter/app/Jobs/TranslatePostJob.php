@@ -8,7 +8,10 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Cache;
 use Modules\AiContentWriter\Services\PostTranslator;
+use Modules\AiContentWriter\Support\TranslationProgress;
+use Modules\TransCoverage\Services\CoverageScanner;
 
 /**
  * 单语言文章翻译任务（AI 翻译动作按语言逐个投递）。
@@ -35,14 +38,13 @@ class TranslatePostJob implements ShouldQueue
     /** 长文翻译（两次 LLM 调用）可能超过 1 分钟 */
     public int $timeout = 900;
 
-    public function __construct(int $postId, string $locale)
-    {
-        $this->postId = $postId;
-        $this->locale = $locale;
-
+    public function __construct(
+        public int $postId,
+        public string $locale,
+    ) {
         // 独立队列：单次翻译最长 15 分钟，与询盘邮件等秒级任务共用 default
         // 会队头阻塞快任务（复核 P2-5）。调度器按 default,ai-translate 顺序消费。
-        // （不用属性声明：Queueable trait 已定义 $queue，类型不兼容会组合失败）
+        // （不用属性声明 $queue：Queueable trait 已定义，类型不兼容会组合失败）
         $this->onQueue('ai-translate');
     }
 
@@ -56,17 +58,17 @@ class TranslatePostJob implements ShouldQueue
 
         // 幂等：任务排队期间该语言可能已被翻译（重复提交/手动翻译），跳过
         if (filled($post->getTranslation('title', $this->locale, false))) {
-            \Modules\AiContentWriter\Support\TranslationProgress::mark($this->postId, $this->locale, 'done', '语言已存在，跳过重复翻译');
+            TranslationProgress::mark($this->postId, $this->locale, 'done', '语言已存在，跳过重复翻译');
 
             return;
         }
 
-        \Modules\AiContentWriter\Support\TranslationProgress::mark($this->postId, $this->locale, 'running');
+        TranslationProgress::mark($this->postId, $this->locale, 'running');
 
         try {
             $translated = app(PostTranslator::class)->translate($post, [$this->locale]);
 
-            \Modules\AiContentWriter\Support\TranslationProgress::mark($this->postId, $this->locale,
+            TranslationProgress::mark($this->postId, $this->locale,
                 $translated === [] ? 'failed' : 'done',
                 $translated === [] ? 'AI 输出无法解析（详见日志/留档）' : '');
 
@@ -74,7 +76,7 @@ class TranslatePostJob implements ShouldQueue
             $this->forgetCoverageCache();
         } catch (\Throwable $e) {
             // 源内容缺失等顶层错误：记录不重试（LLM 成本），矩阵显示缺口即可
-            \Modules\AiContentWriter\Support\TranslationProgress::mark($this->postId, $this->locale, 'failed', $e->getMessage());
+            TranslationProgress::mark($this->postId, $this->locale, 'failed', $e->getMessage());
 
             report($e);
         }
@@ -87,8 +89,8 @@ class TranslatePostJob implements ShouldQueue
     private function forgetCoverageCache(): void
     {
         try {
-            if (class_exists(\Modules\TransCoverage\Services\CoverageScanner::class)) {
-                \Illuminate\Support\Facades\Cache::forget(app(\Modules\TransCoverage\Services\CoverageScanner::class)->cacheKey());
+            if (class_exists(CoverageScanner::class)) {
+                Cache::forget(app(CoverageScanner::class)->cacheKey());
             }
         } catch (\Throwable) {
             // 缓存驱动异常不影响翻译结果落库
