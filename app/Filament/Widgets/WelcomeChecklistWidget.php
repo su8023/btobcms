@@ -32,10 +32,11 @@ class WelcomeChecklistWidget extends Widget
     {
         $hasAiKey = $this->hasAiKey();
 
-        // GscPulse 是可选插件：被停用或目录被删时，这一项既完成不了、
+        // 可选插件：被停用或目录被删时，依赖它的清单项既完成不了、
         // 链接也指向不存在的页面。整项移除，而不是永远挂着「未完成」。
         // 守卫必须在调用之前——类不存在时静态调用会抛 Error。
         $gscAvailable = PluginGuard::available(GscCredential::class, 'GscPulse');
+        $aiWriterAvailable = PluginGuard::available(ArticleStudio::class, 'AiContentWriter');
 
         $items = [
             [
@@ -46,6 +47,7 @@ class WelcomeChecklistWidget extends Widget
                     : '打开「插件中心 → AI 内容写作 → 设置」，填入 AI 接口密钥并保存。这是所有 AI 功能的总开关。',
                 'url' => $hasAiKey ? null : PluginSettingsPage::getUrl(['plugin' => 'AiContentWriter']),
                 'url_label' => '去配置',
+                'optional' => ! $aiWriterAvailable,
             ],
             [
                 'done' => Category::query()->exists(),
@@ -67,6 +69,8 @@ class WelcomeChecklistWidget extends Widget
                 'hint' => '去「AI 写作室」输入一个主题，AI 出方案后一键成稿；发布后会自动做 SEO 并推送给搜索引擎。',
                 'url' => '/admin/ai-studio',
                 'url_label' => '去 AI 写作室',
+                // AI 写作室页面随插件消失，插件不可用时整项移除
+                'optional' => ! $aiWriterAvailable,
             ],
             [
                 'done' => $gscAvailable && GscCredential::isConnected(),

@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Support\PluginGuard;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
 use Modules\AiContentWriter\Support\RecordTranslation;
 use Nwidart\Modules\Contracts\ActivatorInterface;
 use Nwidart\Modules\Facades\Module;
@@ -118,6 +120,38 @@ class PluginGuardTest extends TestCase
         $this->actingAs($this->admin)
             ->get('/admin/categories')
             ->assertOk();
+    }
+
+    public function test_sitemap_renders_when_trust_builder_table_is_missing(): void
+    {
+        // 全新库若 TrustBuilder 从未启用过，迁移没跑 → trust_cases 表不存在。
+        // 此时 class_exists(TrustCase) 仍为 true（类文件在盘上），
+        // 直接 count() 会抛 QueryException，/sitemap.xml 与
+        // /sitemap-cases.xml 全部 500。sitemap 必须优雅降级。
+        Schema::dropIfExists('trust_cases');
+        Cache::forget('sitemap-shard-counts');
+
+        $this->get('/sitemap.xml')
+            ->assertOk();
+
+        // cases 分片此时不应存在（表都没有，查不出链接）
+        $this->get('/sitemap-cases.xml')
+            ->assertNotFound();
+    }
+
+    public function test_pages_render_when_trust_builder_tables_are_missing(): void
+    {
+        // TrustBuilder 的信任条是全站插槽（footer_before），每页都渲染。
+        // 表不存在时它照查不误 → QueryException → 全站每一页都 500
+        // （连 404 页都渲染不出来，因为 404 页本身也要渲染信任条）。
+        Schema::dropIfExists('trust_cases');
+        Schema::dropIfExists('trust_certifications');
+        Cache::forget('trust-builder:trust-bar');
+
+        $this->get('/')->assertOk();
+        $this->get('/contact')->assertOk();
+        $this->get('/blog')->assertOk();
+        $this->get('/nonexistent-page-xyz')->assertNotFound();
     }
 
     /**

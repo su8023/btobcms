@@ -6,8 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Post;
 use App\Models\Product;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\LazyCollection;
+use Modules\TrustBuilder\Models\TrustCase;
+use Nwidart\Modules\Facades\Module;
 
 class SitemapController extends Controller
 {
@@ -72,7 +78,7 @@ class SitemapController extends Controller
                 'blog.show',
             ),
             'cases' => $this->modelUrls(
-                $this->shardQuery(\Modules\TrustBuilder\Models\TrustCase::query()->published()->orderBy('id'), $shard),
+                $this->shardQuery(TrustCase::query()->published()->orderBy('id'), $shard),
                 'cases.show',
             ),
             default => abort(404),
@@ -89,13 +95,34 @@ class SitemapController extends Controller
     private function sectionAvailable(string $section): bool
     {
         if ($section === 'cases') {
-            // TrustBuilder 是可选插件：模块目录被删除后类不存在，
-            // 此时既不能查询也不能生成链接，否则 /sitemap-cases.xml 直接 500。
-            return class_exists(\Modules\TrustBuilder\Models\TrustCase::class)
-                && $this->trustBuilderEnabled();
+            // TrustBuilder 是可选插件，三种失效都要挡住：
+            // 1. 目录被删除 → 类不存在
+            // 2. 插件被停用 → 模块未启用
+            // 3. 表不存在 → 全新库里该插件从未启用过，迁移没跑，表根本没建
+            //    （class_exists 为 true 但表缺失 → 查询直接 QueryException 500）
+            return class_exists(TrustCase::class)
+                && $this->trustBuilderEnabled()
+                && $this->trustCasesTableExists();
         }
 
         return in_array($section, ['pages', 'industries', 'categories', 'products', 'posts'], true);
+    }
+
+    /**
+     * trust_cases 表是否存在。
+     *
+     * 模块迁移在插件自身 Provider 的 boot() 里注册，而 Provider 对所有模块
+     * 都会加载——但表是「迁移真的跑过」才有的。全新安装时若 TrustBuilder
+     * 处于停用状态再执行 migrate，表不会建，此时类存在但表缺失，
+     * 直接 count() 会抛 QueryException。
+     */
+    private function trustCasesTableExists(): bool
+    {
+        try {
+            return Schema::hasTable('trust_cases');
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     /**
@@ -104,7 +131,7 @@ class SitemapController extends Controller
     private function trustBuilderEnabled(): bool
     {
         try {
-            return (bool) \Nwidart\Modules\Facades\Module::isEnabled('TrustBuilder');
+            return (bool) Module::isEnabled('TrustBuilder');
         } catch (\Throwable) {
             return false;
         }
@@ -127,8 +154,10 @@ class SitemapController extends Controller
                     'categories' => Category::query()->where('status', true)->count(),
                     'products' => Product::published()->count(),
                     'posts' => Post::published()->count(),
-                    'cases' => class_exists(\Modules\TrustBuilder\Models\TrustCase::class)
-                        ? \Modules\TrustBuilder\Models\TrustCase::query()->published()->count()
+                    // 复用 sectionAvailable 的判定：类/模块/表三者缺一即计数 0。
+                    // 判定与生成分片处保持一致，避免这里查得到、那里 404。
+                    'cases' => $this->sectionAvailable('cases')
+                        ? TrustCase::query()->published()->count()
                         : 0,
                 };
             }
@@ -156,10 +185,10 @@ class SitemapController extends Controller
      * （含 JSON cast 的正文/属性）会把内存吃到几十 MB，
      * 而 sitemap 只需要 slug 与 updated_at。
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Support\LazyCollection<int, \Illuminate\Database\Eloquent\Model>
+     * @param  Builder  $query
+     * @return LazyCollection<int, Model>
      */
-    private function shardQuery($query, int $shard): \Illuminate\Support\LazyCollection
+    private function shardQuery($query, int $shard): LazyCollection
     {
         return $query
             ->skip($shard * self::SHARD_SIZE)
@@ -230,7 +259,6 @@ class SitemapController extends Controller
         if ($this->sectionAvailable('cases')) {
             $lines[] = '- [Case studies]('.localized_route('cases.index').'): customer success stories and delivery records';
         }
-
 
         // 行业清单：纯线索站的核心实体导航（AI 引擎按行业引用落地页）
         $lines[] = '## Industries we serve';
@@ -328,7 +356,7 @@ class SitemapController extends Controller
     }
 
     /**
-     * @param  iterable<\Illuminate\Database\Eloquent\Model>  $models
+     * @param  iterable<Model>  $models
      * @return array<int, array{url: string, lastmod: ?string, alternates: array<string, string>}>
      */
     private function modelUrls(iterable $models, string $routeName): array

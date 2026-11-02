@@ -3,15 +3,22 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Modules\LeadLens\Models\InquiryEnrichment;
 
 class Inquiry extends Model
 {
     public const STATUS_NEW = 'new';
+
     public const STATUS_READ = 'read';
+
     public const STATUS_FOLLOWING = 'following';
+
     public const STATUS_QUOTED = 'quoted';
+
     public const STATUS_WON = 'won';
+
     public const STATUS_LOST = 'lost';
+
     public const STATUS_SPAM = 'spam';
 
     public const STATUSES = [
@@ -40,11 +47,19 @@ class Inquiry extends Model
     }
 
     /**
-     * LeadLens 插件提供的评分增强（hasOne，模块停用后不访问即无影响）。
+     * LeadLens 插件提供的评分增强（hasOne）。
+     *
+     * 关系是惰性的——类在真正访问时才解析。插件被删（目录被移除）后
+     * 一旦访问本关系就会抛 Error: Class "..." not found，
+     * 因此这里先判类是否存在，不可用时返回 null（调用方 null-safe）。
      */
     public function enrichment()
     {
-        return $this->hasOne(\Modules\LeadLens\Models\InquiryEnrichment::class);
+        if (! class_exists(InquiryEnrichment::class)) {
+            return null;
+        }
+
+        return $this->hasOne(InquiryEnrichment::class);
     }
 
     public function followups()

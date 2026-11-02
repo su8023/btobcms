@@ -6,10 +6,16 @@
     // 信任条不应出现在案例页自身（路由名带语言前缀，两种模式都要排除）
     $trustBarOnCasesPage = request()->routeIs('cases.*', '*.cases.*');
 
+    // 表可能不存在：全新安装时若 TrustBuilder 处于停用状态再执行 migrate，
+    // 模块迁移没跑 → trust_cases / trust_certifications 两张表都没建。
+    // 此时查询直接抛 QueryException，全站每一页（含 404 页）都 500。
+    $trustBarTablesReady = \Illuminate\Support\Facades\Schema::hasTable('trust_cases')
+        && \Illuminate\Support\Facades\Schema::hasTable('trust_certifications');
+
     // 证书/案例变动频率极低而每页都渲染：5 分钟缓存。
     // 注意：database cache 白名单反序列化（禁存 Eloquent 对象），
     // 只能缓存标量数组——多语言名称原样入缓存，渲染时按当前语言解析。
-    $trustBarData = $trustBarOnCasesPage ? null : cache()->remember(
+    $trustBarData = ($trustBarOnCasesPage || ! $trustBarTablesReady) ? null : cache()->remember(
         'trust-builder:trust-bar',
         now()->addMinutes(5),
         fn () => [
