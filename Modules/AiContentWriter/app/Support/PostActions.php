@@ -197,13 +197,14 @@ class PostActions
 
                 // 每语言一个队列任务：调度器每分钟消化一个，互不阻塞、单语言失败不拖累其余
                 foreach ($locales as $locale) {
+                    \Modules\AiContentWriter\Support\TranslationProgress::mark($record->id, $locale, 'queued');
                     TranslatePostJob::dispatch($record->id, $locale);
                 }
 
                 Notification::make()
                     ->title('已提交 '.count($locales).' 个翻译任务')
                     ->body('后台每分钟处理一个语言并自动保存，预计约 '.count($locales).' 分钟完成。'
-                        .'稍后刷新本页即可看到新语言，或在「翻译覆盖率」页查看进度。'
+                        .'实时进度在「翻译覆盖率」页的「补翻进度」区查看；完成后刷新本页即可看到新语言。'
                         .'个别语言失败不影响其余语言，失败的语言会留在覆盖率矩阵里，可重新提交补齐。')
                     ->success()
                     ->persistent()

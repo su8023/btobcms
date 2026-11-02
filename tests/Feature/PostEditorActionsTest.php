@@ -142,10 +142,40 @@ class PostEditorActionsTest extends TestCase
         $this->assertSame('Kaufberatung Ventile', $post->getTranslation('title', 'de'));
         $this->assertSame('Valve Buying Guide', $post->getTranslation('title', 'en'), '已有语言不得被覆盖');
 
+        // 进度落终态 done（覆盖率页据此显示「已完成」徽章）
+        $entry = collect(\Modules\AiContentWriter\Support\TranslationProgress::forPost($post->id))->firstWhere('locale', 'de');
+        $this->assertNotNull($entry);
+        $this->assertSame('done', $entry['state']);
+        $this->assertFalse(\Modules\AiContentWriter\Support\TranslationProgress::hasInFlight($post->id));
+
         // 幂等：语言已存在时任务空跑（不重复消耗 LLM 额度）
         Http::fake(['*' => Http::response('should not be called')]);
         (new \Modules\AiContentWriter\Jobs\TranslatePostJob($post->id, 'de'))->handle();
         Http::assertNothingSent();
+    }
+
+    public function test_translate_job_records_failed_when_body_unparseable(): void
+    {
+        // 回归：AI 正文两轮都无法解析 → 翻译落空，任务必须写 failed 而非静默消失
+        Http::fake(['*' => Http::sequence()
+            ->push($this->openAiBody(['title' => 'X', 'excerpt' => 'Y']))
+            ->push(['choices' => [['message' => ['content' => 'not html']]]])
+            ->push(['choices' => [['message' => ['content' => 'still not html']]]]),
+        ]);
+
+        $post = Post::create([
+            'type' => 'post', 'slug' => 'fail-'.uniqid(), 'status' => 'draft',
+            'title' => ['en' => 'Guide'], 'excerpt' => ['en' => 'A guide.'],
+            'content' => ['en' => '<p>x</p>'],
+        ]);
+
+        (new \Modules\AiContentWriter\Jobs\TranslatePostJob($post->id, 'de'))->handle();
+
+        $entry = collect(\Modules\AiContentWriter\Support\TranslationProgress::forPost($post->id))->firstWhere('locale', 'de');
+        $this->assertNotNull($entry);
+        $this->assertSame('failed', $entry['state']);
+        $this->assertFalse(\Modules\AiContentWriter\Support\TranslationProgress::hasInFlight($post->id));
+        $this->assertFalse($post->refresh()->hasTranslation('title', 'de'), '失败时不得写入半截语言');
     }
 
     private function postCount(): \PHPUnit\Framework\Constraint\IsEqual

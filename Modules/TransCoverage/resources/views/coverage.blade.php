@@ -22,38 +22,72 @@
         {{-- ===== AI 补翻缺失语言 ===== --}}
         <x-filament::section class="mt-6">
             <x-slot name="heading">AI 补翻缺失语言</x-slot>
-            <x-slot name="description">选一篇文章，AI 自动把它缺的语言全部翻译好（含 SEO 标题描述），几分钟完成。</x-slot>
+            <x-slot name="description">选一篇文章，AI 按语言逐个翻译（含 SEO 标题描述）并在下方实时显示进度；任务在后台每分钟消化一个，完成后矩阵自动更新。</x-slot>
             @if (! \Modules\TransCoverage\Services\TranslationFixer::available())
-                <p class="plugin-empty__desc" style="text-align:left; max-width:none; color: var(--warning-600, #b45309)">
+                <p style="text-align:left; max-width:none; font-size: var(--text-sm); color: var(--warning, #b45309)">
                     未安装 AiContentWriter 插件，AI 补翻不可用；下方矩阵仍可正常查看缺口。
                 </p>
             @else
-                <div class="plugin-row" style="align-items:center">
-                    <select wire:model="fixPostId"
-                        class="plugin-input" style="min-width: 18rem">
-                        <option value="">— 选择缺语言最多的文章 —</option>
-                        @foreach ($this->fixCandidates as $candidate)
-                            <option value="{{ $candidate['id'] }}">{{ $candidate['label'] }}</option>
-                        @endforeach
-                    </select>
-                    <button type="button" wire:click="runFix" wire:loading.attr="disabled"
-                        wire:confirm="将对选中文章缺失的所有语言执行 AI 翻译并落库，确认继续？"
-                        class="rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white hover:bg-primary-600 disabled:opacity-50">
+                {{-- 操作行：显式 flex + 按钮用 Filament 组件（bg-primary 等 Tailwind 类不在编译 CSS，原生按钮会灰成一片文字） --}}
+                <div style="display:flex; flex-wrap:wrap; align-items:flex-end; gap:calc(var(--spacing) * 3)">
+                    <div style="flex:1 1 20rem; min-width:16rem; max-width:28rem">
+                        <select wire:model="fixPostId" class="plugin-input">
+                            <option value="">— 选择缺语言最多的文章 —</option>
+                            @foreach ($this->fixCandidates as $candidate)
+                                <option value="{{ $candidate['id'] }}">{{ $candidate['label'] }}</option>
+                            @endforeach
+                        </select>
+                        <p style="margin:4px 0 0; font-size:var(--text-xs); color:var(--gray-400)">选项括号内为该文章缺失的语言数。</p>
+                    </div>
+                    <x-filament::button wire:click="runFix" wire:loading.attr="disabled"
+                        wire:confirm="将对选中文章缺失的所有语言排队 AI 翻译，确认继续？"
+                        icon="heroicon-o-bolt">
                         开始补翻
-                    </button>
-                    <span class="text-xs text-gray-400">选项括号内为该文章缺失的语言数。</span>
+                    </x-filament::button>
                 </div>
             @endif
         </x-filament::section>
+
+        {{-- ===== 补翻进度（5 秒轮询；全部终态后徽章保留 30 分钟供回看） ===== --}}
+        @if (! empty($progress))
+            <x-filament::section class="mt-6" wire:poll.5s>
+                <x-slot name="heading">补翻进度</x-slot>
+                @php($stateLabel = ['queued' => '排队中', 'running' => '翻译中', 'done' => '已完成', 'failed' => '失败'])
+                @php($stateTone = ['queued' => 'warning', 'running' => 'info', 'done' => 'success', 'failed' => 'danger'])
+                <div style="display:flex; flex-direction:column; gap:calc(var(--spacing) * 3)">
+                    @foreach ($progress as $block)
+                        <div class="uc-panel" style="padding:calc(var(--spacing) * 3) calc(var(--spacing) * 4)">
+                            <p style="margin:0 0 8px; font-size:var(--text-sm); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                {{ $block['title'] }}
+                                @if ($block['in_flight'])
+                                    <span class="tp-badge tp-badge--info" style="margin-left:8px">进行中</span>
+                                @endif
+                            </p>
+                            <div style="display:flex; flex-wrap:wrap; gap:8px">
+                                @foreach ($block['entries'] as $entry)
+                                    <span class="tp-badge tp-badge--{{ $stateTone[$entry['state']] ?? 'gray' }}"
+                                        title="{{ $entry['at'] }}{{ $entry['note'] !== '' ? ' · '.$entry['note'] : '' }}">
+                                        {{ config("site.native_names.{$entry['locale']}", strtoupper($entry['locale'])) }} · {{ $stateLabel[$entry['state']] ?? $entry['state'] }}
+                                    </span>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </x-filament::section>
+        @endif
 
         {{-- ===== 覆盖率矩阵 ===== --}}
         <x-filament::section class="mt-6">
             <x-slot name="heading">覆盖矩阵</x-slot>
             <x-slot name="description">
-                <span class="fi-badge fi-badge-color-success">✓ 完整</span>
-                <span class="fi-badge fi-badge-color-warning">◐ 仅标题</span>
-                <span class="fi-badge fi-badge-color-danger">✗ 缺失</span>
-                <span class="ml-2">按缺失语言数降序排列。</span>
+                {{-- 图例横排 + 自绘彩色徽章（fi-badge-color-* 不在预编译 CSS，原生类不会上色） --}}
+                <span style="display:inline-flex; flex-wrap:wrap; align-items:center; gap:8px">
+                    <span class="tp-badge tp-badge--success">✓ 完整</span>
+                    <span class="tp-badge tp-badge--warning">◐ 仅标题</span>
+                    <span class="tp-badge tp-badge--danger">✗ 缺失</span>
+                    <span>按缺失语言数降序排列。</span>
+                </span>
             </x-slot>
             @if (empty($coverage['rows']))
                 <x-plugin-empty icon="heroicon-o-table-cells" title="暂无内容"
@@ -74,7 +108,7 @@
                             @foreach ($coverage['rows'] as $row)
                                 <tr class="border-b">
                                     <td class="py-2 pr-4">
-                                        <span class="fi-badge fi-badge-color-{{ $row['type'] === 'post' ? 'primary' : 'gray' }} mr-1">
+                                        <span class="tp-badge tp-badge--sm tp-badge--{{ $row['type'] === 'post' ? 'primary' : 'gray' }}" style="margin-right:6px">
                                             {{ $row['type'] === 'post' ? '文章' : '产品' }}
                                         </span>
                                         {{ $row['title'] }}
@@ -83,7 +117,7 @@
                                         @php($status = $row['statuses'][$locale] ?? 'missing')
                                         <td class="px-1 text-center"
                                             title="{{ $locale }}：{{ $statusText[$status] }}">
-                                            <span class="fi-badge fi-badge-color-{{ $statusColor[$status] }}">
+                                            <span class="tp-badge tp-badge--sm tp-badge--{{ $statusColor[$status] }}">
                                                 {{ $statusMark[$status] }}
                                             </span>
                                         </td>

@@ -9,6 +9,75 @@
    组件样式，注册于 AdminPanelProvider，随面板加载，零构建依赖。
    ============================================================ */
 
+/* ---------- 色板别名 ----------
+   Filament 只定义带色阶的变量（--primary-600 等），裸 var(--primary)
+   全部未定义 → 任何用它做背景/颜色的规则都会静默变透明（实测：按钮/徽章
+   背景一度全为 rgba(0,0,0,0)）。这里把裸名映射到 600 色阶，一处定义全局生效。 */
+:root {
+    --primary: var(--primary-600, #d97706);
+    --success: var(--success-600, #16a34a);
+    --warning: var(--warning-600, #d97706);
+    --danger: var(--danger-600, #dc2626);
+    --info: var(--info-600, var(--primary));
+}
+
+/* ---------- 新手开始清单（仪表盘 Widget） ---------- */
+.wl { background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: var(--radius-xl); padding: calc(var(--spacing) * 4); }
+.dark .wl { background: color-mix(in oklab, var(--gray-500) 8%, transparent); border-color: color-mix(in oklab, var(--gray-500) 25%, transparent); }
+.wl__head { display: flex; align-items: center; justify-content: space-between; gap: calc(var(--spacing) * 2); margin-bottom: calc(var(--spacing) * 2); }
+.wl__title { margin: 0; font-size: var(--text-base); font-weight: var(--font-weight-bold); color: var(--gray-950); }
+.dark .wl__title { color: var(--gray-50); }
+.wl__count { font-size: var(--text-sm); color: var(--gray-500); white-space: nowrap; }
+.wl__allset { margin: 0; font-size: var(--text-sm); color: var(--gray-500); }
+.wl__list { list-style: none; margin: 0; padding: 0; }
+.wl__item { display: flex; align-items: flex-start; gap: calc(var(--spacing) * 3); padding: calc(var(--spacing) * 2.5) 0; border-top: 1px solid var(--gray-100); }
+.wl__item:first-child { border-top: none; }
+.dark .wl__item { border-top-color: color-mix(in oklab, var(--gray-500) 20%, transparent); }
+.wl__mark { flex: none; display: inline-flex; width: 20px; height: 20px; margin-top: 2px; align-items: center; justify-content: center; color: var(--success); }
+.wl__mark svg { display: block; width: 18px; height: 18px; }
+.wl__mark--todo { color: transparent; }
+.wl__mark--todo::after { content: ""; width: 16px; height: 16px; border-radius: 9999px; border: 2px solid var(--gray-300); display: block; }
+.wl__text { min-width: 0; flex: 1 1 auto; }
+.wl__item-title { font-size: var(--text-sm); font-weight: var(--font-weight-semibold); color: var(--gray-900); }
+.dark .wl__item-title { color: var(--gray-100); }
+.wl__item-title--done { color: var(--gray-400); text-decoration: line-through; }
+.wl__hint { margin-top: 2px; font-size: var(--text-xs); color: var(--gray-500); }
+.wl__btn { flex: none; align-self: center; font-size: var(--text-xs); font-weight: var(--font-weight-bold); padding: 6px 12px; border-radius: var(--radius-lg); background: var(--primary); color: #fff; white-space: nowrap; }
+.wl__btn:hover { filter: brightness(.92); color: #fff; }
+
+/* ---------- 通用工具类垫片（Filament 预编译 CSS 不含这些类，插件视图里用了会静默失效/塌陷）
+   仅覆盖后台插件视图实际用到的布局原语；组件优先用 .plugin-* / .uc-* / .tp-* 自定义类。 ---------- */
+.u-flex { display: flex; }
+.u-inline-flex { display: inline-flex; }
+.u-grid { display: grid; }
+.u-flex-wrap { flex-wrap: wrap; }
+.u-flex-1 { flex: 1 1 0%; }
+.u-items-center { align-items: center; }
+.u-items-start { align-items: flex-start; }
+.u-items-end { align-items: flex-end; }
+.u-justify-between { justify-content: space-between; }
+.u-gap-1 { gap: calc(var(--spacing) * 1); }
+.u-gap-2 { gap: calc(var(--spacing) * 2); }
+.u-gap-3 { gap: calc(var(--spacing) * 3); }
+.u-gap-4 { gap: calc(var(--spacing) * 4); }
+.u-min-w-0 { min-width: 0; }
+.u-w-full { width: 100%; }
+.u-mt-1 { margin-top: calc(var(--spacing) * 1); }
+.u-mt-2 { margin-top: calc(var(--spacing) * 2); }
+.u-mt-4 { margin-top: calc(var(--spacing) * 4); }
+.u-mt-6 { margin-top: calc(var(--spacing) * 6); }
+.u-mb-1 { margin-bottom: calc(var(--spacing) * 1); }
+.u-space-y-1 > * + * { margin-top: calc(var(--spacing) * 1); }
+.u-space-y-2 > * + * { margin-top: calc(var(--spacing) * 2); }
+.u-space-y-3 > * + * { margin-top: calc(var(--spacing) * 3); }
+.u-space-y-4 > * + * { margin-top: calc(var(--spacing) * 4); }
+.u-space-y-6 > * + * { margin-top: calc(var(--spacing) * 6); }
+.u-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.u-text-center { text-align: center; }
+.u-text-right { text-align: right; }
+.u-inline { display: inline; }
+.u-block { display: block; }
+
 /* ---------- 布局网格（Filament 编译 CSS 无 grid 工具类） ---------- */
 .plugin-stats-grid {
     display: grid;
@@ -128,6 +197,31 @@
     border-radius: 9999px;
     background: var(--warning);
 }
+
+/* ---------- 自绘徽章（fi-badge-color-* 不在 Filament 预编译 CSS，颜色类自绘才可靠） ---------- */
+.tp-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 9999px;
+    padding: 2px 10px;
+    font-size: var(--text-xs);
+    font-weight: var(--font-weight-semibold);
+    white-space: nowrap;
+    line-height: 1.6;
+}
+.tp-badge--gray { background: var(--gray-100); color: var(--gray-600); }
+.tp-badge--primary { background: color-mix(in oklab, var(--primary) 14%, transparent); color: var(--primary); }
+.tp-badge--success { background: color-mix(in oklab, var(--success) 14%, transparent); color: var(--success); }
+.tp-badge--warning { background: color-mix(in oklab, var(--warning) 16%, transparent); color: var(--warning); }
+.tp-badge--danger { background: color-mix(in oklab, var(--danger) 14%, transparent); color: var(--danger); }
+.tp-badge--info { background: color-mix(in oklab, var(--info, var(--primary)) 14%, transparent); color: var(--info, var(--primary)); }
+.tp-badge--sm { padding: 1px 8px; min-width: 24px; justify-content: center; }
+.dark .tp-badge--gray { background: color-mix(in oklab, var(--gray-500) 15%, transparent); color: var(--gray-300); }
+.dark .tp-badge--primary { color: color-mix(in oklab, var(--primary) 65%, white); }
+.dark .tp-badge--success { color: color-mix(in oklab, var(--success) 65%, white); }
+.dark .tp-badge--warning { color: color-mix(in oklab, var(--warning) 65%, white); }
+.dark .tp-badge--danger { color: color-mix(in oklab, var(--danger) 65%, white); }
+.dark .tp-badge--info { color: color-mix(in oklab, var(--info, var(--primary)) 65%, white); }
 
 /* ---------- 更新中心：卡片式左右布局 ---------- */
 .uc-two-col {

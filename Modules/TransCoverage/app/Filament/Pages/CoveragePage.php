@@ -44,13 +44,48 @@ class CoveragePage extends Page
     }
 
     /**
-     * 视图数据：整表扫描结果（统计卡 + 矩阵行 + 语言列表）。
+     * 视图数据：整表扫描结果（统计卡 + 矩阵行 + 语言列表）+ 补翻实时进度。
      */
     public function getViewData(): array
     {
         return [
             'coverage' => app(CoverageScanner::class)->scan(),
+            'progress' => $this->progressRows(),
         ];
+    }
+
+    /**
+     * 补翻进度区数据：近期有任务记录的文章 × 各语言状态。
+     * 页面 5 秒轮询 refresh 时随之更新（无在途任务时轮询由视图侧关闭）。
+     *
+     * @return list<array{post_id: int, title: string, entries: list<array{locale: string, state: string, at: string, note: string}>, in_flight: bool}>
+     */
+    protected function progressRows(): array
+    {
+        if (! class_exists(\Modules\AiContentWriter\Support\TranslationProgress::class)) {
+            return []; // AiContentWriter 未启用：无任务可跟踪
+        }
+
+        $rows = [];
+
+        foreach (\Modules\AiContentWriter\Support\TranslationProgress::trackedPosts() as $postId) {
+            $entries = \Modules\AiContentWriter\Support\TranslationProgress::forPost($postId);
+
+            if ($entries === []) {
+                continue;
+            }
+
+            $post = Post::find($postId);
+
+            $rows[] = [
+                'post_id' => $postId,
+                'title' => $post?->getTranslation('title', default_locale(), false) ?: "文章 #{$postId}",
+                'entries' => $entries,
+                'in_flight' => \Modules\AiContentWriter\Support\TranslationProgress::hasInFlight($postId),
+            ];
+        }
+
+        return $rows;
     }
 
     /**
@@ -110,7 +145,11 @@ class CoveragePage extends Page
         // 会在一个 HTTP 请求里跑几分钟，被服务器掐断后 Livewire 只能报「页面加载出错」。
         // 任务由调度器每分钟消化一个并自动落库，矩阵按缓存 TTL 自然刷新。
         if (config('queue.default') !== 'sync') {
+            // 清理该文章旧的终态记录（done/failed），重新排队后徽章从零开始
+            \Modules\AiContentWriter\Support\TranslationProgress::clear($post->id);
+
             foreach ($locales as $locale) {
+                \Modules\AiContentWriter\Support\TranslationProgress::mark($post->id, $locale, 'queued');
                 \Modules\AiContentWriter\Jobs\TranslatePostJob::dispatch($post->id, $locale);
             }
 
@@ -118,7 +157,8 @@ class CoveragePage extends Page
 
             Notification::make()
                 ->title('已提交 '.count($locales).' 个补翻任务')
-                ->body('后台每分钟处理一个语言并自动保存，预计约 '.count($locales).' 分钟完成；矩阵将随缓存刷新更新。'
+                ->body('下方「补翻进度」实时显示各语言状态（排队中 → 翻译中 → 完成）。'
+                    .'预计约 '.count($locales).' 分钟内逐个完成，完成后矩阵自动更新。'
                     .'个别语言失败不影响其余语言，失败的语言会留在矩阵里，可重新提交补齐。')
                 ->success()
                 ->send();

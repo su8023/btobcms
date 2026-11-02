@@ -360,5 +360,16 @@ class TransCoverageTest extends TestCase
 
         // 8 语言 - en（full）= 7 个补翻任务
         Queue::assertPushed(\Modules\AiContentWriter\Jobs\TranslatePostJob::class, 7);
+
+        // 派发即写入 queued 进度：页面「补翻进度」区据此展示
+        $progress = \Modules\AiContentWriter\Support\TranslationProgress::forPost($post->id);
+        $this->assertCount(7, $progress);
+        $this->assertSame(['queued'], array_values(array_unique(array_column($progress, 'state'))));
+        $this->assertTrue(\Modules\AiContentWriter\Support\TranslationProgress::hasInFlight($post->id));
+
+        // 进度区随页面渲染出现
+        \Livewire\Livewire::test(\Modules\TransCoverage\Filament\Pages\CoveragePage::class)
+            ->assertSee('补翻进度')
+            ->assertSee('排队中');
     }
 }

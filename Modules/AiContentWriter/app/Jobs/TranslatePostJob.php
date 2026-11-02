@@ -56,14 +56,42 @@ class TranslatePostJob implements ShouldQueue
 
         // 幂等：任务排队期间该语言可能已被翻译（重复提交/手动翻译），跳过
         if (filled($post->getTranslation('title', $this->locale, false))) {
+            \Modules\AiContentWriter\Support\TranslationProgress::mark($this->postId, $this->locale, 'done', '语言已存在，跳过重复翻译');
+
             return;
         }
 
+        \Modules\AiContentWriter\Support\TranslationProgress::mark($this->postId, $this->locale, 'running');
+
         try {
-            app(PostTranslator::class)->translate($post, [$this->locale]);
+            $translated = app(PostTranslator::class)->translate($post, [$this->locale]);
+
+            \Modules\AiContentWriter\Support\TranslationProgress::mark($this->postId, $this->locale,
+                $translated === [] ? 'failed' : 'done',
+                $translated === [] ? 'AI 输出无法解析（详见日志/留档）' : '');
+
+            // 覆盖率看板矩阵刷新：缓存 key 随内容指纹变化，直接 forget 旧 key 保证立即更新
+            $this->forgetCoverageCache();
         } catch (\Throwable $e) {
             // 源内容缺失等顶层错误：记录不重试（LLM 成本），矩阵显示缺口即可
+            \Modules\AiContentWriter\Support\TranslationProgress::mark($this->postId, $this->locale, 'failed', $e->getMessage());
+
             report($e);
+        }
+    }
+
+    /**
+     * 翻译落库后使覆盖率扫描缓存失效（10 分钟 TTL 的 scan 结果），
+     * 看板轮询时矩阵即时反映补齐结果。TransCoverage 未启用时静默跳过。
+     */
+    private function forgetCoverageCache(): void
+    {
+        try {
+            if (class_exists(\Modules\TransCoverage\Services\CoverageScanner::class)) {
+                \Illuminate\Support\Facades\Cache::forget(app(\Modules\TransCoverage\Services\CoverageScanner::class)->cacheKey());
+            }
+        } catch (\Throwable) {
+            // 缓存驱动异常不影响翻译结果落库
         }
     }
 }
