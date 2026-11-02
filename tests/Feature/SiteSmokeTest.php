@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Inquiry;
 use App\Models\Redirect;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -230,6 +231,15 @@ class SiteSmokeTest extends TestCase
             ->assertJsonFragment(['slug' => 'galvanized-steel-pipe-dn100']);
     }
 
+    public function test_basket_api_rejects_array_ids_without_500(): void
+    {
+        // ?ids[]=1 数组语法：explode(',', array) 会 TypeError 500。
+        // 正常前端用逗号分隔字符串，恶意构造不能打挂接口。
+        $this->get('/api/basket/products?ids[]=1&ids[]=2')
+            ->assertOk()
+            ->assertJsonCount(0);
+    }
+
     public function test_basket_inquiry_submits_multiple_products(): void
     {
         $response = $this->postJson('/api/inquiries', [
@@ -242,7 +252,7 @@ class SiteSmokeTest extends TestCase
 
         $response->assertCreated();
 
-        $inquiry = \App\Models\Inquiry::where('email', 'rfq@example.com')->first();
+        $inquiry = Inquiry::where('email', 'rfq@example.com')->first();
         $this->assertCount(3, $inquiry->items);
         $this->assertSame('basket', $inquiry->source);
     }
@@ -266,7 +276,7 @@ class SiteSmokeTest extends TestCase
             'status' => 'new',
         ]);
 
-        $inquiry = \App\Models\Inquiry::where('email', 'buyer@example.com')->first();
+        $inquiry = Inquiry::where('email', 'buyer@example.com')->first();
         $this->assertSame('google', $inquiry->utm['source'] ?? null);
         $this->assertNull($inquiry->assignee_id);
         $this->assertCount(1, $inquiry->items);
@@ -283,7 +293,7 @@ class SiteSmokeTest extends TestCase
             'source' => 'product',
         ])->assertCreated();
 
-        $inquiry = \App\Models\Inquiry::where('email', 'firstvisit@example.com')->first();
+        $inquiry = Inquiry::where('email', 'firstvisit@example.com')->first();
         $this->assertStringStartsWith(url('/'), (string) $inquiry->landing_url);
         $this->assertStringEndsWith('/product/gate-valve-dn50', (string) $inquiry->landing_url);
     }

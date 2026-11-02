@@ -15,7 +15,11 @@ class BasketController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $ids = collect(explode(',', (string) $request->query('ids', '')))
+        // ids 只接受逗号分隔字符串（site.js 的调用格式）。攻击者可用 ?ids[]=1
+        // 传数组进来：explode(',', array) 抛 TypeError → 500。非字符串一律按空处理。
+        $rawIds = $request->query('ids', '');
+
+        $ids = collect(explode(',', is_string($rawIds) ? $rawIds : ''))
             ->map(fn ($v) => (int) trim($v))
             ->filter()
             ->unique()
