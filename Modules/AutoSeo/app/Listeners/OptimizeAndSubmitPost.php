@@ -95,13 +95,17 @@ PROMPT],
                 $data = json_decode((string) $extracted, true) ?: [];
 
                 if ($needsTitle && ! blank($data['seo_title'] ?? null)) {
-                    $existing->setTranslation('title', $lang, (string) $data['seo_title']);
+                    // 截断到表单字段上限：后台 SEO 字段是 maxLength(255) 的 TextInput，
+                    // 写入超长值会让后续每次编辑都校验失败（错误又藏在折叠的 SEO 区域，
+                    // 表现为「点保存没反应」——实测线上文章因此完全无法编辑）。
+                    $existing->setTranslation('title', $lang, mb_substr(trim((string) $data['seo_title']), 0, 255));
                 }
                 if ($needsDesc && ! blank($data['seo_description'] ?? null)) {
                     $existing->setTranslation('description', $lang, (string) $data['seo_description']);
                 }
                 if ($needsKeywords && ! blank($data['keywords'] ?? null)) {
-                    $existing->setTranslation('keywords', $lang, (string) $data['keywords']);
+                    // 同上：关键词字段上限 255，LLM 常给 8 个长词组（实测 290 字符）
+                    $existing->setTranslation('keywords', $lang, mb_substr(trim((string) $data['keywords']), 0, 255));
                 }
                 $existing->save();
             }

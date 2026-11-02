@@ -2,9 +2,9 @@
 
 namespace App\Filament\Support;
 
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\RichEditor;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
@@ -45,13 +45,15 @@ class TranslatableFields
 
     /**
      * SEO 覆盖字段区块（标题/描述/关键词，多语言）。
+     *
+     * 默认展开而非折叠：SEO 区一旦有校验错误（如 AI 生成的关键词超 255 字符），
+     * 折叠状态下错误提示不可见 → 运营点「保存」看不到任何反馈，以为是坏了。
      */
     public static function seoSection(): Section
     {
         return Section::make('SEO')
             ->description(__('admin.seo.section_description'))
             ->collapsible()
-            ->collapsed()
             ->schema([
                 self::tabs('seo.title', __('admin.seo.title'), 'text'),
                 self::tabs('seo.description', __('admin.seo.description'), 'textarea'),

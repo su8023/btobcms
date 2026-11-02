@@ -4,10 +4,11 @@ namespace Tests\Feature;
 
 use App\Events\PostPublished;
 use App\Models\Post;
+use App\Models\SeoMeta;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
+use Modules\AutoSeo\Support\IndexNow;
 use Tests\TestCase;
 
 /**
@@ -40,18 +41,18 @@ class AutoSeoTest extends TestCase
     public function test_indexnow_key_file_served_at_txt_route(): void
     {
         // IndexNow 协议标准验证路径是 /{key}.txt（带 .txt 后缀）
-        $key = \Modules\AutoSeo\Support\IndexNow::key();
+        $key = IndexNow::key();
         $this->get("/{$key}.txt")->assertOk()->assertSee($key);
 
         // 非法 key 一律 404
-        $this->get("/".str_repeat("a", 31).".txt")->assertNotFound();
-        $this->get("/".str_repeat("a", 32))->assertNotFound();
+        $this->get('/'.str_repeat('a', 31).'.txt')->assertNotFound();
+        $this->get('/'.str_repeat('a', 32))->assertNotFound();
     }
 
     public function test_indexnow_key_is_stable_and_hex32(): void
     {
-        $k1 = \Modules\AutoSeo\Support\IndexNow::key();
-        $k2 = \Modules\AutoSeo\Support\IndexNow::key();
+        $k1 = IndexNow::key();
+        $k2 = IndexNow::key();
 
         $this->assertSame($k1, $k2, '密钥必须持久化稳定');
         $this->assertMatchesRegularExpression('/^[a-f0-9]{32}$/', $k1);
@@ -59,7 +60,7 @@ class AutoSeoTest extends TestCase
 
     public function test_key_file_route_serves_key_and_404_otherwise(): void
     {
-        $key = \Modules\AutoSeo\Support\IndexNow::key();
+        $key = IndexNow::key();
 
         $this->get('/'.$key)
             ->assertOk()
@@ -67,6 +68,47 @@ class AutoSeoTest extends TestCase
 
         $this->get('/ffffffffffffffffffffffffffffffff')->assertNotFound();
         $this->get('/short')->assertNotFound();
+    }
+
+    public function test_generated_keywords_are_truncated_to_form_field_limit(): void
+    {
+        // 后台 SEO 关键词字段是 maxLength(255) 的 TextInput；LLM 给出 290 字符时
+        // 若原样写库，后续每次编辑都校验失败，且错误藏在折叠的 SEO 区域 →
+        // 运营点保存没反应，文章完全无法编辑（线上实锤）。
+        $longKeywords = implode(', ', array_fill(0, 8, 'stainless steel gate valve manufacturer china'));
+        $this->assertGreaterThan(255, mb_strlen($longKeywords));
+
+        $tdkContent = json_encode([
+            'seo_title' => 'Valve Sourcing Guide',
+            'seo_description' => 'Complete guide to sourcing stainless steel valves from China.',
+            'keywords' => $longKeywords,
+        ], JSON_UNESCAPED_UNICODE);
+
+        Http::fake([
+            'https://api.deepseek.test/*' => Http::response([
+                'choices' => [['message' => ['content' => $tdkContent]]],
+                'usage' => ['prompt_tokens' => 50, 'completion_tokens' => 60],
+            ], 200),
+            'https://api.indexnow.org/*' => Http::response(['ok' => true], 200),
+        ]);
+
+        $post = Post::create([
+            'type' => 'post',
+            'slug' => 'valve-guide-'.uniqid(),
+            'status' => Post::STATUS_PUBLISHED,
+            'title' => ['en' => 'Valve Sourcing Guide'],
+            'content' => ['en' => '<p>How to source valves.</p>'],
+            'published_at' => now(),
+        ]);
+
+        event(new PostPublished($post));
+
+        $meta = SeoMeta::where('metable_type', Post::class)->where('metable_id', $post->id)->first();
+
+        $this->assertNotNull($meta);
+        $keywords = (string) $meta->getTranslation('keywords', 'en');
+        $this->assertLessThanOrEqual(255, mb_strlen($keywords), 'SEO 关键词必须截断到表单字段上限（255）');
+        $this->assertStringStartsWith('stainless steel gate valve', $keywords);
     }
 
     public function test_post_publish_triggers_tdk_generation_and_indexnow_submit(): void
@@ -99,7 +141,7 @@ class AutoSeoTest extends TestCase
         event(new PostPublished($post));
 
         // 队列 sync 执行后：TDK 已写入
-        $meta = \App\Models\SeoMeta::where('metable_type', Post::class)->where('metable_id', $post->id)->first();
+        $meta = SeoMeta::where('metable_type', Post::class)->where('metable_id', $post->id)->first();
         $this->assertNotNull($meta, 'seo_meta 应已生成');
         $this->assertSame('Valve Sourcing Guide | Aples', $meta->getTranslation('title', 'en'));
 
@@ -140,7 +182,7 @@ class AutoSeoTest extends TestCase
             'content' => ['en' => '<p>x</p>'],
         ]);
 
-        \App\Models\SeoMeta::create([
+        SeoMeta::create([
             'metable_type' => Post::class,
             'metable_id' => $post->id,
             'title' => ['en' => 'Existing SEO Title'],
@@ -176,7 +218,7 @@ class AutoSeoTest extends TestCase
             'content' => ['en' => '<p>x</p>'],
         ]);
 
-        \App\Models\SeoMeta::create([
+        SeoMeta::create([
             'metable_type' => Post::class,
             'metable_id' => $post->id,
             'title' => ['en' => 'Existing SEO Title'],
@@ -184,7 +226,7 @@ class AutoSeoTest extends TestCase
 
         event(new PostPublished($post));
 
-        $meta = \App\Models\SeoMeta::where('metable_type', Post::class)->where('metable_id', $post->id)->first();
+        $meta = SeoMeta::where('metable_type', Post::class)->where('metable_id', $post->id)->first();
         $this->assertSame('Existing SEO Title', $meta->getTranslation('title', 'en'), '已有标题不被覆盖');
         $this->assertSame('Generated description text long enough.', $meta->getTranslation('description', 'en'), '只补缺失的描述');
     }
