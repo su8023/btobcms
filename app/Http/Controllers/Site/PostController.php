@@ -46,4 +46,29 @@ class PostController extends Controller
             ],
         ]);
     }
+
+    /**
+     * 草稿/待审文章的签名预览（AI 写作室「预览草稿」按钮）。
+     *
+     * 与 show() 的三点差别：不限发布状态（草稿只能这样看）、不增加浏览量、
+     * 输出 noindex 防搜索引擎收录预览链接。签名由路由 signed 中间件校验，
+     * 无签名或过期一律 403——未发布内容不会泄漏给无链接的访客与爬虫。
+     */
+    public function preview(string $slug)
+    {
+        $post = Post::query()
+            ->where('slug', $slug)
+            ->firstOrFail();
+
+        $routeParams = ['slug' => $post->slug];
+
+        return response()
+            ->view('blog.show', [
+                'post' => $post,
+                'seo' => Seo::for($post, 'blog.show', $routeParams),
+                'jsonLd' => [], // 预览页不需要结构化数据（也不该被引擎抓取）
+                'noindex' => true,
+            ])
+            ->header('X-Robots-Tag', 'noindex, nofollow');
+    }
 }

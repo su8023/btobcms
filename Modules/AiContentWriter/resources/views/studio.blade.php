@@ -103,7 +103,7 @@
                         <x-filament::button tag="a" href="/admin/posts/{{ $createdPostId }}/edit" color="primary">
                             {{ __('admin.ai_studio.open_editor') }}
                         </x-filament::button>
-                        <x-filament::button tag="a" href="/blog/{{ $createdSlug }}" color="gray" target="_blank" rel="noopener">
+                        <x-filament::button tag="a" href="{{ $this->previewUrl }}" color="gray" target="_blank" rel="noopener">
                             {{ __('admin.ai_studio.preview_draft') }}
                         </x-filament::button>
                     </div>

@@ -181,6 +181,26 @@ class AiStudio extends Page
     }
 
     /**
+     * 「预览草稿」链接：3 天有效的签名预览 URL。
+     *
+     * 草稿是待审状态，前台正式页 /blog/{slug} 只显示已发布——之前直接链接正式页，
+     * 点开必然 404。签名预览路由 /blog/{slug}/preview 凭签名放行草稿，
+     * 无签名/过期 403，草稿内容不会泄漏给爬虫或无链接访客。
+     */
+    public function getPreviewUrlProperty(): ?string
+    {
+        if ($this->createdSlug === null || $this->createdSlug === '') {
+            return null;
+        }
+
+        return \Illuminate\Support\Facades\URL::temporarySignedRoute(
+            'blog.preview',
+            now()->addDays(3),
+            ['slug' => $this->createdSlug],
+        );
+    }
+
+    /**
      * 把多行/逗号分隔的文本切成干净的去重列表。
      *
      * @param  string|null  $extraSeparator 额外的分隔符（如关键词用逗号）

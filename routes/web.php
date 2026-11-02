@@ -37,6 +37,10 @@ $registerSiteRoutes = function (string $locale): void {
     Route::get('/category/{slug}', [CategoryController::class, 'show'])->name("{$name}categories.show");
     Route::get('/blog', [PostController::class, 'index'])->name("{$name}blog.index");
     Route::get('/blog/{slug}', [PostController::class, 'show'])->name("{$name}blog.show");
+    // 草稿签名预览：仅凭带签名 URL 可看（AI 写作室「预览草稿」），无效/过期签名 403
+    Route::get('/blog/{slug}/preview', [PostController::class, 'preview'])
+        ->name("{$name}blog.preview")
+        ->middleware('signed');
     Route::get('/contact', [PageController::class, 'contact'])->name("{$name}contact");
     Route::get('/about', [PageController::class, 'about'])->name("{$name}about");
     Route::get('/privacy', [PageController::class, 'privacy'])->name("{$name}privacy");
