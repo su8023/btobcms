@@ -10,7 +10,9 @@ class Post extends Model
     use HasTranslations;
 
     public const STATUS_DRAFT = 'draft';
+
     public const STATUS_REVIEW = 'review';
+
     public const STATUS_PUBLISHED = 'published';
 
     protected $fillable = [
@@ -19,6 +21,19 @@ class Post extends Model
     ];
 
     public array $translatable = ['title', 'excerpt', 'content'];
+
+    protected static function booted(): void
+    {
+        // 状态为「已发布」但发布时间为空时自动补 now()——所有写入路径
+        // （后台保存、发布动作、AI 命令）同一兜底。缺这一步时 published()
+        // 过滤掉 published_at 为空的行，文章"已发布"却全站 404（线上实锤）。
+        // 已有值不覆盖：改回草稿再发布不刷新首次发布时间。
+        static::saving(static function (self $post): void {
+            if ($post->status === self::STATUS_PUBLISHED && $post->published_at === null) {
+                $post->published_at = now();
+            }
+        });
+    }
 
     protected function casts(): array
     {
