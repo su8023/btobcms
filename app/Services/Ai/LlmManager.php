@@ -54,7 +54,7 @@ class LlmManager
         $response = $this->send($provider, $messages, $temperature, $providerName);
 
         $ok = $response->successful();
-        $json = (array) $response->json();
+        $json = (array) $this->decodeBody((string) $response->body());
 
         AiCall::create([
             'provider' => $providerName,
@@ -129,6 +129,35 @@ class LlmManager
             ->timeout(config('ai.timeout', 120))
             ->retry((int) config('ai.retries', 2), 2000, throw: false)
             ->post($baseUrl.'/chat/completions', $payload);
+    }
+
+    /**
+     * 解析上游 JSON 响应体，容忍部分中转站/代理的非标准行为。
+     *
+     * 一些 OpenAI 兼容中转会在非流式响应的 JSON 尾部追加流式终止符
+     * `data: [DONE]`（正规 API 只在 SSE 流里用它）——严格 json_decode
+     * 因尾部垃圾返回 null，content 取不到，表现为「AI 返回无法解析」。
+     * 先严格解析；失败则剥掉 `data:` 行后再试。
+     *
+     * @return array<string, mixed>
+     */
+    protected function decodeBody(string $body): array
+    {
+        $decoded = json_decode($body, true);
+
+        if (is_array($decoded)) {
+            return $decoded;
+        }
+
+        // 剥掉流式终止符及其后的全部尾巴（真换行、字面 "\n"、SSE 残片都不要），
+        // 再去掉紧贴 JSON 的 `data:` 前缀。不用 $ 锚：字面 "\n"（反斜杠+n 两个普通
+        // 字符）不被 $ 认作行尾。
+        $pos = stripos($body, '[DONE]');
+        $cleaned = $pos !== false ? substr($body, 0, $pos) : $body;
+        $cleaned = preg_replace('/\s*data:\s*$/i', '', $cleaned) ?? $cleaned;
+        $decoded = json_decode(rtrim($cleaned, " \t\r\n"), true);
+
+        return is_array($decoded) ? $decoded : [];
     }
 
     /**
