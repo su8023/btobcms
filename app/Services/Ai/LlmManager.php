@@ -132,12 +132,15 @@ class LlmManager
     }
 
     /**
-     * 解析上游 JSON 响应体，容忍部分中转站/代理的非标准行为。
+     * 解析上游响应体，容忍中转/代理的三类非标准形态。
      *
-     * 一些 OpenAI 兼容中转会在非流式响应的 JSON 尾部追加流式终止符
-     * `data: [DONE]`（正规 API 只在 SSE 流里用它）——严格 json_decode
-     * 因尾部垃圾返回 null，content 取不到，表现为「AI 返回无法解析」。
-     * 先严格解析；失败则剥掉 `data:` 行后再试。
+     * 正规 OpenAI 兼容 API 在非流式请求下返回纯 JSON。实测中转常见三种劣化：
+     *   1. JSON 尾部追加流式终止符 `data: [DONE]`（严格 json_decode 返回 null）；
+     *   2. 无视 stream=false，直接返回 SSE 流（text/event-stream，多个
+     *      `data: {chunk}` 行 + 结尾 `data: [DONE]`）——需按 delta 重组；
+     *   3. 正常纯 JSON（严格解析直接命中）。
+     * 任一形态解析失败都会让 content 取不到，表现为「AI 返回无法解析」
+     * （线上实锤：自建中转 glm 通道是形态 1、MiniMax 通道是形态 2）。
      *
      * @return array<string, mixed>
      */
@@ -149,7 +152,56 @@ class LlmManager
             return $decoded;
         }
 
-        // 剥掉流式终止符及其后的全部尾巴（真换行、字面 "\n"、SSE 残片都不要），
+        // 形态 2：SSE 流——逐行取 data: 后的 chunk，拼 delta.content，
+        // 重组为标准非流式结构（finish_reason/usage 取最后一个带值的 chunk）
+        $content = '';
+        $finish = null;
+        $usage = [];
+
+        foreach (preg_split('/\R/', $body) ?: [] as $line) {
+            $line = trim($line);
+
+            if (! str_starts_with($line, 'data:')) {
+                continue;
+            }
+
+            $payload = trim(substr($line, 5));
+
+            if ($payload === '' || stripos($payload, '[DONE]') !== false) {
+                continue;
+            }
+
+            $chunk = json_decode($payload, true);
+
+            if (! is_array($chunk)) {
+                continue;
+            }
+
+            $delta = $chunk['choices'][0]['delta'] ?? null;
+
+            if (is_array($delta) && isset($delta['content'])) {
+                $content .= (string) $delta['content'];
+            }
+
+            foreach ((array) ($chunk['choices'] ?? []) as $choice) {
+                if (! empty($choice['finish_reason'])) {
+                    $finish = (string) $choice['finish_reason'];
+                }
+            }
+
+            if (! empty($chunk['usage']) && is_array($chunk['usage'])) {
+                $usage = $chunk['usage'];
+            }
+        }
+
+        if ($content !== '' || $finish !== null) {
+            return [
+                'choices' => [['message' => ['content' => $content], 'finish_reason' => $finish]],
+                'usage' => $usage,
+            ];
+        }
+
+        // 形态 1：剥掉流式终止符及其后的全部尾巴（真换行、字面 "\n"、SSE 残片都不要），
         // 再去掉紧贴 JSON 的 `data:` 前缀。不用 $ 锚：字面 "\n"（反斜杠+n 两个普通
         // 字符）不被 $ 认作行尾。
         $pos = stripos($body, '[DONE]');

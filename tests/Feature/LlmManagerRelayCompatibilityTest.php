@@ -40,7 +40,6 @@ class LlmManagerRelayCompatibilityTest extends TestCase
         $method->setAccessible(true);
 
         $json = $method->invoke($manager, $body);
-        $content = $json['choices.0'] ?? null;
 
         if ($expectContent === null) {
             $this->assertSame([], $json, '解析失败应返回空数组');
@@ -83,6 +82,36 @@ class LlmManagerRelayCompatibilityTest extends TestCase
     public function test_non_json_garbage_still_fails(): void
     {
         $this->decode('upstream exploded', null);
+    }
+
+    /**
+     * 形态 2：中转无视 stream=false，直接吐 SSE 流——需按 delta 重组。
+     * 线上实测 mm/MiniMax-M3.1-Flash 通道就是这种形态。
+     */
+    public function test_sse_stream_is_reassembled(): void
+    {
+        $sse = "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}\n\n"
+            ."data: {\"choices\":[{\"delta\":{\"content\":\"<h2>\"}}]}\n\n"
+            ."data: {\"choices\":[{\"delta\":{\"content\":\"title</h2>\"}}]}\n\n"
+            ."data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":5}}\n\n"
+            ."data: [DONE]\n\n";
+
+        $this->decode($sse, '<h2>title</h2>');
+    }
+
+    public function test_sse_usage_is_captured_for_call_logging(): void
+    {
+        $sse = "data: {\"choices\":[{\"delta\":{\"content\":\"OK\"}}]}\n\n"
+            ."data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":2955,\"completion_tokens\":12,\"total_tokens\":2967}}\n\n"
+            ."data: [DONE]\n";
+        $manager = new LlmManager;
+        $method = new ReflectionMethod($manager, 'decodeBody');
+        $method->setAccessible(true);
+
+        $json = $method->invoke($manager, $sse);
+
+        $this->assertSame(2955, data_get($json, 'usage.prompt_tokens'));
+        $this->assertSame('stop', data_get($json, 'choices.0.finish_reason'));
     }
 
     public function test_end_to_end_plan_with_done_suffix_succeeds(): void
