@@ -13,7 +13,7 @@
 |---|---|
 | 技术栈 | Laravel 13 + Filament 5 + Livewire v4 + Spatie Translatable + nwidart 模块 |
 | 线上站 | https://www.chinasupplier.shop（Dallas 服务器，宝塔 nginx + PHP-FPM） |
-| 线上当前版本 | 看后台上「更新中心」，或 GitHub `releases/latest`（发版流程见第五节） |
+| 线上当前版本 | **v1.4.32**（2026-11-03 核查；仓库已到 v1.4.33 → 线上落后一个版本，v1.4.33 的 P0「文章编辑页静默无法保存」线上仍在生效）。看后台上「更新中心」，或 GitHub `releases/latest`（发版流程见第五节） |
 | 本仓库 | `/home/bskhk/文件/BtoBcms`，remote `github.com/su8023/btobcms`（HTTPS） |
 | Shell | Debian 13 (trixie) + bash；php/composer/node 均在 PATH（见下） |
 | 语言 | 站点 8 语言（en 默认无前缀，es/ar/ru/pt/fr/de/it 带 `/es/` 前缀）；`site_locales()` / `default_locale()` helpers |
@@ -165,6 +165,22 @@ curl -s https://api.github.com/repos/su8023/btobcms/releases/latest | grep tag_n
 | 队列任务静默失败但本地测试全绿 | 构造器用 `$this->x = ...` 老式赋值但**未声明属性** → PHP 8.2 动态属性不入对象 schema → database 队列 serialize 时丢失 → 反序列化后 `Undefined property`。本地 `QUEUE_CONNECTION=sync` 同进程执行、`Queue::fake()` 不执行 handle，两种都测不到 → 必须真走 serialize→unserialize 往返 |
 | git push 每次弹 GitHub 授权窗 | GCM 没持久化凭据 → `git config --global credential.https://github.com.provider github` + `credential.store true`，再跑一次 `git credential-manager github login` 完成 OAuth 即永久缓存 |
 | Filament 表单字段值改了存不进去 | 多语言字段用 `wire:model`（deferred），DOM 改动要 `dispatchEvent(new Event('input', {bubbles:true}))`；select 要 `change` 事件。别用 `Livewire.find(id).set()`——Filament v5 的表单状态路径是数组式（`data.data.0.field`），写错路径会静默无效 |
+| 同站两个品牌名（首页新名、模型页旧名） | 站点名有两个来源：`config('site.name')`（env，默认 BtoBcms）与 `site_setting('site.name')`（后台可改）。混用 → 首页标题带后台名、产品/分类/文章页标题带 env 默认名，JSON-LD brand/author 同理。**全站一律用 `site_name()` helper**（后台设置优先、config 兜底） |
+| meta description 变成字面量 `<p></p>` | 分类 description 是 RichEditor，空内容存的是 `<p></p>`；`Seo::for()` 把它当正文直接输出 → Google 抓到标签不是文案。摘要统一转纯文本（`Seo::plainText()`：只剥真标签 `</?[a-z]...>`，不用 strip_tags——后者会吃掉正文的 `MOQ<100`） |
+| 英文（默认语言）缺 SEO 元数据 | AI 翻译只翻「非源语言」，源语言（en）的 SEO title/description 不会自动生成——分类/产品的 en SEO 要人工填或走 AutoSeo（AutoSeo 只在 `PostPublished` 事件上跑，只覆盖文章）。翻译覆盖率看板「缺 SEO」列全为 1 就是这个原因 |
+| 内链词典有词但「已织入」= 0 | 织入只挂在 `PostPublished` 事件上：词典是文章发布**之后**加的 → 旧文章不会被补织。运营点内链词典页右上「全量回织」（幂等，不重复织） |
+| 后台配置项读出来是空字符串 | Livewire 多语言/插件设置面板的值要读 `input` 的 `value` 属性，但 `offsetParent` 过滤会漏掉折叠区的字段（值仍在 DOM 里）。逐个 `input` 读，别只筛可见 |
+
+## 六之二、线上排查手法（2026-11-03 建立）
+
+| 场景 | 手法 |
+|---|---|
+| 登录线上后台 | 本机 Chrome 带 `--remote-debugging-port=9222`（`~/apps/start-chrome-debug.sh`），配 `~/cdp-control/browser.mjs`（`node browser.mjs open/eval/tabs`）或自写 playwright-core 脚本 `connectOverCDP('http://127.0.0.1:9222')` —— 用**真实 profile**，会话能留在浏览器里 |
+| 线上账号 | `tbskhk@gmail.com`（密码问用户，不要写进仓库/文档） |
+| 巡检线上所有后台页 | 逐个 `goto('/admin/...')` + 断言 `status===200` 且页面文本不含「页面加载出错/500/Whoops」——Filament 错误页仍是 200，只看状态码会漏 |
+| ⚠️ 线上调试禁止写操作 | POST 询盘 API 会**真实落库**（还可能触发邮件/飞书推送）。测试完必须到后台删除，否则污染真实线索数据。只读巡检用 GET + DOM 断言 |
+| 后台删除记录 | 行内最后一个 `<button>` 是「删除」→ 点击后弹确认框 → 弹窗内可见的「删除」按钮才是确认（页面里多个同名按钮，用 `offsetParent!==null` 筛可见的，取最后一个） |
+| 核对 sitemap 与路由 | sitemap 里的 `<loc>` 逐个 curl 验 200。注意 `/cases` 不是真实路由（真实是 `/case-studies`）、`/basket` 也不是（是 `/inquiry-basket`）——探错 URL 不等于 bug |
 
 ## 七、重要决策记录（为什么这么做）
 
