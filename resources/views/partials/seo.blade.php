@@ -1,6 +1,6 @@
 @php
     $seo = $seo ?? [];
-    $title = $seo['title'] ?? config('site.name');
+    $title = $seo['title'] ?? site_name();
     $description = $seo['description'] ?? '';
     $canonical = $seo['canonical'] ?? url()->current();
     $alternates = $seo['alternates'] ?? [];
@@ -25,7 +25,7 @@
 <meta property="og:image" content="{{ $og['image'] ?? asset('images/og-default.png') }}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:site_name" content="{{ config('site.name') }}">
+<meta property="og:site_name" content="{{ site_name() }}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="{{ $og['image'] ?? asset('images/og-default.png') }}">
 @if(!empty($jsonLd))

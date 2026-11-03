@@ -15,9 +15,7 @@ class InquiryNotification extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public function __construct(public Inquiry $inquiry)
-    {
-    }
+    public function __construct(public Inquiry $inquiry) {}
 
     public function build(): self
     {
@@ -29,14 +27,14 @@ class InquiryNotification extends Mailable
                 '{id}' => (string) $this->inquiry->id,
                 '{name}' => (string) $this->inquiry->name,
                 '{email}' => (string) $this->inquiry->email,
-                '{site}' => (string) config('site.name'),
+                '{site}' => (string) site_name(),
             ],
         );
 
         return $this->from(config('mail.from.address'), plugin_setting('mail-notifier', 'sender_name'))
             ->subject($subject)
             ->view('mailnotifier::emails.admin-notification', [
-                'siteName' => (string) config('site.name'),
+                'siteName' => (string) site_name(),
                 'products' => $this->inquiry->items->pluck('product.name')->filter()->values(),
                 'utm' => is_array($this->inquiry->utm) ? $this->inquiry->utm : [],
             ]);

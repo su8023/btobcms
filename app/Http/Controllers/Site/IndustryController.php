@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Support\Seo;
 use Illuminate\Http\Request;
 
-
 /**
  * 行业落地页：每个行业一个独立获客页（定制导语 + 能力清单 + FAQ + 询盘表单）。
  * 行业数据驱动自 config/industries.php，增删行业自动同步路由与导航。
@@ -64,7 +63,7 @@ class IndustryController extends Controller
                     '@type' => 'Service',
                     'name' => __('industries.show_title', ['name' => $name]),
                     'description' => __('industries.show_description', ['name' => $name]),
-                    'provider' => ['@type' => 'Organization', 'name' => config('site.name')],
+                    'provider' => ['@type' => 'Organization', 'name' => site_name()],
                     'areaServed' => 'Worldwide',
                 ],
                 [

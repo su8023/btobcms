@@ -15,9 +15,7 @@ class InquiryConfirmation extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public function __construct(public Inquiry $inquiry)
-    {
-    }
+    public function __construct(public Inquiry $inquiry) {}
 
     public function build(): self
     {
@@ -26,12 +24,12 @@ class InquiryConfirmation extends Mailable
 
         // 主题模板（设置面板可覆盖）：占位符 {site}
         $subject = trim((string) plugin_setting('mail-notifier', 'buyer_subject', ''));
-        $subject = strtr($subject !== '' ? $subject : 'We have received your inquiry — {site}', ['{site}' => (string) config('site.name')]);
+        $subject = strtr($subject !== '' ? $subject : 'We have received your inquiry — {site}', ['{site}' => (string) site_name()]);
 
         $this->from(config('mail.from.address'), plugin_setting('mail-notifier', 'sender_name'))
             ->subject($subject)
             ->view('mailnotifier::emails.buyer-confirmation', [
-                'siteName' => (string) config('site.name'),
+                'siteName' => (string) site_name(),
                 'contactEmail' => (string) config('site.contact.email'),
                 'contactPhone' => (string) config('site.contact.phone'),
                 'landingUrl' => (string) ($this->inquiry->landing_url ?: ''),

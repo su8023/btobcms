@@ -1,4 +1,4 @@
-@php($siteName = site_setting('site.name', config('site.name')))
+@php($siteName = site_name())
 @php($siteEmail = site_setting('site.contact.email', config('site.contact.email')))
 @php($sitePhone = site_setting('site.contact.phone', config('site.contact.phone')))
 @php($siteAddress = site_setting('site.contact.address', config('site.contact.address')))

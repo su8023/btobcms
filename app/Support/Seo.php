@@ -21,7 +21,7 @@ class Seo
     public static function for(Model $model, string $routeName, array $routeParams = []): array
     {
         $locale = app()->getLocale();
-        $site = (string) config('site.name');
+        $site = (string) site_name();
 
         $type = match (true) {
             $model instanceof Product => 'product',
@@ -38,7 +38,7 @@ class Seo
         };
 
         $name = trim((string) $model->getTranslation($nameField, $locale));
-        $summary = trim((string) $model->getTranslation($descField, $locale));
+        $summary = self::plainText($model->getTranslation($descField, $locale));
 
         $categoryName = '';
         if ($model instanceof Product && $model->category) {
@@ -84,7 +84,7 @@ class Seo
     {
         $locale = app()->getLocale();
         $cfg = config("site.seo.{$key}") ?? [];
-        $site = (string) site_setting('site.name', config('site.name'));
+        $site = (string) site_name();
 
         // 优先级：后台设置的每语言文案 → 当前语言的语言包模板 → 配置模板（英文兜底）
         // 后台把字段清空时存的是空串（不是 null），所以必须显式判空，
@@ -120,6 +120,28 @@ class Seo
         $value = trim((string) $value);
 
         return $value === '' ? null : $value;
+    }
+
+    /**
+     * 富文本摘要转纯文本。
+     *
+     * 分类 description 是 RichEditor（存 HTML），产品 summary / 文章 excerpt 是 textarea。
+     * 但 meta description 必须是纯文本：直接吐 HTML 会让 Google 抓到
+     * `<p></p>` 这种编辑器空内容占位——线上 9 个分类页的 description 就这么变成了 7 字符。
+     *
+     * 只剥真正的标签（`</?[a-z]...>`），不用 strip_tags：后者会把正文里的
+     * "MOQ<100"、"Lead <5 days" 一起吃掉。
+     */
+    private static function plainText(mixed $value): string
+    {
+        if (! is_string($value)) {
+            return '';
+        }
+
+        $text = preg_replace('/<\/?[a-z][a-z0-9]*(?:\s[^<>]*)?>/i', '', $value) ?? $value;
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        return trim(preg_replace('/\s+/u', ' ', $text) ?? '');
     }
 
     /**

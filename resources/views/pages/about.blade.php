@@ -7,11 +7,11 @@
             <h1>{{ __('site.nav.about') }}</h1>
         </div>
         <div class="article">
-            <h2>{{ config('site.name') }}</h2>
+            <h2>{{ site_name() }}</h2>
             <p>{{ __('site.home.hero_sub') }}</p>
             <h3>Factory & Quality Control</h3>
             <p>
-                {{ config('site.name') }} operates production lines with in-house quality control from raw material
+                {{ site_name() }} operates production lines with in-house quality control from raw material
                 inspection to final packaging. Our QC team performs AQL-standard inspections for every order.
             </p>
             <h3>OEM / ODM Support</h3>

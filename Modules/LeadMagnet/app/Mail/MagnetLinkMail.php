@@ -17,17 +17,16 @@ class MagnetLinkMail extends Mailable
     public function __construct(
         public LeadMagnet $magnet,
         public string $url,
-    ) {
-    }
+    ) {}
 
     public function build(): self
     {
-        return $this->from(config('mail.from.address'), (string) config('site.name'))
+        return $this->from(config('mail.from.address'), (string) site_name())
             ->subject(__('front.mail_subject', ['title' => (string) $this->magnet->title]))
             ->text('leadmagnet::mail.magnet-link', [
                 'magnet' => $this->magnet,
                 'url' => $this->url,
-                'siteName' => (string) config('site.name'),
+                'siteName' => (string) site_name(),
             ]);
     }
 }

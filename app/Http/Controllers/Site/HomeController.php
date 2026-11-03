@@ -79,7 +79,7 @@ class HomeController extends Controller
             '@context' => 'https://schema.org',
             '@type' => 'Organization',
             '@id' => $url.'/#organization',
-            'name' => site_setting('site.name', config('site.name')),
+            'name' => site_name(),
             'url' => $url,
             // Google 富媒体要求 logo 为可解析图片，光栅 ≥112px 优先。
             // 运营放了自定义 logo（public/images/logo.*）时 schema 一并跟随，否则用内置标记。
@@ -123,7 +123,7 @@ class HomeController extends Controller
             '@context' => 'https://schema.org',
             '@type' => 'WebSite',
             '@id' => $url.'/#website',
-            'name' => site_setting('site.name', config('site.name')),
+            'name' => site_name(),
             'url' => $url,
             'inLanguage' => site_locales(),
         ];

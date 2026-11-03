@@ -22,8 +22,7 @@ class InquiryReply extends Mailable
         public Inquiry $inquiry,
         public string $subjectLine,
         public string $replyBody,
-    ) {
-    }
+    ) {}
 
     public function build(): self
     {
@@ -33,7 +32,7 @@ class InquiryReply extends Mailable
         $this->from(config('mail.from.address'), config('mail-notifier.sender_name'))
             ->subject($this->subjectLine)
             ->text('filament.inquiry-reply-email', [
-                'siteName' => (string) config('site.name'),
+                'siteName' => (string) site_name(),
                 'inquiry' => $this->inquiry,
                 'replyBody' => $this->replyBody,
             ]);

@@ -228,7 +228,7 @@ class SitemapController extends Controller
      */
     public function llms(): Response
     {
-        $site = site_setting('site.name', config('site.name'));
+        $site = site_name();
         $url = localized_route('home');
         $locale = app()->getLocale();
 

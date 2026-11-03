@@ -5,8 +5,8 @@ namespace App\Filament\Pages;
 use App\Models\Setting;
 use BackedEnum;
 use Filament\Actions\Action;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Actions;
@@ -60,7 +60,7 @@ class SiteSettings extends Page
     public function mount(): void
     {
         $this->form->fill([
-            'site_name' => site_setting('site.name', config('site.name')),
+            'site_name' => site_name(),
             'contact_email' => site_setting('site.contact.email', config('site.contact.email')),
             'contact_phone' => site_setting('site.contact.phone', config('site.contact.phone')),
             'contact_address' => site_setting('site.contact.address', config('site.contact.address')),

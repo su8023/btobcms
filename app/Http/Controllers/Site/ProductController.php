@@ -69,7 +69,7 @@ class ProductController extends Controller
             'name' => $product->name,
             'description' => (string) ($product->summary ?? $product->name),
             'sku' => (string) ($product->sku ?? $product->slug),
-            'brand' => ['@type' => 'Brand', 'name' => config('site.name')],
+            'brand' => ['@type' => 'Brand', 'name' => site_name()],
         ];
 
         if ($product->price_min !== null) {

@@ -41,7 +41,7 @@ class PostController extends Controller
                 'description' => (string) ($post->excerpt ?? ''),
                 'datePublished' => optional($post->published_at)->toIso8601String(),
                 'dateModified' => $post->updated_at->toIso8601String(),
-                'author' => ['@type' => 'Organization', 'name' => config('site.name')],
+                'author' => ['@type' => 'Organization', 'name' => site_name()],
                 'mainEntityOfPage' => localized_route('blog.show', $routeParams),
             ],
         ]);

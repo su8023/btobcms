@@ -52,7 +52,7 @@ class EditInquiry extends EditRecord
                         ->maxLength(255)
                         ->default(fn (): string => __('admin.inquiries.reply_subject_default', [
                             'id' => $this->record->id,
-                            'site' => (string) config('site.name'),
+                            'site' => (string) site_name(),
                         ])),
 
                     Textarea::make('message')

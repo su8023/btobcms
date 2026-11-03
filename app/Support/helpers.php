@@ -1,16 +1,33 @@
 <?php
 
+use App\Models\Setting;
+use App\Models\User;
+
 /**
  * 全站多语言路由辅助函数。
  */
-
 if (! function_exists('site_setting')) {
     /**
      * 读取全站设置（Setting 表，全局），未设置时回退到传入默认值。
      */
     function site_setting(string $key, mixed $default = null): mixed
     {
-        return \App\Models\Setting::get($key, $default);
+        return Setting::get($key, $default);
+    }
+}
+
+if (! function_exists('site_name')) {
+    /**
+     * 站点品牌名：后台「站点设置」优先，回退 env SITE_NAME。
+     *
+     * 站点名有两个来源——config('site.name')（env，默认 BtoBcms）与
+     * site_setting('site.name')（后台可改）。混用会让同站输出两个品牌名：
+     * 首页标题带后台设的名字，模型页标题带 env 默认名。
+     * 全站一律走这里。
+     */
+    function site_name(): string
+    {
+        return (string) site_setting('site.name', config('site.name'));
     }
 }
 
@@ -32,8 +49,8 @@ if (! function_exists('plugin_setting')) {
         $module = $moduleMap[$configPrefix] ?? str_replace('-', '', ucwords($configPrefix, '-'));
 
         try {
-            $values = \App\Models\Setting::get("plugin.{$module}");
-        } catch (\Throwable) {
+            $values = Setting::get("plugin.{$module}");
+        } catch (Throwable) {
             $values = null;
         }
 
@@ -58,7 +75,7 @@ if (! function_exists('user_is_admin')) {
     {
         $user = auth()->user();
 
-        return $user instanceof \App\Models\User && $user->isAdmin();
+        return $user instanceof User && $user->isAdmin();
     }
 }
 

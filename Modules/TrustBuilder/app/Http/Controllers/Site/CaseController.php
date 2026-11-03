@@ -29,7 +29,7 @@ class CaseController extends Controller
             'cases' => $cases,
             // 列表页 SEO：静态页信息包（title/description 取模块语言包）
             'seo' => [
-                'title' => __('trustbuilder.nav.cases').' | '.site_setting('site.name', config('site.name')),
+                'title' => __('trustbuilder.nav.cases').' | '.site_name(),
                 'description' => __('trustbuilder.front.cases_description'),
                 'canonical' => localized_route('cases.index'),
                 'alternates' => locale_alternates('cases.index'),
@@ -56,7 +56,7 @@ class CaseController extends Controller
 
         $routeParams = ['slug' => $case->slug];
         $canonical = localized_route('cases.show', $routeParams);
-        $siteName = (string) site_setting('site.name', config('site.name'));
+        $siteName = (string) site_name();
 
         // SEO 信息包：标题 = 案例名 | 站名；描述取正文纯文本前 160 字
         $description = Str::limit(trim(strip_tags((string) $case->body)), 160);
