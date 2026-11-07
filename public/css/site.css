@@ -744,3 +744,9 @@ p { margin: 0 0 1em; }
 .notfound > p { color: var(--muted); max-width: 520px; margin: 0 auto; }
 .btn-ghost-dark { border: 1px solid var(--border); color: var(--ink); background: transparent; }
 .btn-ghost-dark:hover { background: var(--surface); }
+
+/* 文章正文表格（寻源指南对比表）：窄屏可横向滚动，不撑破版面 */
+.article-body table { display: block; width: 100%; max-width: 100%; overflow-x: auto; border-collapse: collapse; margin: 1.4em 0; font-size: var(--fs-sm); }
+.article-body table th, .article-body table td { padding: 10px 12px; border: 1px solid var(--border); text-align: start; vertical-align: top; }
+.article-body table thead th { background: var(--bg); font-weight: 620; white-space: nowrap; }
+.article-body table tbody tr:nth-child(even) { background: color-mix(in srgb, var(--bg) 55%, var(--surface)); }
