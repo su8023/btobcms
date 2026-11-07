@@ -70,7 +70,7 @@ class ContentSeeder extends Seeder
             [
                 'category_id' => $category->id,
                 'status' => 'published',
-                'attrs' => $attrs ?: null,
+                'specs' => $attrs ?: null,
                 'moq' => '100 pcs',
                 'name' => $name,
                 'summary' => ['en' => $name['en'].' — factory direct supply, OEM available.'],

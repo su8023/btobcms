@@ -49,7 +49,7 @@ return [
 
         'showing' => 'Mostrando :count producto|Mostrando :count productos',
 
-        'search_ph' => 'Buscar productos, p. ej. «válvula», «DN50»…',
+        'search_ph' => 'Buscar productos, p. ej. «auriculares», «cajas de embalaje»…',
         'search_btn' => 'Buscar',
         'hot' => 'Popular:',
         'categories' => 'Categorías de productos',

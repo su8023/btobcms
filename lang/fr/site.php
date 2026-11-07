@@ -45,7 +45,7 @@ return [
         'hero_title_html' => 'Approvisionnement direct de tout produit <em>auprès d\u2019usines vérifiées en Chine</em>',
         'hero_sub' => 'Des biens de consommation aux machines industrielles. Nous identifions les bons fournisseurs, inspectons et négocions des prix directs usine auprès des principaux pôles industriels chinois, en 48 heures.',
         'form_card_title' => 'Demandez une mise en relation usine (devis sous 48 h)',
-        'search_ph' => 'Rechercher des produits, ex. « vanne », « DN50 »…',
+        'search_ph' => 'Rechercher des produits, ex. « écouteurs », « boîtes d’emballage »…',
         'search_btn' => 'Rechercher',
         'hot' => 'Populaire :',
         'categories' => 'Catégories de produits',

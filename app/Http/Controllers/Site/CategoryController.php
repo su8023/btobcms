@@ -48,7 +48,7 @@ class CategoryController extends Controller
                     // JSON 路径必须绑定传参，绝不能把 code 拼进 SQL 字符串
                     // （code 是后台可编辑字段，拼进去等于给了注入入口）
                     $query->whereRaw(
-                        'json_extract(attrs, ?) = ?',
+                        'json_extract(specs, ?) = ?',
                         ['$.'.$facet->code, (string) $value]
                     );
                 }
@@ -75,6 +75,7 @@ class CategoryController extends Controller
             'products' => $products,
             'facets' => $facets,
             'activeFilters' => $filters,
+            'hotChips' => Product::hotKeywordChips(5, $category->id),
             'seo' => Seo::for($category, 'categories.show', $routeParams),
             'jsonLd' => [
                 '@context' => 'https://schema.org',

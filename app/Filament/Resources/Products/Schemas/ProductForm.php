@@ -10,6 +10,7 @@ use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -70,6 +71,21 @@ class ProductForm
                     TextInput::make('sort_order')->label(__('admin.common.sort_order'))->numeric()->default(0),
                 ]),
 
+                Section::make(__('admin.products.sections.sourcing'))->columns(2)->schema([
+                    TextInput::make('price_range')->label(__('admin.products.fields.price_range'))->maxLength(64),
+                    TextInput::make('certification')->label(__('admin.products.fields.certification'))->maxLength(255),
+                    TextInput::make('lead_time')->label(__('admin.products.fields.lead_time'))->maxLength(64),
+                    TextInput::make('aql')->label(__('admin.products.fields.aql'))->maxLength(64),
+                    TagsInput::make('core_keywords')
+                        ->label(__('admin.products.fields.core_keywords'))
+                        ->placeholder(__('admin.products.fields.core_keywords_ph'))
+                        ->columnSpanFull(),
+                    TagsInput::make('hot_trending_keywords')
+                        ->label(__('admin.products.fields.hot_trending_keywords'))
+                        ->placeholder(__('admin.products.fields.hot_trending_keywords_ph'))
+                        ->columnSpanFull(),
+                ]),
+
                 Section::make(__('admin.common.sections.content'))->schema([
                     TranslatableFields::tabs('name', __('admin.products.name'), 'text', requireDefault: true),
                     TranslatableFields::tabs('summary', __('admin.products.summary'), 'textarea'),
@@ -79,7 +95,7 @@ class ProductForm
                 Section::make(__('admin.products.sections.attributes'))
                     ->description(__('admin.products.attrs.description'))
                     ->schema([
-                        KeyValue::make('attrs')
+                        KeyValue::make('specs')
                             ->keyLabel(__('admin.products.attrs.key'))
                             ->valueLabel(__('admin.common.value')),
                     ]),

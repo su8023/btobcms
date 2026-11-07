@@ -174,6 +174,7 @@
 @if($latestProducts->isNotEmpty())
 <section class="section" aria-label="{{ __('site.home.latest_products') }}">
     <div class="container">
+        @include('partials.hot-keywords', ['hotChips' => $hotChips ?? []])
         <div class="section-head">
             <div>
                 <span class="section-eyebrow">{{ __('site.home.products_eyebrow') }}</span>

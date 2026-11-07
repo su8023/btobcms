@@ -109,7 +109,6 @@ class LinkTermResource extends Resource
                         // 回织有单次时间预算：跑满即收尾，剩余文章下次再点一次即可（幂等，不会重复织）
                         if ($partial) {
                             $action
-                                ->success()
                                 ->successNotification(
                                     Notification::make()
                                         ->warning()
@@ -121,7 +120,6 @@ class LinkTermResource extends Resource
                         }
 
                         $action
-                            ->success()
                             ->successNotificationTitle(
                                 $links > 0
                                     ? "回织完成：{$posts} 篇文章新增 {$links} 条内链"

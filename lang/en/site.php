@@ -46,7 +46,7 @@ return [
         'hero_title_html' => "Source Any Product Directly <em>from China's Verified Factories</em>",
         'hero_sub' => "From consumer goods to industrial machinery. We match, inspect, and negotiate factory-direct prices from top manufacturing clusters across China in 48 hours.",
         'form_card_title' => 'Request a Factory Match (48h Quote)',
-        'search_ph' => 'Search products, e.g. “valve”, “DN50”…',
+        'search_ph' => 'Search products, e.g. “earbuds”, “packaging box”…',
         'search_btn' => 'Search',
         'hot' => 'Hot:',
         'categories' => 'Product Categories',

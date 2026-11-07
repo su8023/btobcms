@@ -134,7 +134,7 @@ class AdminFullSweepTest extends TestCase
                 'category_id' => $parent->id,
                 'status' => 'published',
                 'sku' => 'SWEEP-1',
-                'attrs' => ['material' => 'SS316'],
+                'specs' => ['material' => 'SS316'],
                 'price_min' => 10,
                 'price_max' => 20,
                 'currency' => 'USD',

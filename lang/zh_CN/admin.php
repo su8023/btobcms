@@ -181,7 +181,7 @@ return [
         'name' => '名称',
         'code' => '编码',
         'slug' => '网址标识',
-        'slug_helper' => '网页地址的最后一段，只能用小写英文、数字和连字符（如 how-to-choose-gate-valve）。点「AI 填充」会自动生成。',
+        'slug_helper' => '网页地址的最后一段，只能用小写英文、数字和连字符（如 how-to-choose-a-supplier）。点「AI 填充」会自动生成。',
         'type' => '类型',
         'unit' => '单位',
         'value' => '值',
@@ -217,6 +217,7 @@ return [
         'section_description' => 'TDK 覆盖项 — 留空则使用模板默认值',
     ],
 
+
     'products' => [
         'label' => '产品',
         'plural' => '产品',
@@ -232,9 +233,18 @@ return [
             'moq' => '最小起订量',
             'unit' => '单位（件 / 套 / 吨）',
             'images' => '产品图片',
+            'price_range' => '出厂价格区间',
+            'certification' => '认证',
+            'lead_time' => '交期',
+            'aql' => 'AQL / 质检标准',
+            'core_keywords' => '核心搜索词',
+            'core_keywords_ph' => '例如：蓝牙耳机',
+            'hot_trending_keywords' => '热搜词',
+            'hot_trending_keywords_ph' => '例如：降噪蓝牙耳机',
         ],
         'sections' => [
             'attributes' => '属性',
+            'sourcing' => '采购规范',
             'images' => '图片',
             'alt' => '图片 ALT 文本',
         ],
@@ -283,8 +293,14 @@ return [
             'dry_run' => '试运行——未写入任何更改。',
         ],
     ],
-
     'categories' => [
+        'sections' => [
+            'keywords' => '搜索关键词',
+        ],
+        'core_keywords' => '核心搜索词',
+        'core_keywords_ph' => '例如：源头工厂',
+        'hot_trending_keywords' => '热搜词',
+        'hot_trending_keywords_ph' => '例如：消费电子批发',
         'label' => '分类',
         'plural' => '分类',
         'name' => '分类名称',
@@ -522,7 +538,7 @@ return [
         'title' => 'AI 写作室',
         'step1' => '第 1 步 · 主题与提示词',
         'topic' => '主题 *',
-        'topic_ph' => '例：水处理工程如何选择不锈钢阀门',
+        'topic_ph' => '例：面向全球采购的 OEM 工厂如何选择',
         'prompt' => '提示词（可选）——结构要求、必须覆盖的点、风格说明',
         'prompt_ph' => '例：重点写 AQL 验货流程；提到起订量灵活；不要出现具体价格',
         'lang' => '语言',

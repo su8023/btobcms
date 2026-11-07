@@ -45,7 +45,7 @@ return [
         'hero_title_html' => 'Beschaffen Sie jedes Produkt direkt <em>aus geprüften Fabriken in China</em>',
         'hero_sub' => 'Von Konsumgütern bis zu Industriemaschinen. Wir vermitteln den passenden Betrieb, prüfen die Ware und handeln Direktpreise aus den führenden Fertigungsclustern Chinas in 48 Stunden aus.',
         'form_card_title' => 'Fabrikvermittlung anfragen (Angebot in 48 Std.)',
-        'search_ph' => 'Produkte suchen, z. B. „Ventil“, „DN50“…',
+        'search_ph' => 'Produkte suchen, z. B. „Ohrhörer“, „Verpackungskartons“…',
         'search_btn' => 'Suchen',
         'hot' => 'Beliebt:',
         'categories' => 'Produktkategorien',

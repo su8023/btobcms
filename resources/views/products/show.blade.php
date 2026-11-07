@@ -51,10 +51,10 @@
                     @endif
                 </div>
 
-                @if(!empty($product->attrs))
+                @if(!empty($product->specs))
                     <h2 class="product-subhead">{{ __('site.products.specs') }}</h2>
                     <table class="spec-table">
-                        @foreach($product->attrs as $code => $value)
+                        @foreach($product->specs as $code => $value)
                             <tr>
                                 <th>{{ $attrDefs[$code]->name ?? $code }}{{ $attrDefs[$code]->unit ?? null ? ' ('.$attrDefs[$code]->unit.')' : '' }}</th>
                                 <td>{{ is_array($value) ? implode(', ', $value) : $value }}</td>

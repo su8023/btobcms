@@ -4,9 +4,9 @@
     "require": {},
     "autoload": {
         "psr-4": {
-            "Modules\UpdateCenter\\": "app/",
-            "Modules\UpdateCenter\Database\Factories\\": "database/factories/",
-            "Modules\UpdateCenter\Database\Seeders\\": "database/seeders/"
+            "Modules\\UpdateCenter\\": "app/",
+            "Modules\\UpdateCenter\\Database\\Factories\\": "database/factories/",
+            "Modules\\UpdateCenter\\Database\\Seeders\\": "database/seeders/"
         }
     }
 }

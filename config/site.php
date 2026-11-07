@@ -32,7 +32,7 @@ return [
     ],
 
     // 首页 hero 热门搜索词（内链 + 快速发现；上线后按 GSC 真实搜索词更新）
-    'hot_keywords' => ['Consumer Electronics', 'CNC Machining', 'Silicone & Plastics', 'LED Lighting', 'Packaging & Boxes', 'Apparel & Fabrics'],
+    'hot_keywords' => ['Consumer Electronics', 'Apparel & Bags', 'Home & Kitchenware', 'Beauty & Personal Care', 'Sports & Outdoor', 'Toys & Baby Care', 'Pet Supplies', 'Automotive Parts', 'Hardware & Building Materials', 'Commercial Lighting', 'Packaging & Printing', 'CNC & Industrial Machinery'],
 
     /*
     |--------------------------------------------------------------------------

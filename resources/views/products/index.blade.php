@@ -15,6 +15,8 @@
             <button type="submit" class="btn btn-primary">🔍</button>
         </form>
 
+        @include('partials.hot-keywords', ['hotChips' => $hotChips ?? []])
+
         <p class="section-count">{{ trans_choice('site.products.showing', $products->total(), ['count' => $products->total()]) }}</p>
 
         @if($products->isEmpty())

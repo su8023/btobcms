@@ -45,7 +45,7 @@ return [
         'hero_title_html' => 'Approvviggiona qualsiasi prodotto direttamente <em>da fabbriche verificate in Cina</em>',
         'hero_sub' => 'Dai beni di consumo alle macchinari industriali. Individuiamo la fabbrica giusta, ispezioniamo e negoziamo prezzi diretti di fabbrica nei principali distretti industriali cinesi entro 48 ore.',
         'form_card_title' => 'Richiedi un abbinamento con la fabbrica (preventivo in 48 h)',
-        'search_ph' => 'Cerca prodotti, es. «valvola», «DN50»…',
+        'search_ph' => 'Cerca prodotti, es. «auricolari», «scatole di imballaggio»…',
         'search_btn' => 'Cerca',
         'hot' => 'Popolari:',
         'categories' => 'Categorie di prodotti',

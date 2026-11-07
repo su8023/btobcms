@@ -45,7 +45,7 @@ return [
         'hero_title_html' => 'Abasteça qualquer produto diretamente <em>de fábricas verificadas na China</em>',
         'hero_sub' => 'De bens de consumo a máquinas industriais. Fazemos a seleção de fábricas, inspecionamos e negociamos preços diretos de fábrica nos principais polos industriais da China em 48 horas.',
         'form_card_title' => 'Solicite um match de fábrica (orçamento em 48 h)',
-        'search_ph' => 'Pesquisar produtos, ex. «válvula», «DN50»…',
+        'search_ph' => 'Pesquisar produtos, ex. «fones de ouvido», «caixas de embalagem»…',
         'search_btn' => 'Pesquisar',
         'hot' => 'Populares:',
         'categories' => 'Categorias de produtos',

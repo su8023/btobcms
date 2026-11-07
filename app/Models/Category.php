@@ -12,7 +12,8 @@ class Category extends Model
 
     protected $fillable = [
         'site_id', 'parent_id', 'path', 'slug', 'attr_set_id',
-        'name', 'description', 'sort_order', 'status',
+        'name', 'description', 'core_keywords', 'hot_trending_keywords',
+        'sort_order', 'status',
     ];
 
     public array $translatable = ['name', 'description'];
@@ -21,6 +22,8 @@ class Category extends Model
     {
         return [
             'status' => 'boolean',
+            'core_keywords' => 'array',
+            'hot_trending_keywords' => 'array',
         ];
     }
 

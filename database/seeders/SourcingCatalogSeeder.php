@@ -291,7 +291,7 @@ class SourcingCatalogSeeder extends Seeder
                 .'<li><strong>Packing:</strong> export carton with foam insert, individually labelled, palletised for container loading</li>'
                 .'<li><strong>Shipping port:</strong> Shenzhen or Ningbo, EXW / FOB / CIF, air freight for small urgent lots</li></ul>'
                 .'<p>Send a drawing, STEP file or a sample and we return a manufacturability review, an itemised quotation and the tooling cost split.</p>',
-            'attrs' => [
+            'specs' => [
                 'material' => 'Aluminium 6061-T6, SS304/316L, S45C, brass, POM, PTFE',
                 'tolerance' => '±0.005 mm on critical dimensions (ISO 2768-f general)',
                 'certification' => 'ISO 9001:2015 factory, material certificates with heat numbers',
@@ -332,7 +332,7 @@ class SourcingCatalogSeeder extends Seeder
                 .'<li><strong>Packing:</strong> anti-static tray into export carton, 40 pcs per carton, serial number listed</li>'
                 .'<li><strong>Shipping port:</strong> Shenzhen or Hong Kong, EXW / FOB / CIF / DDP</li></ul>'
                 .'<p>Send a schematic, Gerber file or a working sample — we return a DFM and BOM risk review, a quotation and an honest lead-time estimate within 24 hours.</p>',
-            'attrs' => [
+            'specs' => [
                 'material' => 'FR4 PCB (1.6–2.0 mm), RoHS-compliant components, ABS/PC enclosure',
                 'tolerance' => 'IPC-A-600 Class 2 workmanship',
                 'certification' => 'CE / RoHS (FCC and ENEC on request)',
@@ -373,7 +373,7 @@ class SourcingCatalogSeeder extends Seeder
                 .'<li><strong>Packing:</strong> bagged and boxed, 100 pcs per bag, lot and cavity number labelled</li>'
                 .'<li><strong>Shipping port:</strong> Ningbo or Shanghai, EXW / FOB / CIF</li></ul>'
                 .'<p>Send a 3D file or a physical sample and we return a DFM report, a mould cost estimate and the shot-life assumption behind the price.</p>',
-            'attrs' => [
+            'specs' => [
                 'material' => 'ABS, PC, PP, PA66, POM, TPE, LSR silicone, PVC',
                 'tolerance' => '±0.02 mm on the cavity, general tolerance ISO 29481',
                 'certification' => 'ISO 9001 moulding partner, material grade report per lot',
@@ -415,7 +415,7 @@ class SourcingCatalogSeeder extends Seeder
                 .'<li><strong>Packing:</strong> export carton with foam, 4 pcs per carton</li>'
                 .'<li><strong>Shipping port:</strong> Guangzhou or Zhongshan, EXW / FOB / CIF</li></ul>'
                 .'<p>Send the IES file or the wattage and mounting height — we send a photometric comparison and the payback calculation before you commit.</p>',
-            'attrs' => [
+            'specs' => [
                 'material' => 'Aluminium housing, PC diffuser, aluminium reflector',
                 'tolerance' => '±0.5 mm housing dimensions, lumens within ±5% of nominal',
                 'certification' => 'CE / RoHS, ENEC and FCC on request, IES data supplied',
@@ -457,7 +457,7 @@ class SourcingCatalogSeeder extends Seeder
                 .'<li><strong>Packing:</strong> bundled with strapping and corner protection, export pallet</li>'
                 .'<li><strong>Shipping port:</strong> Wenzhou or Ningbo, EXW / FOB / CIF</li></ul>'
                 .'<p>Send the product dimensions and the weight per carton and we return a board grade proposal, a print-ready dieline and a landed cost per carton.</p>',
-            'attrs' => [
+            'specs' => [
                 'material' => '3-ply / 5-ply kraft corrugated, recycled & FSC board available',
                 'tolerance' => '±2 mm cut size, print registration ±1 mm',
                 'certification' => 'FSC / ISO 9001 on request, food-contact grade for packaging',
@@ -499,7 +499,7 @@ class SourcingCatalogSeeder extends Seeder
                 .'<li><strong>Packing:</strong> poly bag per piece, 50 pcs per export carton, size ratio labelled</li>'
                 .'<li><strong>Shipping port:</strong> Xiamen or Ningbo, EXW / FOB / CIF</li></ul>'
                 .'<p>Send the use case, climate and certification requirement — we return a fabric recommendation, a costed sample option and the certification route.</p>',
-            'attrs' => [
+            'specs' => [
                 'material' => '3/1 twill cotton, poly-cotton, polyester, ripstop, FR grades',
                 'tolerance' => '±1 cm on body measurements, size range S–5XL',
                 'certification' => 'EN ISO 20471, EN 388, ANSI/ISEA 107 documentation',
@@ -656,7 +656,7 @@ class SourcingCatalogSeeder extends Seeder
                     'category_id' => $categoryIds[$definition['category']],
                     'sku' => $definition['sku'],
                     'status' => 'published',
-                    'attrs' => $definition['attrs'],
+                    'specs' => $definition['specs'],
                     'price_min' => $definition['price_min'],
                     'price_max' => $definition['price_max'],
                     'currency' => 'USD',

@@ -43,6 +43,13 @@ class OptimizeAndSubmitPost implements ShouldQueue
      */
     protected function generateSeoMeta(Post $post): void
     {
+        // 应用「AI 内容写作」插件设置里的自定义模型（base_url/key/model）。
+        // AutoSeo 直接用 LlmManager，不经过 ArticleStudio 构造器，
+        // 所以这里显式补一次，否则自定义供应商永远不生效（报「AI 服务还没配置好」）。
+        if (class_exists(\Modules\AiContentWriter\Services\ArticleStudio::class)) {
+            \Modules\AiContentWriter\Services\ArticleStudio::applyCustomProvider();
+        }
+
         try {
             $existing = SeoMeta::firstOrNew(['metable_type' => Post::class, 'metable_id' => $post->id]);
 

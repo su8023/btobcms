@@ -23,6 +23,8 @@
             </div>
         @endif
 
+        @include('partials.hot-keywords', ['hotChips' => $hotChips ?? []])
+
         <div class="category-layout">
             @if($facets->isNotEmpty())
                 <aside class="facet-panel">

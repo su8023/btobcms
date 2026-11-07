@@ -6,6 +6,7 @@ use App\Filament\Support\TranslatableFields;
 use App\Models\AttrSet;
 use App\Models\Category;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
@@ -64,6 +65,17 @@ class CategoryForm
                 Section::make(__('admin.common.sections.content'))->schema([
                     TranslatableFields::tabs('name', __('admin.categories.name'), 'text', requireDefault: true),
                     TranslatableFields::tabs('description', __('admin.categories.description'), 'rich'),
+                ]),
+
+                Section::make(__('admin.categories.sections.keywords'))->columns(2)->schema([
+                    TagsInput::make('core_keywords')
+                        ->label(__('admin.categories.fields.core_keywords'))
+                        ->placeholder(__('admin.categories.fields.core_keywords_ph'))
+                        ->columnSpanFull(),
+                    TagsInput::make('hot_trending_keywords')
+                        ->label(__('admin.categories.fields.hot_trending_keywords'))
+                        ->placeholder(__('admin.categories.fields.hot_trending_keywords_ph'))
+                        ->columnSpanFull(),
                 ]),
 
                 TranslatableFields::seoSection(),

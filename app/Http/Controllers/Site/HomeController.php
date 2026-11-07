@@ -57,6 +57,7 @@ class HomeController extends Controller
             'latestProducts' => $latestProducts,
             'latestPosts' => $latestPosts,
             'caseStudies' => $caseStudies,
+            'hotChips' => Product::hotKeywordChips(1),
             'stats' => [
                 'products' => $productCount,
                 'industries' => $industries->count(),

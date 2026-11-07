@@ -132,11 +132,13 @@ class GscFetcher
     {
         $keys = (array) ($row['keys'] ?? []);
         $date = (string) ($keys[0] ?? $row['date'] ?? '');
+        // 降维取数后 keys 可能只有 date（无 page/query/country），按缺省值处理，
+        // 不因缺键丢行：只有 date 缺失才真的无法落库。
         $page = (string) ($keys[1] ?? '');
         $query = (string) ($keys[2] ?? '');
         $country = isset($keys[3]) ? (string) $keys[3] : null;
 
-        if ($date === '' || $page === '' || $query === '') {
+        if ($date === '') {
             return null;
         }
 
@@ -214,14 +216,19 @@ class GscFetcher
 
         $startRow = 0;
 
+        // 维度顺序决定返回行 keys 的下标：0=date 1=page 2=query 3=country。
+        // 必须带 date 维度：不带时 GSC 返回整个窗口的聚合行（无逐日明细），
+        // 而 gsc_daily 按天存储、衰退预警按 date 分组环比都依赖逐日数据。
+        // GSC 在 date+page+query+country 四维下可能返回 0 行（query/country 维度
+        // 无法满足），故降维取数：先 date+page，仍为 0 行再退到 date（只退一次）。
+        $dimensions = ['date', 'page'];
+        $fellBack = false;
+
         for ($page = 0; $page < $maxPages; $page++) {
             $response = Http::withToken($accessToken)->post($endpoint, [
                 'startDate' => $startDate,
                 'endDate' => $endDate,
-                // 维度顺序决定返回行 keys 的下标：0=date 1=page 2=query 3=country。
-                // 必须带 date 维度：不带时 GSC 返回整个窗口的聚合行（无逐日明细），
-                // 而 gsc_daily 按天存储、衰退预警按 date 分组环比都依赖逐日数据。
-                'dimensions' => ['date', 'page', 'query', 'country'],
+                'dimensions' => $dimensions,
                 'rowLimit' => $rowLimit,
                 'startRow' => $startRow,
             ]);
@@ -231,6 +238,26 @@ class GscFetcher
             }
 
             $rows = (array) $response->json('rows', []);
+
+            // 0 行 → 降维重试一次（维度变少，起始行归零）
+            if ($rows === [] && ! $fellBack && $startRow === 0) {
+                $fellBack = true;
+                $dimensions = ['date'];
+                $startRow = 0;
+                $response = Http::withToken($accessToken)->post($endpoint, [
+                    'startDate' => $startDate,
+                    'endDate' => $endDate,
+                    'dimensions' => $dimensions,
+                    'rowLimit' => $rowLimit,
+                    'startRow' => $startRow,
+                ]);
+
+                if ($response->failed()) {
+                    throw new RuntimeException('GSC searchAnalytics 请求失败：'.$this->shortError($response));
+                }
+
+                $rows = (array) $response->json('rows', []);
+            }
 
             foreach ($rows as $row) {
                 yield $row;
