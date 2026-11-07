@@ -32,7 +32,7 @@ return [
     ],
 
     // 首页 hero 热门搜索词（内链 + 快速发现；上线后按 GSC 真实搜索词更新）
-    'hot_keywords' => ['gate valve', 'butterfly valve', 'water pump', 'steel pipe', 'DN50', 'OEM supplier'],
+    'hot_keywords' => ['Consumer Electronics', 'CNC Machining', 'Silicone & Plastics', 'LED Lighting', 'Packaging & Boxes', 'Apparel & Fabrics'],
 
     /*
     |--------------------------------------------------------------------------
@@ -41,8 +41,8 @@ return [
     */
     'seo' => [
         'home' => [
-            'title' => 'Reliable Manufacturer & Wholesale Supplier from China | {site}',
-            'description' => '{site} is a trusted B2B manufacturer and wholesale supplier from China. Factory prices, OEM/ODM support, global shipping. Get an instant quote today.',
+            'title' => 'Source Any Product Directly from China Verified Factories | {site}',
+            'description' => 'Tell us what you need. {site} connects global buyers with top-tier verified factories across China. Factory-direct pricing, on-site inspection, and supply chain protection.',
         ],
         'products' => [
             'index' => [

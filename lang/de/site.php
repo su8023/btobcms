@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'brand_slogan' => 'Zuverlässiges globales B2B-Sourcing',
+    'brand_slogan' => 'Beschaffung jedes Produkts direkt aus den besten Fabriken Chinas',
 
     'nav' => [
         'industries' => 'Branchen',
@@ -41,10 +41,10 @@ return [
     ],
 
     'home' => [
-        'hero_title' => 'Zuverlässiger Hersteller und Großhändler aus China',
-        'hero_title_html' => 'Zuverlässiger Hersteller und Großhändler <em>aus China</em>',
-        'hero_sub' => 'Fabrikdirekte Qualität, Großhandelspreise und OEM/ODM-Unterstützung für B2B-Käufer weltweit. Sagen Sie uns, was Sie brauchen — Angebot innerhalb von 24 Stunden.',
-        'form_card_title' => 'Angebot innerhalb von 24 Stunden',
+        'hero_title' => 'Beschaffen Sie jedes Produkt direkt aus geprüften Fabriken in China',
+        'hero_title_html' => 'Beschaffen Sie jedes Produkt direkt <em>aus geprüften Fabriken in China</em>',
+        'hero_sub' => 'Von Konsumgütern bis zu Industriemaschinen. Wir vermitteln den passenden Betrieb, prüfen die Ware und handeln Direktpreise aus den führenden Fertigungsclustern Chinas in 48 Stunden aus.',
+        'form_card_title' => 'Fabrikvermittlung anfragen (Angebot in 48 Std.)',
         'search_ph' => 'Produkte suchen, z. B. „Ventil“, „DN50“…',
         'search_btn' => 'Suchen',
         'hot' => 'Beliebt:',
@@ -53,17 +53,17 @@ return [
         'products_eyebrow' => 'Neuheiten',
         'blog_eyebrow' => 'Wissensdatenbank',
         'why_eyebrow' => 'Warum Käufer uns wählen',
-        'why_us' => 'Gemacht für ernsthaftes B2B-Sourcing',
-        'why_sub' => 'Vom Werk bis zu Ihrem Lager — ein verantwortlicher Partner für Qualität, Anpassung und Lieferung.',
+        'why_us' => 'Ihre vertrauten Augen und Hände in der Fertigung',
+        'why_sub' => 'Direkter Zugang zu über 100 chinesischen Fertigungsclustern mit strenger Prüfung, transparenten Preisen und Qualitätskontrolle vor dem Versand.',
         'latest_products' => 'Neue Produkte',
         'latest_posts' => 'Neueste Sourcing-Ratgeber',
         'view_all' => 'Alle ansehen',
         'guarantees_title' => 'Unsere Garantien',
         'guarantees' => [
-            'Angebot innerhalb von 24 Stunden',
-            'Kostenlose Muster verfügbar',
-            'Inspektionsbericht vor dem Versand',
-            'Sichere Zahlungsbedingungen (T/T · L/C)',
+            '3 geprüfte Fabriken in 48 Std.',
+            'Großhandelspreise direkt ab Werk',
+            'Audit- und Inspektionsberichte vor Ort',
+            'Sichere Zahlung per Treuhand (Escrow)',
         ],
         'industries_eyebrow' => 'Branchen, die wir beliefern',
         'industries_title' => 'Lösungen für Ihre Branche',
@@ -99,12 +99,12 @@ return [
     ],
 
     'features' => [
-        'factory_title' => 'Direkt ab Werk',
-        'factory_text' => 'Eigene Produktionslinien — keine Zwischenhändler, transparente Preise und stabile Lieferzeiten.',
-        'oem_title' => 'OEM / ODM',
-        'oem_text' => 'Kundenspezifische Spezifikationen, Privatlabel und Verpackung. Engineering-Prüfung innerhalb weniger Tage.',
-        'qc_title' => 'AQL-Qualitätskontrolle',
-        'qc_text' => 'In-Line- und Vorversand-Inspektion bei jeder Bestellung — mit Fotoberichten.',
+        'factory_title' => 'Geprüfte Lieferfabriken',
+        'factory_text' => 'Wir umgehen Handelsaufschläge und verbinden Sie direkt mit echten Herstellern in Shenzhen, Yiwu, Ningbo und weiteren Industriezentren.',
+        'oem_title' => 'OEM / ODM für alle Kategorien',
+        'oem_text' => 'Individuelle Werkzeugformen, maßgeschneiderte Verpackung, Logo-Branding und Prüfung technischer Zeichnungen auf Machbarkeit — erstellt von erfahrenen Ingenieuren.',
+        'qc_title' => 'Strenge Prüfung vor Ort',
+        'qc_text' => 'Vollständige Rohstoff-, In-Line- und AQL-konforme Kontrollen vor Versand, ergänzt durch hochauflösende Fotos und einen Video-Nachweis.',
         'ship_title' => 'Weltweiter Versand',
         'ship_text' => 'EXW / FOB / CIF per See, Luft oder Express — zu jedem major port.',
     ],
@@ -153,7 +153,7 @@ return [
         'company' => 'Unternehmen',
         'country' => 'Land',
         'message' => 'Nachricht',
-        'message_ph' => 'Sagen Sie uns, was Sie brauchen: Produkt, Menge, Spezifikationen, Zielhafen…',
+        'message_ph' => 'Beschreiben Sie das Produkt, das Sie beschaffen möchten, die Ziel-Spezifikationen, die voraussichtliche Menge (MOQ), die erforderlichen Zertifizierungen (CE/FDA/ISO) und den Zielhafen... (z. B. 5.000 Stück Silikon-Zahnbürsten / CNC-Aluminiumteile / smarte LED-Leuchten)',
         'submit' => 'Anfrage senden',
         'sending' => 'Wird gesendet…',
         'success' => 'Vielen Dank! Ihre Anfrage wurde gesendet. Wir antworten innerhalb von 24 Stunden.',

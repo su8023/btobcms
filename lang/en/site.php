@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'brand_slogan' => 'Global B2B Sourcing Made Reliable',
+    'brand_slogan' => "Source Any Product Direct from China's Top Factories",
 
     'nav' => [
         'industries' => 'Industries',
@@ -42,10 +42,10 @@ return [
     ],
 
     'home' => [
-        'hero_title' => 'Reliable Manufacturer & Wholesale Supplier from China',
-        'hero_title_html' => 'Reliable Manufacturer &amp; Wholesale Supplier <em>from China</em>',
-        'hero_sub' => 'Factory-direct quality, wholesale pricing and OEM/ODM support for B2B buyers worldwide. Tell us what you need — get a quote within 24 hours.',
-        'form_card_title' => 'Get a quote within 24 hours',
+        'hero_title' => "Source Any Product Directly from China's Verified Factories",
+        'hero_title_html' => "Source Any Product Directly <em>from China's Verified Factories</em>",
+        'hero_sub' => "From consumer goods to industrial machinery. We match, inspect, and negotiate factory-direct prices from top manufacturing clusters across China in 48 hours.",
+        'form_card_title' => 'Request a Factory Match (48h Quote)',
         'search_ph' => 'Search products, e.g. “valve”, “DN50”…',
         'search_btn' => 'Search',
         'hot' => 'Hot:',
@@ -54,17 +54,17 @@ return [
         'products_eyebrow' => 'New arrivals',
         'blog_eyebrow' => 'Knowledge base',
         'why_eyebrow' => 'Why buyers choose us',
-        'why_us' => 'Built for serious B2B sourcing',
-        'why_sub' => 'From factory floor to your warehouse — one accountable partner for quality, customization and delivery.',
+        'why_us' => 'Your Trusted Eyes & Hands on the Factory Floor',
+        'why_sub' => 'Direct access to 100+ Chinese manufacturing clusters with strict verification, price transparency, and pre-shipment quality inspection.',
         'latest_products' => 'Latest Products',
         'latest_posts' => 'Latest Sourcing Guides',
         'view_all' => 'View all',
         'guarantees_title' => 'Our guarantees',
         'guarantees' => [
-            'Quote within 24 hours',
-            'Free samples available',
-            'Inspection report before shipment',
-            'Secure payment terms (T/T · L/C)',
+            '3 Verified Factory Matches in 48h',
+            'Factory-Direct Wholesale Pricing',
+            'On-Site Audit & Inspection Reports',
+            'Escrow & Safe Payment Protection',
         ],
         'industries_eyebrow' => 'Industries we serve',
         'industries_title' => 'Solutions for your industry',
@@ -112,12 +112,12 @@ return [
     ],
 
     'features' => [
-        'factory_title' => 'Factory Direct',
-        'factory_text' => 'Own production lines — no middlemen, transparent pricing and stable lead times.',
-        'oem_title' => 'OEM / ODM Ready',
-        'oem_text' => 'Custom specifications, private label and packaging. Engineering review within days.',
-        'qc_title' => 'AQL Quality Control',
-        'qc_text' => 'In-line and pre-shipment inspections on every order, with photo reports.',
+        'factory_title' => 'Verified Source Factories',
+        'factory_text' => 'We bypass trading markups to connect you directly with genuine manufacturers across Shenzhen, Yiwu, Ningbo, and industrial clusters.',
+        'oem_title' => 'Full-Category OEM / ODM',
+        'oem_text' => 'Custom molds, tailored packaging, logo branding, and technical drawing feasibility reviews handled by experienced engineers.',
+        'qc_title' => 'Rigorous On-Site Inspection',
+        'qc_text' => 'Full raw material, in-line, and AQL-standard pre-shipment inspections with high-res photos and video verification before dispatch.',
         'ship_title' => 'Global Shipping',
         'ship_text' => 'EXW / FOB / CIF terms by sea, air or express — to any major port.',
     ],
@@ -165,7 +165,7 @@ return [
         'company' => 'Company',
         'country' => 'Country',
         'message' => 'Message',
-        'message_ph' => 'Tell us what you need: product, quantity, specifications, destination port…',
+        'message_ph' => "Describe the product you want to source, target specifications, estimated quantity (MOQ), required certifications (CE/FDA/ISO), and destination port... (e.g. 5,000 pcs custom silicone teethers / CNC aluminum parts / smart LED lights)",
         'submit' => 'Send Inquiry',
         'sending' => 'Sending…',
         'success' => 'Thank you! Your inquiry has been sent. We will reply within 24 hours.',

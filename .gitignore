@@ -49,3 +49,10 @@ cookies.txt
 # Laravel Boost 的本机 MCP 配置（含绝对路径，逐人不同，不入仓库）
 # .claude/skills/ 与 boost.json 是团队共享的项目资产，需要入库
 /.mcp.json
+
+# 备份与临时文件
+*.bak
+*.bak.*
+*.tar.gz
+*.zip
+/public/.well-known/

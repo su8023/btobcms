@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'brand_slogan' => "L'approvisionnement B2B mondial, en toute confiance",
+    'brand_slogan' => 'L\u2019approvisionnement direct de tout produit auprès des meilleures usines de Chine',
 
     'nav' => [
         'industries' => 'Secteurs',
@@ -41,10 +41,10 @@ return [
     ],
 
     'home' => [
-        'hero_title' => 'Fabricant et fournisseur de gros fiable de Chine',
-        'hero_title_html' => 'Fabricant et fournisseur de gros fiable <em>de Chine</em>',
-        'hero_sub' => 'Qualité directe usine, prix de gros et support OEM/ODM pour les acheteurs B2B du monde entier. Dites-nous ce dont vous avez besoin — devis sous 24 heures.',
-        'form_card_title' => 'Recevez votre devis sous 24 heures',
+        'hero_title' => 'Approvisionnement direct de tout produit auprès d\u2019usines vérifiées en Chine',
+        'hero_title_html' => 'Approvisionnement direct de tout produit <em>auprès d\u2019usines vérifiées en Chine</em>',
+        'hero_sub' => 'Des biens de consommation aux machines industrielles. Nous identifions les bons fournisseurs, inspectons et négocions des prix directs usine auprès des principaux pôles industriels chinois, en 48 heures.',
+        'form_card_title' => 'Demandez une mise en relation usine (devis sous 48 h)',
         'search_ph' => 'Rechercher des produits, ex. « vanne », « DN50 »…',
         'search_btn' => 'Rechercher',
         'hot' => 'Populaire :',
@@ -53,17 +53,17 @@ return [
         'products_eyebrow' => 'Nouveautés',
         'blog_eyebrow' => 'Base de connaissances',
         'why_eyebrow' => 'Pourquoi les acheteurs nous choisissent',
-        'why_us' => 'Conçu pour l\u2019achat B2B sérieux',
-        'why_sub' => 'De l\u2019usine à votre entrepôt — un partenaire unique et responsable pour la qualité, la personnalisation et la livraison.',
+        'why_us' => 'Vos yeux et vos mains de confiance sur le terrain',
+        'why_sub' => 'Accès direct à plus de 100 pôles industriels chinois, avec vérification rigoureuse, transparence des prix et inspection qualité avant expédition.',
         'latest_products' => 'Derniers produits',
         'latest_posts' => 'Derniers guides d\u2019achat',
         'view_all' => 'Voir tout',
         'guarantees_title' => 'Nos garanties',
         'guarantees' => [
-            'Devis sous 24 heures',
-            'Échantillons gratuits disponibles',
-            'Rapport d\u2019inspection avant expédition',
-            'Paiements sécurisés (T/T · L/C)',
+            '3 usines vérifiées en 48 h',
+            'Prix de gros directs usine',
+            'Rapports d\u2019audit et d\u2019inspection sur site',
+            'Paiement sécurisé par séquestre (escrow)',
         ],
         'industries_eyebrow' => 'Secteurs servis',
         'industries_title' => 'Des solutions pour votre secteur',
@@ -99,12 +99,12 @@ return [
     ],
 
     'features' => [
-        'factory_title' => 'Direct usine',
-        'factory_text' => 'Lignes de production propres — aucun intermédiaire, prix transparents et délais stables.',
-        'oem_title' => 'OEM / ODM',
-        'oem_text' => 'Spécifications personnalisées, marque privée et emballage. Étude technique en quelques jours.',
-        'qc_title' => 'Contrôle qualité AQL',
-        'qc_text' => 'Inspections en ligne et avant expédition sur chaque commande, avec rapports photo.',
+        'factory_title' => 'Usines sources vérifiées',
+        'factory_text' => 'Nous supprimons les marges des négociants pour vous mettre en relation directe avec de véritables fabricants à Shenzhen, Yiwu, Ningbo et dans les pôles industriels.',
+        'oem_title' => 'OEM / ODM toutes catégories',
+        'oem_text' => 'Moulages sur mesure, emballage personnalisé, pose de logo et revue de faisabilité des plans techniques, pris en charge par des ingénieurs expérimentés.',
+        'qc_title' => 'Inspection rigoureuse sur site',
+        'qc_text' => 'Inspections complètes des matières premières, en ligne et avant expédition selon la norme AQL, avec photos haute résolution et vérification vidéo avant l\u2019expédition.',
         'ship_title' => 'Livraison mondiale',
         'ship_text' => 'Incoterms EXW / FOB / CIF par mer, air ou express — vers tout port majeur.',
     ],
@@ -153,7 +153,7 @@ return [
         'company' => 'Société',
         'country' => 'Pays',
         'message' => 'Message',
-        'message_ph' => 'Dites-nous ce dont vous avez besoin : produit, quantité, spécifications, port de destination…',
+        'message_ph' => 'Décrivez le produit que vous souhaitez sourcer, les spécifications visées, la quantité estimée (MOQ), les certifications requises (CE/FDA/ISO) et le port de destination... (ex. 5 000 unités de brosses à dents en silicone sur mesure / pièces en aluminium CNC / lampadaires LED intelligents)',
         'submit' => 'Envoyer la demande',
         'sending' => 'Envoi…',
         'success' => 'Merci ! Votre demande a été envoyée. Nous répondrons sous 24 heures.',

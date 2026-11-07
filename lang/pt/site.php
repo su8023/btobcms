@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'brand_slogan' => 'Abastecimento global B2B confiável',
+    'brand_slogan' => 'Abastecimento de qualquer produto direto das melhores fábricas da China',
 
     'nav' => [
         'industries' => 'Setores',
@@ -41,10 +41,10 @@ return [
     ],
 
     'home' => [
-        'hero_title' => 'Fabricante e fornecedor atacadista confiável da China',
-        'hero_title_html' => 'Fabricante e fornecedor atacadista confiável <em>da China</em>',
-        'hero_sub' => 'Qualidade direta da fábrica, preços de atacado e suporte OEM/ODM para compradores B2B no mundo todo. Diga o que você precisa — orçamento em 24 horas.',
-        'form_card_title' => 'Receba seu orçamento em 24 horas',
+        'hero_title' => 'Abasteça qualquer produto diretamente de fábricas verificadas na China',
+        'hero_title_html' => 'Abasteça qualquer produto diretamente <em>de fábricas verificadas na China</em>',
+        'hero_sub' => 'De bens de consumo a máquinas industriais. Fazemos a seleção de fábricas, inspecionamos e negociamos preços diretos de fábrica nos principais polos industriais da China em 48 horas.',
+        'form_card_title' => 'Solicite um match de fábrica (orçamento em 48 h)',
         'search_ph' => 'Pesquisar produtos, ex. «válvula», «DN50»…',
         'search_btn' => 'Pesquisar',
         'hot' => 'Populares:',
@@ -53,17 +53,17 @@ return [
         'products_eyebrow' => 'Novidades',
         'blog_eyebrow' => 'Central de conhecimento',
         'why_eyebrow' => 'Por que compradores nos escolhem',
-        'why_us' => 'Feito para compras B2B sérias',
-        'why_sub' => 'Da fábrica ao seu armazém — um único parceiro responsável por qualidade, personalização e entrega.',
+        'why_us' => 'Seus olhos e mãos de confiança no chão de fábrica',
+        'why_sub' => 'Acesso direto a mais de 100 polos industriais chineses com verificação rigorosa, transparência de preços e inspeção de qualidade pré-embarque.',
         'latest_products' => 'Últimos produtos',
         'latest_posts' => 'Últimos guias de compra',
         'view_all' => 'Ver tudo',
         'guarantees_title' => 'Nossas garantias',
         'guarantees' => [
-            'Orçamento em 24 horas',
-            'Amostras gratuitas disponíveis',
-            'Relatório de inspeção antes do envio',
-            'Pagamento seguro (T/T · L/C)',
+            '3 fábricas verificadas em 48 h',
+            'Preços de atacado diretos da fábrica',
+            'Relatórios de auditoria e inspeção no local',
+            'Pagamento protegido por escrow e seguro',
         ],
         'industries_eyebrow' => 'Setores que atendemos',
         'industries_title' => 'Soluções para o seu setor',
@@ -99,12 +99,12 @@ return [
     ],
 
     'features' => [
-        'factory_title' => 'Direto da fábrica',
-        'factory_text' => 'Linhas de produção próprias — sem intermediários, preços transparentes e prazos estáveis.',
-        'oem_title' => 'OEM / ODM',
-        'oem_text' => 'Especificações personalizadas, marca própria e embalagem. Análise técnica em poucos dias.',
-        'qc_title' => 'Controle de qualidade AQL',
-        'qc_text' => 'Inspeção em linha e pré-embarque em cada pedido, com relatórios fotográficos.',
+        'factory_title' => 'Fábricas de origem verificadas',
+        'factory_text' => 'Eliminamos os intermediários para conectar você diretamente a fabricantes reais em Shenzhen, Yiwu, Ningbo e nos principais polos industriais.',
+        'oem_title' => 'OEM / ODM para todas as categorias',
+        'oem_text' => 'Molde sob medida, embalagem personalizada, aplicação de logotipo e análise de viabilidade de desenhos técnicos feita por engenheiros experientes.',
+        'qc_title' => 'Inspeção rigorosa no local',
+        'qc_text' => 'Inspeções completas de matéria-prima, em linha e pré-embarque conforme a norma AQL, com fotos em alta resolução e verificação em vídeo antes da expedição.',
         'ship_title' => 'Envio global',
         'ship_text' => 'Incoterms EXW / FOB / CIF por mar, ar ou expresso — para qualquer porto principal.',
     ],
@@ -153,7 +153,7 @@ return [
         'company' => 'Empresa',
         'country' => 'País',
         'message' => 'Mensagem',
-        'message_ph' => 'Diga o que você precisa: produto, quantidade, especificações, porto de destino…',
+        'message_ph' => 'Descreva o produto que quer abastecer, as especificações desejadas, a quantidade estimada (MOQ), as certificações exigidas (CE/FDA/ISO) e o porto de destino... (ex.: 5.000 pcs. de escovas de dente de silicone personalizadas / peças de alumínio usinadas em CNC / luminárias LED inteligentes)',
         'submit' => 'Enviar consulta',
         'sending' => 'Enviando…',
         'success' => 'Obrigado! Sua consulta foi enviada. Responderemos em 24 horas.',

@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'brand_slogan' => 'Approvvigionamento B2B globale affidabile',
+    'brand_slogan' => 'Approvvigionamento di qualsiasi prodotto direttamente dalle migliori fabbriche cinesi',
 
     'nav' => [
         'industries' => 'Settori',
@@ -41,10 +41,10 @@ return [
     ],
 
     'home' => [
-        'hero_title' => 'Produttore e fornitore all\u2019ingrosso affidabile dalla Cina',
-        'hero_title_html' => 'Produttore e fornitore all\u2019ingrosso affidabile <em>dalla Cina</em>',
-        'hero_sub' => 'Qualità diretta dalla fabbrica, prezzi all\u2019ingrosso e supporto OEM/ODM per acquirenti B2B di tutto il mondo. Dicci cosa ti serve — preventivo entro 24 ore.',
-        'form_card_title' => 'Preventivo entro 24 ore',
+        'hero_title' => 'Approvviggiona qualsiasi prodotto direttamente da fabbriche verificate in Cina',
+        'hero_title_html' => 'Approvviggiona qualsiasi prodotto direttamente <em>da fabbriche verificate in Cina</em>',
+        'hero_sub' => 'Dai beni di consumo alle macchinari industriali. Individuiamo la fabbrica giusta, ispezioniamo e negoziamo prezzi diretti di fabbrica nei principali distretti industriali cinesi entro 48 ore.',
+        'form_card_title' => 'Richiedi un abbinamento con la fabbrica (preventivo in 48 h)',
         'search_ph' => 'Cerca prodotti, es. «valvola», «DN50»…',
         'search_btn' => 'Cerca',
         'hot' => 'Popolari:',
@@ -53,17 +53,17 @@ return [
         'products_eyebrow' => 'Novità',
         'blog_eyebrow' => 'Centro conoscenze',
         'why_eyebrow' => 'Perché gli acquirenti ci scelgono',
-        'why_us' => 'Progettato per acquisti B2B seri',
-        'why_sub' => 'Dalla fabbrica al tuo magazzino — un unico partner responsabile per qualità, personalizzazione e consegna.',
+        'why_us' => 'I tuoi occhi e le tue mani di fiducia in fabbrica',
+        'why_sub' => 'Accesso diretto a oltre 100 distretti industriali cinesi, con verifica rigorosa, trasparenza dei prezzi e controllo qualità pre-spedizione.',
         'latest_products' => 'Ultimi prodotti',
         'latest_posts' => 'Ultime guide per l\u2019acquisto',
         'view_all' => 'Vedi tutto',
         'guarantees_title' => 'Le nostre garanzie',
         'guarantees' => [
-            'Preventivo entro 24 ore',
-            'Campioni gratuiti disponibili',
-            'Rapporto di ispezione prima della spedizione',
-            'Pagamenti sicuri (T/T · L/C)',
+            '3 fabbriche verificate in 48 h',
+            'Prezzi all\u2019ingrosso diretti da fabbrica',
+            'Report di audit e ispezione in loco',
+            'Pagamento protetto da escrow e sicuro',
         ],
         'industries_eyebrow' => 'Setti che serviamo',
         'industries_title' => 'Soluzioni per il tuo settore',
@@ -99,12 +99,12 @@ return [
     ],
 
     'features' => [
-        'factory_title' => 'Direttamente dalla fabbrica',
-        'factory_text' => 'Linee di produzione proprie — nessun intermediario, prezzi trasparenti e tempi stabili.',
-        'oem_title' => 'OEM / ODM',
-        'oem_text' => 'Specifiche personalizzate, marchio privato e packaging. Studio tecnico in pochi giorni.',
-        'qc_title' => 'Controllo qualità AQL',
-        'qc_text' => 'Ispezioni in linea e pre-spedizione su ogni ordine, con report fotografici.',
+        'factory_title' => 'Fabbriche di sourcing verificate',
+        'factory_text' => 'Eliminiamo i ricarichi dei trader collegandoti direttamente con veri produttori a Shenzhen, Yiwu, Ningbo e nei distretti industriali.',
+        'oem_title' => 'OEM / ODM per ogni categoria',
+        'oem_text' => 'Stampi su misura, packaging personalizzato, applicazione del logo e verifica di fattibilità dei disegni tecnici, curati da ingegneri esperti.',
+        'qc_title' => 'Ispezione rigorosa in loco',
+        'qc_text' => 'Controlli completi su materie prime, in linea e pre-spedizione secondo lo standard AQL, con foto ad alta risoluzione e verifica video prima della partenza.',
         'ship_title' => 'Spedizione globale',
         'ship_text' => 'Resi EXW / FOB / CIF via mare, aerea o espresso — verso qualsiasi porto principale.',
     ],
@@ -153,7 +153,7 @@ return [
         'company' => 'Azienda',
         'country' => 'Paese',
         'message' => 'Messaggio',
-        'message_ph' => 'Dicci cosa ti serve: prodotto, quantità, specifiche, porto di destinazione…',
+        'message_ph' => 'Descrivi il prodotto che vuoi approvvigionare, le specifiche desiderate, la quantità stimata (MOQ), le certificazioni richieste (CE/FDA/ISO) e il porto di destinazione... (es. 5.000 pz di spazzolini in silicone personalizzati / componenti in alluminio CNC / luci LED intelligenti)',
         'submit' => 'Invia richiesta',
         'sending' => 'Invio…',
         'success' => 'Grazie! La tua richiesta è stata inviata. Risponderemo entro 24 ore.',

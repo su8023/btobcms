@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'brand_slogan' => 'Sourcing B2B global confiable',
+    'brand_slogan' => 'Abastecimiento directo de cualquier producto desde las mejores fábricas de China',
 
     'nav' => [
         'industries' => 'Industrias',
@@ -41,10 +41,10 @@ return [
     ],
 
     'home' => [
-        'hero_title' => 'Fabricante y proveedor mayorista de confianza de China',
-        'hero_title_html' => 'Fabricante y proveedor mayorista <em>de China</em>',
-        'hero_sub' => 'Calidad directa de fábrica, precios al por mayor y soporte OEM/ODM para compradores B2B de todo el mundo. Díganos qué necesita — presupuesto en 24 horas.',
-        'form_card_title' => 'Reciba su presupuesto en 24 horas',
+        'hero_title' => 'Abastezca cualquier producto directamente de fábricas verificadas en China',
+        'hero_title_html' => 'Abastezca cualquier producto directamente <em>de fábricas verificadas en China</em>',
+        'hero_sub' => 'Desde bienes de consumo hasta maquinaria industrial. Nos encargamos de la búsqueda, la inspección y la negociación de precios directos de fábrica en los principales clusters manufactureros de China, en 48 horas.',
+        'form_card_title' => 'Solicite una coincidencia de fábrica (cotización en 48 h)',
         'results_for' => 'Resultados de búsqueda para',
 
         'showing' => 'Mostrando :count producto|Mostrando :count productos',
@@ -57,17 +57,17 @@ return [
         'products_eyebrow' => 'Novedades',
         'blog_eyebrow' => 'Centro de conocimiento',
         'why_eyebrow' => 'Por qué eligen compradores',
-        'why_us' => 'Diseñado para compras B2B serias',
-        'why_sub' => 'De la fábrica a su almacén — un solo socio responsable para calidad, personalización y entrega.',
+        'why_us' => 'Sus ojos y manos de confianza en la planta',
+        'why_sub' => 'Acceso directo a más de 100 clusters manufactureros chinos con verificación estricta, transparencia de precios e inspección de calidad previa al embarque.',
         'latest_products' => 'Últimos productos',
         'latest_posts' => 'Últimas guías de compra',
         'view_all' => 'Ver todo',
         'guarantees_title' => 'Nuestras garantías',
         'guarantees' => [
-            'Presupuesto en 24 horas',
-            'Muestras gratuitas disponibles',
-            'Informe de inspección antes del embarque',
-            'Pagos seguros (T/T · L/C)',
+            '3 fábricas verificadas en 48 h',
+            'Precios mayoristas directos de fábrica',
+            'Informes de auditoría e inspección en sitio',
+            'Protección de pago segura mediante escrow',
         ],
         'industries_eyebrow' => 'Industrias que servimos',
         'industries_title' => 'Soluciones para su industria',
@@ -115,12 +115,12 @@ return [
     ],
 
     'features' => [
-        'factory_title' => 'Directo de fábrica',
-        'factory_text' => 'Líneas de producción propias — sin intermediarios, precios transparentes y plazos estables.',
-        'oem_title' => 'OEM / ODM',
-        'oem_text' => 'Especificaciones personalizadas, marca privada y embalaje. Revisión técnica en días.',
-        'qc_title' => 'Control de calidad AQL',
-        'qc_text' => 'Inspección en línea y previa al embarque en cada pedido, con reporte fotográfico.',
+        'factory_title' => 'Fábricas de origen verificadas',
+        'factory_text' => 'Eliminamos los intermediarios para conectarle directamente con fabricantes genuinos en Shenzhen, Yiwu, Ningbo y el resto de clusters industriales.',
+        'oem_title' => 'OEM / ODM para todas las categorías',
+        'oem_text' => 'Moldeado personalizado, embalajes a medida, aplicación de su logotipo y revisiones de viabilidad de planos técnicos a cargo de ingenieros con experiencia.',
+        'qc_title' => 'Inspección rigurosa en sitio',
+        'qc_text' => 'Inspecciones completas de materia prima, en línea y previas al embarque conforme a la norma AQL, con fotografías de alta resolución y verificación en vídeo antes del envío.',
         'ship_title' => 'Envío global',
         'ship_text' => 'Términos EXW / FOB / CIF por mar, aire o exprés — a cualquier puerto principal.',
     ],
@@ -166,7 +166,7 @@ return [
         'company' => 'Empresa',
         'country' => 'País',
         'message' => 'Mensaje',
-        'message_ph' => 'Cuéntenos qué necesita: producto, cantidad, especificaciones, puerto de destino…',
+        'message_ph' => 'Describa el producto que desea abastecer, las especificaciones objetivo, la cantidad estimada (MOQ), las certificaciones requeridas (CE/FDA/ISO) y el puerto de destino... (p. ej. 5.000 uds. de cepillos de dientes de silicona personalizados / piezas de aluminio CNC / luces LED inteligentes)',
         'submit' => 'Enviar consulta',
         'sending' => 'Enviando…',
         'success' => '¡Gracias! Su consulta ha sido enviada. Responderemos en 24 horas.',
